@@ -1,0 +1,24 @@
+# Dependencies & build output
+node_modules/
+dist/
+
+# Secrets — never commit
+.env.local
+.env.*.local
+
+# Trace logs (regenerated per run; samples committed only under research/)
+logs/*.jsonl
+logs/*.log
+*.log
+
+# Smoke-test result caches (large, regenerable)
+research/smoke/results/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Bench run outputs (regenerable via `sitescout bench run`)
+bench/vngeobench/results/
