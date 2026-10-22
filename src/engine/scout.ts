@@ -157,15 +157,18 @@ export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hi
     () => api.geocode(cleaned || text, { limit: 5, biasLonLat: HCMC }),
     () => api.autocomplete(short, { limit: 5, biasLonLat: HCMC }),
   ];
+  let lastError: unknown;
   for (const [k, attempt] of attempts.entries()) {
     try {
       const r = await attempt();
       refs.push(r.seq);
       if (consider(r.results, k === 1 ? "search" : "autocomplete")) break;
-    } catch {
-      /* next */
+    } catch (e) {
+      lastError = e;
     }
   }
+  // Every attempt threw (quota, auth, network): surface that instead of "not found".
+  if (tried.length === 0 && lastError && refs.length === 0) throw lastError;
   tried.sort((a, b) => b.s - a.s);
   return { hit: tried[0]?.hit, refs, via: tried[0]?.via };
 }

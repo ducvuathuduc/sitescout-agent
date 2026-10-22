@@ -19,10 +19,25 @@ const bin = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.cha
 function serveEmbedded(url: URL): Response {
   const path = url.pathname === "/" ? "/index.html" : url.pathname;
   const f = EMBEDDED[path];
-  if (!f) return new Response("Not found", { status: 404 });
+  if (!f) return new Response(NOT_FOUND_HTML, { status: 404, headers: { "content-type": "text/html; charset=utf-8" } });
   const long = /\.(woff2|svg)$/.test(path) || path.startsWith("/examples/");
   return new Response(bin(f.b64), { headers: { "content-type": f.type, "cache-control": long ? "public, max-age=86400" : "public, max-age=300", "x-content-type-options": "nosniff" } });
 }
+
+// 404 layout follows the CARTO error page (centred badge, title, one line, one action); our colours/copy.
+const NOT_FOUND_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — SiteScout</title><link rel="icon" href="/favicon.svg"><style>
+@font-face{font-family:"Open Sans";src:url(/fonts/open-sans-latin-400-normal.woff2) format("woff2");font-weight:400}
+@font-face{font-family:"Open Sans";src:url(/fonts/open-sans-latin-600-normal.woff2) format("woff2");font-weight:600}
+html,body{margin:0;height:100%;background:#1785FB;color:#fff;font-family:"Open Sans",system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:24px 15%;font-weight:600;letter-spacing:.2em;font-size:13px}
+header a{color:#fff;text-decoration:none;letter-spacing:0;font-size:13px}
+main{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100% - 140px);text-align:center}
+.badge{width:68px;height:68px;border:2px solid rgba(255,255,255,.35);border-radius:50%;display:grid;place-items:center;margin-bottom:24px}
+h1{font-size:22px;font-weight:600;margin:0 0 10px}p{font-size:18px;line-height:1.5;max-width:420px;margin:0 0 26px}
+.btn{background:#fff;color:#1785FB;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none}
+</style></head><body><header><span>SITESCOUT</span><a href="https://github.com/ducvuathuduc/sitescout-agent">GitHub</a></header><main>
+<div class="badge"><svg width="24" height="27" viewBox="0 0 24 27"><path d="M12 1C6.5 1 2 5.3 2 10.6 2 17.6 12 26 12 26s10-8.4 10-15.4C22 5.3 17.5 1 12 1z" fill="#fff"/><circle cx="12" cy="10.5" r="3.6" fill="#1785FB"/></svg></div>
+<h1>404 ERROR</h1><p>This place isn't on our map. The demo covers Ho Chi Minh City site analyses.</p><a class="btn" href="/">Back to the map</a></main></body></html>`;
 
 export interface Env {
   GEOAPIFY_KEY: string;

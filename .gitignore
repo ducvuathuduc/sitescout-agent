@@ -24,3 +24,4 @@ Thumbs.db
 bench/vngeobench/results/
 node_modules
 web/worker/assets.gen.ts
+web/.dist/
