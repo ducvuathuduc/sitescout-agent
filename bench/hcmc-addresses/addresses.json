@@ -1,0 +1,698 @@
+{
+ "description": "55 HCMC geocoding test queries. Reference coordinates are Wikidata P625 of the landmark (independent of Geoapify). Old→new ward pairs follow Nghị quyết 1685/NQ-UBTVQH15 (16/6/2025), official text: https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/6/45141/56880-1-2025805-8061685-nq-ubtvqh15.pdf",
+ "created": "2026-10-22",
+ "items": [
+  {
+   "id": "lm-01",
+   "group": "landmark-formal",
+   "query": "Chợ Bến Thành, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.772521,
+    "lon": 106.698019,
+    "source": "https://www.wikidata.org/wiki/Q3232879 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-02",
+   "group": "landmark-formal",
+   "query": "Nhà thờ chính tòa Đức Bà Sài Gòn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.779722,
+    "lon": 106.699167,
+    "source": "https://www.wikidata.org/wiki/Q428129 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-03",
+   "group": "landmark-formal",
+   "query": "Dinh Độc Lập, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.77705,
+    "lon": 106.69537,
+    "source": "https://www.wikidata.org/wiki/Q933384 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-04",
+   "group": "landmark-formal",
+   "query": "Bưu điện Sài Gòn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.78,
+    "lon": 106.7,
+    "source": "https://www.wikidata.org/wiki/Q2227270 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-05",
+   "group": "landmark-formal",
+   "query": "Bitexco Financial Tower, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.771666666667,
+    "lon": 106.70444444444,
+    "source": "https://www.wikidata.org/wiki/Q638512 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-06",
+   "group": "landmark-formal",
+   "query": "Landmark 81, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.795,
+    "lon": 106.72194444444445,
+    "source": "https://www.wikidata.org/wiki/Q18640924 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-07",
+   "group": "landmark-formal",
+   "query": "Sân bay quốc tế Tân Sơn Nhất, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.818888888889,
+    "lon": 106.65194444444,
+    "source": "https://www.wikidata.org/wiki/Q478595 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-08",
+   "group": "landmark-formal",
+   "query": "Thảo Cầm Viên Sài Gòn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.78805556,
+    "lon": 106.70472222,
+    "source": "https://www.wikidata.org/wiki/Q3162430 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-09",
+   "group": "landmark-formal",
+   "query": "Chợ Bình Tây, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.749375,
+    "lon": 106.651078,
+    "source": "https://www.wikidata.org/wiki/Q15265989 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-10",
+   "group": "landmark-formal",
+   "query": "Công viên Văn hóa Đầm Sen, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.76611,
+    "lon": 106.63806,
+    "source": "https://www.wikidata.org/wiki/Q2056423 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-11",
+   "group": "landmark-formal",
+   "query": "Nhà hát Thành phố Hồ Chí Minh, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.77639,
+    "lon": 106.70278,
+    "source": "https://www.wikidata.org/wiki/Q1949129 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-12",
+   "group": "landmark-formal",
+   "query": "Bảo tàng Chứng tích chiến tranh, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.7795,
+    "lon": 106.692,
+    "source": "https://www.wikidata.org/wiki/Q703871 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-13",
+   "group": "landmark-formal",
+   "query": "Chợ Bà Chiểu, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.80138889,
+    "lon": 106.6988889,
+    "source": "https://www.wikidata.org/wiki/Q11839857 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-14",
+   "group": "landmark-formal",
+   "query": "Lăng Ông (Bà Chiểu), Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.8019,
+    "lon": 106.697,
+    "source": "https://www.wikidata.org/wiki/Q7818628 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-15",
+   "group": "landmark-formal",
+   "query": "Bến Nhà Rồng, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.76824,
+    "lon": 106.706799,
+    "source": "https://www.wikidata.org/wiki/Q10743440 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-16",
+   "group": "landmark-formal",
+   "query": "Chợ Tân Định, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.789904,
+    "lon": 106.689996,
+    "source": "https://www.wikidata.org/wiki/Q31994680 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-17",
+   "group": "landmark-formal",
+   "query": "Nhà thờ Tân Định, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.788416666666667,
+    "lon": 106.69069444444445,
+    "source": "https://www.wikidata.org/wiki/Q7682043 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-18",
+   "group": "landmark-formal",
+   "query": "Chùa Ngọc Hoàng, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.791666666667,
+    "lon": 106.69777777778,
+    "source": "https://www.wikidata.org/wiki/Q6121304 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-19",
+   "group": "landmark-formal",
+   "query": "Hồ Con Rùa, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.782722222222,
+    "lon": 106.69594444444,
+    "source": "https://www.wikidata.org/wiki/Q10771949 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-20",
+   "group": "landmark-formal",
+   "query": "Bệnh viện Chợ Rẫy, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.7572,
+    "lon": 106.6598,
+    "source": "https://www.wikidata.org/wiki/Q5103381 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-21",
+   "group": "landmark-formal",
+   "query": "Sân vận động Thống Nhất, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.760703,
+    "lon": 106.663331,
+    "source": "https://www.wikidata.org/wiki/Q2051647 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-22",
+   "group": "landmark-formal",
+   "query": "Công viên Tao Đàn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.774722222222,
+    "lon": 106.69305555556,
+    "source": "https://www.wikidata.org/wiki/Q10752055 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-23",
+   "group": "landmark-formal",
+   "query": "Chợ An Đông, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.758101,
+    "lon": 106.672179,
+    "source": "https://www.wikidata.org/wiki/Q32032749 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-24",
+   "group": "landmark-formal",
+   "query": "Công viên Hoàng Văn Thụ, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.8012,
+    "lon": 106.6643,
+    "source": "https://www.wikidata.org/wiki/Q66424095 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-25",
+   "group": "landmark-formal",
+   "query": "Cầu Thủ Thiêm, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.7858,
+    "lon": 106.718,
+    "source": "https://www.wikidata.org/wiki/Q7798636 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": true
+  },
+  {
+   "id": "lm-26",
+   "group": "landmark-formal",
+   "query": "Đường hầm sông Sài Gòn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.769444444444444,
+    "lon": 106.70805555555556,
+    "source": "https://www.wikidata.org/wiki/Q7798644 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": true
+  },
+  {
+   "id": "lm-27",
+   "group": "landmark-formal",
+   "query": "Saigon Centre, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.77,
+    "lon": 106.7,
+    "source": "https://www.wikidata.org/wiki/Q7400074 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "lm-28",
+   "group": "landmark-formal",
+   "query": "Đại học Quốc gia Thành phố Hồ Chí Minh, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.7828,
+    "lon": 106.695,
+    "source": "https://www.wikidata.org/wiki/Q943759 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": true
+  },
+  {
+   "id": "lm-29",
+   "group": "landmark-formal",
+   "query": "Chợ Lớn, Thành phố Hồ Chí Minh",
+   "ref": {
+    "lat": 10.7514918,
+    "lon": 106.6604732,
+    "source": "https://www.wikidata.org/wiki/Q2405555 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-30",
+   "group": "informal-no-diacritics",
+   "query": "cho ben thanh",
+   "ref": {
+    "lat": 10.772521,
+    "lon": 106.698019,
+    "source": "https://www.wikidata.org/wiki/Q3232879 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-31",
+   "group": "informal-no-diacritics",
+   "query": "nha tho duc ba",
+   "ref": {
+    "lat": 10.779722,
+    "lon": 106.699167,
+    "source": "https://www.wikidata.org/wiki/Q428129 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-32",
+   "group": "informal-no-diacritics",
+   "query": "dinh doc lap",
+   "ref": {
+    "lat": 10.77705,
+    "lon": 106.69537,
+    "source": "https://www.wikidata.org/wiki/Q933384 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-33",
+   "group": "informal-no-diacritics",
+   "query": "buu dien thanh pho",
+   "ref": {
+    "lat": 10.78,
+    "lon": 106.7,
+    "source": "https://www.wikidata.org/wiki/Q2227270 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-34",
+   "group": "informal-no-diacritics",
+   "query": "landmark 81",
+   "ref": {
+    "lat": 10.795,
+    "lon": 106.72194444444445,
+    "source": "https://www.wikidata.org/wiki/Q18640924 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-35",
+   "group": "informal-no-diacritics",
+   "query": "thao cam vien",
+   "ref": {
+    "lat": 10.78805556,
+    "lon": 106.70472222,
+    "source": "https://www.wikidata.org/wiki/Q3162430 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-36",
+   "group": "informal-no-diacritics",
+   "query": "cho binh tay",
+   "ref": {
+    "lat": 10.749375,
+    "lon": 106.651078,
+    "source": "https://www.wikidata.org/wiki/Q15265989 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-37",
+   "group": "informal-no-diacritics",
+   "query": "san bay tan son nhat",
+   "ref": {
+    "lat": 10.818888888889,
+    "lon": 106.65194444444,
+    "source": "https://www.wikidata.org/wiki/Q478595 (P625)"
+   },
+   "toleranceM": 1500,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-38",
+   "group": "informal-no-diacritics",
+   "query": "cho ba chieu",
+   "ref": {
+    "lat": 10.80138889,
+    "lon": 106.6988889,
+    "source": "https://www.wikidata.org/wiki/Q11839857 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "inf-39",
+   "group": "informal-no-diacritics",
+   "query": "ho con rua",
+   "ref": {
+    "lat": 10.782722222222,
+    "lon": 106.69594444444,
+    "source": "https://www.wikidata.org/wiki/Q10771949 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-40",
+   "group": "address-old-ward",
+   "query": "7 Công trường Lam Sơn, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh",
+   "landmark": "Nhà hát Thành phố Hồ Chí Minh",
+   "expectedNewWard": "Phường Sài Gòn",
+   "ref": {
+    "lat": 10.77639,
+    "lon": 106.70278,
+    "source": "https://www.wikidata.org/wiki/Q1949129 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-41",
+   "group": "address-new-ward",
+   "query": "7 Công trường Lam Sơn, Phường Sài Gòn, Thành phố Hồ Chí Minh",
+   "landmark": "Nhà hát Thành phố Hồ Chí Minh",
+   "expectedNewWard": "Phường Sài Gòn",
+   "ref": {
+    "lat": 10.77639,
+    "lon": 106.70278,
+    "source": "https://www.wikidata.org/wiki/Q1949129 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-42",
+   "group": "address-old-ward",
+   "query": "2 Công xã Paris, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh",
+   "landmark": "Bưu điện Sài Gòn",
+   "expectedNewWard": "Phường Sài Gòn",
+   "ref": {
+    "lat": 10.78,
+    "lon": 106.7,
+    "source": "https://www.wikidata.org/wiki/Q2227270 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-43",
+   "group": "address-new-ward",
+   "query": "2 Công xã Paris, Phường Sài Gòn, Thành phố Hồ Chí Minh",
+   "landmark": "Bưu điện Sài Gòn",
+   "expectedNewWard": "Phường Sài Gòn",
+   "ref": {
+    "lat": 10.78,
+    "lon": 106.7,
+    "source": "https://www.wikidata.org/wiki/Q2227270 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-44",
+   "group": "address-old-ward",
+   "query": "28 Võ Văn Tần, Phường Võ Thị Sáu, Quận 3, Thành phố Hồ Chí Minh",
+   "landmark": "Bảo tàng Chứng tích chiến tranh",
+   "expectedNewWard": "Phường Xuân Hòa",
+   "ref": {
+    "lat": 10.7795,
+    "lon": 106.692,
+    "source": "https://www.wikidata.org/wiki/Q703871 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-45",
+   "group": "address-new-ward",
+   "query": "28 Võ Văn Tần, Phường Xuân Hòa, Thành phố Hồ Chí Minh",
+   "landmark": "Bảo tàng Chứng tích chiến tranh",
+   "expectedNewWard": "Phường Xuân Hòa",
+   "ref": {
+    "lat": 10.7795,
+    "lon": 106.692,
+    "source": "https://www.wikidata.org/wiki/Q703871 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-46",
+   "group": "address-old-ward",
+   "query": "289 Hai Bà Trưng, Phường 8, Quận 3, Thành phố Hồ Chí Minh",
+   "landmark": "Nhà thờ Tân Định",
+   "expectedNewWard": "Phường Xuân Hòa",
+   "ref": {
+    "lat": 10.788416666666667,
+    "lon": 106.69069444444445,
+    "source": "https://www.wikidata.org/wiki/Q7682043 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-47",
+   "group": "address-new-ward",
+   "query": "289 Hai Bà Trưng, Phường Xuân Hòa, Thành phố Hồ Chí Minh",
+   "landmark": "Nhà thờ Tân Định",
+   "expectedNewWard": "Phường Xuân Hòa",
+   "ref": {
+    "lat": 10.788416666666667,
+    "lon": 106.69069444444445,
+    "source": "https://www.wikidata.org/wiki/Q7682043 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-48",
+   "group": "address-old-ward",
+   "query": "201B Nguyễn Chí Thanh, Phường 12, Quận 5, Thành phố Hồ Chí Minh",
+   "landmark": "Bệnh viện Chợ Rẫy",
+   "expectedNewWard": "Phường Chợ Lớn",
+   "ref": {
+    "lat": 10.7572,
+    "lon": 106.6598,
+    "source": "https://www.wikidata.org/wiki/Q5103381 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-49",
+   "group": "address-new-ward",
+   "query": "201B Nguyễn Chí Thanh, Phường Chợ Lớn, Thành phố Hồ Chí Minh",
+   "landmark": "Bệnh viện Chợ Rẫy",
+   "expectedNewWard": "Phường Chợ Lớn",
+   "ref": {
+    "lat": 10.7572,
+    "lon": 106.6598,
+    "source": "https://www.wikidata.org/wiki/Q5103381 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-50",
+   "group": "address-old-ward",
+   "query": "57A Tháp Mười, Phường 2, Quận 6, Thành phố Hồ Chí Minh",
+   "landmark": "Chợ Bình Tây",
+   "expectedNewWard": "Phường Bình Tây",
+   "ref": {
+    "lat": 10.749375,
+    "lon": 106.651078,
+    "source": "https://www.wikidata.org/wiki/Q15265989 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-51",
+   "group": "address-new-ward",
+   "query": "57A Tháp Mười, Phường Bình Tây, Thành phố Hồ Chí Minh",
+   "landmark": "Chợ Bình Tây",
+   "expectedNewWard": "Phường Bình Tây",
+   "ref": {
+    "lat": 10.749375,
+    "lon": 106.651078,
+    "source": "https://www.wikidata.org/wiki/Q15265989 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-52",
+   "group": "address-old-ward",
+   "query": "720A Điện Biên Phủ, Phường 22, Quận Bình Thạnh, Thành phố Hồ Chí Minh",
+   "landmark": "Landmark 81",
+   "expectedNewWard": "Phường Thạnh Mỹ Tây",
+   "ref": {
+    "lat": 10.795,
+    "lon": 106.72194444444445,
+    "source": "https://www.wikidata.org/wiki/Q18640924 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-53",
+   "group": "address-new-ward",
+   "query": "720A Điện Biên Phủ, Phường Thạnh Mỹ Tây, Thành phố Hồ Chí Minh",
+   "landmark": "Landmark 81",
+   "expectedNewWard": "Phường Thạnh Mỹ Tây",
+   "ref": {
+    "lat": 10.795,
+    "lon": 106.72194444444445,
+    "source": "https://www.wikidata.org/wiki/Q18640924 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-54",
+   "group": "address-old-ward",
+   "query": "1 Vũ Tùng, Phường 1, Quận Bình Thạnh, Thành phố Hồ Chí Minh",
+   "landmark": "Lăng Ông (Bà Chiểu)",
+   "expectedNewWard": "Phường Gia Định",
+   "ref": {
+    "lat": 10.8019,
+    "lon": 106.697,
+    "source": "https://www.wikidata.org/wiki/Q7818628 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  },
+  {
+   "id": "adr-55",
+   "group": "address-new-ward",
+   "query": "1 Vũ Tùng, Phường Gia Định, Thành phố Hồ Chí Minh",
+   "landmark": "Lăng Ông (Bà Chiểu)",
+   "expectedNewWard": "Phường Gia Định",
+   "ref": {
+    "lat": 10.8019,
+    "lon": 106.697,
+    "source": "https://www.wikidata.org/wiki/Q7818628 (P625)"
+   },
+   "toleranceM": 300,
+   "inThuDucOld": false
+  }
+ ]
+}

@@ -125,11 +125,22 @@ function pickAnchor(results: GeocodeResult[]): GeocodeResult | undefined {
 export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hit?: GeocodeResult; refs: number[]; via?: "autocomplete" | "search" }> {
   const refs: number[] = [];
   const fold = (x: string): string => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
+  // Pre-2025 admin units ("Phường 12", "Quận 5", "TP Thủ Đức") no longer exist. Measured on
+  // 2026-10-22 (bench/hcmc-addresses): sending them makes the geocoder match alley numbers
+  // ("Phường 12" → "175/12 Nguyễn Tri Phương"), so they are dropped from the query and the score.
+  const legacy = (p: string): boolean => /^(phuong|p\.?)\s*\d+$/.test(p) || /^quan\s/.test(p) || /^(tp\.?|thanh pho)\s*thu duc$/.test(p);
+  const rawParts = text.split(",").map((x) => x.trim()).filter(Boolean);
+  const keep = rawParts.filter((x) => !legacy(fold(x)));
   // tokens that should appear in a correct answer (drop generic words)
-  const parts = text.split(",").map((x) => fold(x).trim()).filter((x) => x && !/^(ho chi minh|tp\.? ?hcm|thanh pho ho chi minh|viet ?nam)$/.test(x));
+  const parts = keep.map(fold).filter((x) => x && !/^(ho chi minh|tp\.? ?hcm|thanh pho ho chi minh|viet ?nam)$/.test(x));
+  const words = (x: string): Set<string> => new Set(x.split(/[^a-z0-9]+/).filter(Boolean));
   const score = (r: GeocodeResult): number => {
-    const f = fold(r.formatted ?? "");
-    return parts.reduce((n, p, k) => n + (f.includes(p.replace(/^(quan|phuong|duong) /, "")) ? (k === 0 ? 2 : 1) : 0), 0);
+    const f = words(fold(r.formatted ?? ""));
+    return parts.reduce((n, p, k) => {
+      const ws = [...words(p.replace(/^(quan|phuong|duong) /, ""))];
+      const ok = ws.length > 0 && ws.every((w) => f.has(w));
+      return n + (ok ? (k === 0 ? 2 : 1) : 0);
+    }, 0);
   };
   const tried: Array<{ hit: GeocodeResult; via: "autocomplete" | "search"; s: number }> = [];
   const consider = (rs: GeocodeResult[], via: "autocomplete" | "search"): boolean => {
@@ -139,10 +150,11 @@ export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hi
     }
     return tried.some((t) => t.s >= Math.min(parts.length, 2) + 1);
   };
-  const short = text.split(",")[0].trim();
+  const short = (keep[0] ?? text).trim();
+  const cleaned = keep.join(", ");
   const attempts: Array<() => Promise<{ results: GeocodeResult[]; seq: number }>> = [
-    () => api.autocomplete(parts.length > 1 ? text.split(",").slice(0, 2).join(",") : short, { limit: 5, biasLonLat: HCMC }),
-    () => api.geocode(text, { limit: 5, biasLonLat: HCMC }),
+    () => api.autocomplete(keep.length > 1 ? keep.slice(0, 2).join(", ") : short, { limit: 5, biasLonLat: HCMC }),
+    () => api.geocode(cleaned || text, { limit: 5, biasLonLat: HCMC }),
     () => api.autocomplete(short, { limit: 5, biasLonLat: HCMC }),
   ];
   for (const [k, attempt] of attempts.entries()) {
