@@ -12,9 +12,9 @@
 
 **[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude / Cursor](agent/README.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
 
-<a href="https://sitescout.huynhthanh.workers.dev"><img src="docs/assets/demo.gif" alt="SiteScout demo: a question becomes 7 walking isochrones and a ranked shortlist" width="860"></a>
+<a href="https://sitescout.huynhthanh.workers.dev"><img src="docs/assets/demo.gif" alt="SiteScout demo: why this spot, reach explorer, compare and evidence" width="860"></a>
 
-🎬 Videos: [demo (67 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-16x9.mp4) · [full tutorial](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) · [vertical cut](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-9x16.mp4)
+🎬 Videos: [demo (80 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-16x9.mp4) · [full tutorial (3 min)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) · [vertical cut (47 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-9x16.mp4)
 
 </div>
 
