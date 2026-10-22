@@ -119,7 +119,7 @@ export function resolveWardAlias(segment: string): WardAliasResult {
 }
 
 /**
- * Ordered geocode query list for the fallback chain (ARCHITECTURE.md §5.3):
+ * Ordered geocode query list for the fallback chain:
  *   1. canonical (diacritics preserved)
  *   2. folded (ASCII)
  *   3. alias-expanded (legacy ward segment replaced by each current ward name)

@@ -71,7 +71,7 @@ export const DEFAULT_WEIGHTS: Record<keyof SubScores, number> = {
 };
 
 /**
- * Data-density floor (REDTEAM.md W3.2): a candidate whose catchment yields
+ * Data-density floor: a candidate whose catchment yields
  * fewer than this many POIs across ALL place sweeps is flagged
  * `insufficient-data` and EXCLUDED from ranking — "no data" must never read
  * as "no competition".

@@ -153,7 +153,7 @@ export const CalculateRouteArgs = z
     optimize_stops: z.boolean().optional(),
     units: z.enum(["metric", "imperial"]).optional(),
     lang: z.string().length(2).optional(),
-    /** SiteScout default: "approximated" (traffic-aware; see REDTEAM W3.4). */
+    /** SiteScout default: "approximated" (traffic-aware). */
     traffic: z.enum(["free_flow", "approximated"]).optional(),
   })
   .strict();

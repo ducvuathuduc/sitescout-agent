@@ -74,7 +74,7 @@ ul.lim{margin:0;padding-left:18px;color:var(--ink2);font-size:13px}
         <p class="why">Competition 0.22 · complementarity 0.24 · catchment 0.23 · accessibility 0.28</p><div class="chips"><button class="tchip" data-seq="37">T37</button> <button class="tchip" data-seq="38">T38</button> <button class="tchip" data-seq="39">T39</button> <button class="tchip" data-seq="40">T40</button> <button class="tchip" data-seq="41">T41</button> <button class="tchip" data-seq="42">T42</button> <button class="tchip" data-seq="43">T43</button> <button class="tchip" data-seq="44">T44</button> <button class="tchip" data-seq="69">T69</button></div></div></article></section>
 <section><h2>Limitations — read before acting</h2><ul class="lim"><li>Catchments are circular-buffer approximations (transform_geometry buffer), not drive-time isochrones — the Geoapify MCP server exposes no isochrone tool (Isoline is REST-only); filed as docs/FEEDBACK.md#1. Treat accessibility scores as directional.</li>
 <li>Scores use v0 heuristic weights (0.1.0-heuristic); calibration against ground truth is pending a live key.</li>
-<li>Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition” (REDTEAM W3.2).</li>
+<li>Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition”.</li>
 <li>POI data reflects Geoapify's places index at query time, not live foot traffic. Route times use approximated traffic at query time — time-of-day dependent.</li>
 <li>This report is decision support, not a guarantee of business outcomes.</li></ul></section>
 </div>

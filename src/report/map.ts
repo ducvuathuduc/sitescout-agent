@@ -4,7 +4,7 @@
  * `renderVisualReport()` emits ONE self-contained HTML file (no build step):
  *  - Leaflet via CDN, Geoapify raster tiles as basemap
  *    (https://maps.geoapify.com/v1/tile/{style}/{z}/{x}/{y}.png?apiKey=…)
- *  - Overlay layers in the SiteScout palette (ARCHITECTURE.md §4.2):
+ *  - Overlay layers in the SiteScout palette:
  *      catchment buffers (indigo), competitors (rose), complementary POIs (emerald),
  *      ranked shortlist (numbered amber badges)
  *  - Evidence-trace side panel: every [T#] chip scrolls to / highlights the trace entry

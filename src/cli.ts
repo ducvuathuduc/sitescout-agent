@@ -109,7 +109,7 @@ async function cmdAsk(rest: string[]): Promise<void> {
   const budgetCap = flag(rest, "--budget") ?? process.env.SITESCOUT_BUDGET;
   if (DOCS_ONLY_PLAYBOOKS.includes(playbook)) {
     throw new Error(
-      `playbook "${playbook}" is docs-only (STRETCH cut — REDTEAM.md GO-WITH-CUTS): ` +
+      `playbook "${playbook}" is docs-only (cut from v1 scope): ` +
         `question definitions + workflow doc ship at src/playbooks/${playbook}/playbook.ts, ` +
         `but there is no runtime implementation in v1.`,
     );

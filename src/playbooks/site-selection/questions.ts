@@ -106,7 +106,7 @@ export function getSiteSelectionQuestion(id: string, region?: Region): SiteSelec
   return found[0];
 }
 
-/** Geocode query fallback chain for one seed (ARCHITECTURE.md §5.3). */
+/** Geocode query fallback chain for one seed.  */
 export function seedQueries(seed: string): string[] {
   return candidateQueries(seed);
 }

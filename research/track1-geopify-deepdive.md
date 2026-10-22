@@ -128,7 +128,7 @@ Pricing page: https://www.geoapify.com/pricing/ · Pricing details per API: link
 variants (~3) + reverse checks (~3) ≈ 11 credits; places searches ~5 × (limit 60 → 3 credits) ≈ 15;
 route matrices ~4 × (4×4=16) ≈ 64; routing ~10; isoline (REST) 15-min = 3. **≈ 100 credits/question** —
 ~30 questions/day on the free tier, comfortably inside 3,000/day. Credit budgeting is tracked and
-printed per question (see ARCHITECTURE.md § credit budgeting).
+printed per question.
 
 ---
 
@@ -230,7 +230,7 @@ no form submission). This needs a **live-browser task by the parent**.
 
 - **Nationwide scope:** the 3-region pattern (HCMC/Hanoi/Da Nang, same question template, same
   scoring model) in the sibling `smoke.sh` is the template for nationwide coverage; `questions.ts`
-  per playbook carries region definitions (see ARCHITECTURE.md).
+  per playbook carries region definitions.
 - **VN-GeoBench:** the data-quality protocol (§4.3) is the seed for `bench/vngeobench/`
   (questions + expected tool behavior + scored runs).
 - **Visual report:** every future smoke/sample run should also produce the Leaflet visual report
@@ -246,4 +246,4 @@ no form submission). This needs a **live-browser task by the parent**.
 - https://apidocs.geoapify.com/docs/isolines/ · https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/
 - https://www.geoapify.com/route-matrix-api/ · https://www.geoapify.com/geocoding-api/
 - https://www.geoapify.com/pricing/ · https://www.geoapify.com/open-geospatial-program/
-- https://www.geoapify.com/maps-api/ · https://www.mapbox.com/maps (design-spec references, §ARCHITECTURE.md)
+- https://www.geoapify.com/maps-api/ · https://www.mapbox.com/maps (design-spec references)

@@ -8,10 +8,10 @@
  *
  * Planner: HeuristicPlanner (deterministic, template-driven, zero network
  * calls for planning itself). The default and only planner in v1 — the
- * LLM-planner experiment was cut (REDTEAM.md, GO-WITH-CUTS); the "AI" in the
+ * LLM-planner experiment was cut; the "AI" in the
  * theme is carried by the agent-loop architecture, not an LLM in the hot path.
  *
- * Robustness (ARCHITECTURE.md §5.3):
+ * Robustness:
  *  - every call is budget-planned before it is sent (--budget cap);
  *  - args validated per-tool BEFORE the request (schemas.ts);
  *  - empty geocode results → fallback chain: canonical → folded →
@@ -193,7 +193,7 @@ async function executeCall(
   }
 }
 
-/** result_type preference for ambiguous geocodes (ARCHITECTURE.md §5.3). */
+/** result_type preference for ambiguous geocodes. */
 const RESULT_TYPE_PREFERENCE = [
   "amenity",
   "building",
@@ -544,7 +544,7 @@ export async function runSiteSelection(
         sources: origins.map((o) => ({ lat: o.outcome.point.lat, lon: o.outcome.point.lon })),
         targets: rankable.map((c) => ({ lat: c.point.lat, lon: c.point.lon })),
         mode: "drive",
-        traffic: "approximated", // traffic-aware (REDTEAM W3.4); timestamp in trace
+        traffic: "approximated", // traffic-aware; timestamp in trace
       },
       rationale: `Accessibility matrix: ${origins.length} origins × ${rankable.length} candidates (drive, approximated traffic)`,
     });
@@ -1035,7 +1035,7 @@ function siteLimitations(): string[] {
   return [
     "Catchments are circular-buffer approximations (transform_geometry buffer), not drive-time isochrones — the Geoapify MCP server exposes no isochrone tool (Isoline is REST-only); filed as docs/FEEDBACK.md#1. Treat accessibility scores as directional.",
     `Scores use v0 heuristic weights (${WEIGHTS_VERSION}); calibration against ground truth is pending a live key.`,
-    "Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition” (REDTEAM W3.2).",
+    "Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition”.",
     "POI data reflects Geoapify's places index at query time, not live foot traffic. Route times use approximated traffic at query time — time-of-day dependent.",
     "This report is decision support, not a guarantee of business outcomes.",
   ];

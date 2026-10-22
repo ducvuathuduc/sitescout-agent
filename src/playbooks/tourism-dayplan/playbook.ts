@@ -1,7 +1,7 @@
 /**
  * Playbook 5 — Tourism day-plan grounding. STRETCH.
  *
- * DOCS-ONLY (red-team cut — REDTEAM.md GO-WITH-CUTS): question definitions +
+ * DOCS-ONLY (cut from v1 scope): question definitions +
  * workflow doc ship; NO runtime implementation, NO sample runs in v1.
  *
  * Documented workflow (for a future runtime):

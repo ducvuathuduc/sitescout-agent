@@ -13,8 +13,7 @@
 # Same question pattern in every region:
 #   0. initialize → notifications/initialized → tools/list — snapshot the
 #      live tool schema AND assert the 11-tool surface + corrected arg shapes
-#      (aborts before any credit is spent when the surface has drifted —
-#      REDTEAM.md R4.4)
+#      (aborts before any credit is spent when the surface has drifted)
 #   1. geocode_address       — diacritic-heavy formal address
 #   2. geocode_address       — informal / POI-style name
 #   3. geocode_structured_address — structured variant of (1)
