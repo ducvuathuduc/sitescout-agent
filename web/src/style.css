@@ -24,7 +24,7 @@
   --bar-sel: #263238;
   --bar-off: #cbced0;
   --shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.24);
-  --shadow-ctrl: 0 0 2px 0 rgba(0, 0, 0, 0.24);
+  --shadow-ctrl: 0 0 2px 0 rgba(0, 0, 0, 0.24), 0 4px 8px 0 rgba(0, 0, 0, 0.16);
   --ease: cubic-bezier(0.01, 0.99, 0.36, 1);
 }
 * { box-sizing: border-box; }
