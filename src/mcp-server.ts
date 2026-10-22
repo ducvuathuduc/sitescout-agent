@@ -24,9 +24,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { GeoapifyApi } from "./engine/geoapify.js";
-import { heuristicPlan, validatePlan, ScoutPlanSchema, type PlanOutcome } from "./engine/plan.js";
+import { heuristicPlan, validatePlan, ScoutPlanSchema, type PlanOutcome, type ScoutPlan } from "./engine/plan.js";
 import { runScout, resolvePlace, type ScoutResult } from "./engine/scout.js";
 import { renderMarkdown } from "./engine/render.js";
+import { CATEGORY_SET } from "./engine/categories.js";
 
 const VERSION = "1.0.0";
 const DEMO_PROXY = "https://sitescout.huynhthanh.workers.dev/geo";
@@ -49,10 +50,10 @@ const GENERIC = new Set(["ho", "chi", "minh", "hcm", "hcmc", "tp", "thanh", "pho
  * the run silently analysed another ward. Hosts must surface a mismatch.
  */
 export function areaCheck(query: string, anchorLabel: string, wardName?: string): string {
-  const hay = fold(`${anchorLabel} ${wardName ?? ""}`);
+  const hay = new Set(fold(`${anchorLabel} ${wardName ?? ""}`).split(/[^a-z0-9]+/));
   const toks = fold(query).split(/[^a-z0-9]+/).filter((t) => t.length > 1 && !GENERIC.has(t));
   if (toks.length === 0) return "ok";
-  const hit = toks.filter((t) => hay.includes(t));
+  const hit = toks.filter((t) => hay.has(t));
   return hit.length > 0 ? "ok" : `mismatch: none of [${toks.join(", ")}] appear in the resolved area "${anchorLabel}" — tell the user and re-run with a corrected plan.area`;
 }
 
@@ -68,9 +69,17 @@ const CandidateOut = z.object({
   isochroneAreaKm2: z.number().nullable(),
   why: z.string(),
   refs: z.array(z.number()),
+  evidence: z.object({
+    label: z.array(z.number()),
+    isochrone: z.array(z.number()),
+    poiCounts: z.array(z.number()),
+    driveTimes: z.array(z.number()),
+  }).describe("Which [Tn] refs back which number: label = reverse geocoding, isochrone = walk area, poiCounts = competitors/demand, driveTimes = route matrix"),
 });
 
 export function summarize(r: ScoutResult): z.infer<typeof ScoutOut> {
+  const apiOf = new Map(r.calls.map((c) => [c.seq, c.api]));
+  const pick = (refs: number[], ...apis: string[]): number[] => refs.filter((x) => apis.includes(apiOf.get(x) ?? ""));
   return {
     question: r.question,
     business: r.plan.business,
@@ -92,7 +101,18 @@ export function summarize(r: ScoutResult): z.infer<typeof ScoutOut> {
       isochroneAreaKm2: c.isoline ? Number((c.isolineAreaM2 / 1e6).toFixed(3)) : null,
       why: c.why,
       refs: c.refs,
+      evidence: {
+        label: pick(c.refs, "reverse-geocoding"),
+        isochrone: pick(c.refs, "isoline"),
+        poiCounts: pick(c.refs, "places"),
+        driveTimes: pick(c.refs, "route-matrix"),
+      },
     })),
+    topCandidateCalls: (r.candidates[0]?.refs ?? [])
+      .map((x) => r.calls.find((c) => c.seq === x))
+      .filter((c): c is NonNullable<typeof c> => !!c && c.api !== "place-details" && c.api !== "routing")
+      .map((c) => ({ ref: c.seq, api: c.api, endpoint: `${c.method} ${c.endpoint}`, summary: c.summary })),
+    planNotes: r.planNotes,
     limitations: r.limitations,
     calls: r.calls.length,
     creditsEstimated: r.creditsEstimated,
@@ -109,10 +129,40 @@ const ScoutOut = z.object({
   planner: z.string(),
   walkMinutes: z.number(),
   candidates: z.array(CandidateOut),
+  topCandidateCalls: z.array(z.object({ ref: z.number(), api: z.string(), endpoint: z.string(), summary: z.record(z.unknown()) }))
+    .describe("The exact Geoapify requests (key never included) behind the #1 candidate — quote these instead of reconstructing a URL"),
+  planNotes: z.array(z.string()),
   limitations: z.array(z.string()),
   calls: z.number(),
   creditsEstimated: z.number(),
 });
+
+/**
+ * Apply a host's plan overrides without letting a bad field sink the run.
+ * Recorded in agent/transcripts/02b: a model passed "Nhà thuốc" as a category.
+ * Invalid categories are dropped (with a note the model can read) and the
+ * planner's validated value is kept.
+ */
+export function mergeOverrides(base: ScoutPlan, o: Partial<ScoutPlan>, notes: string[]): ScoutPlan {
+  const next: Record<string, unknown> = { ...base };
+  for (const [k, v] of Object.entries(o)) if (v !== undefined) next[k] = v;
+  if (o.competitorCategory && !CATEGORY_SET.has(o.competitorCategory)) {
+    notes.push(`ignored competitorCategory "${o.competitorCategory}" (not a Geoapify category); kept "${base.competitorCategory}"`);
+    next.competitorCategory = base.competitorCategory;
+  }
+  if (o.demandCategories) {
+    const ok = o.demandCategories.filter((c) => CATEGORY_SET.has(c));
+    const bad = o.demandCategories.filter((c) => !CATEGORY_SET.has(c));
+    if (bad.length) notes.push(`ignored demand categories ${JSON.stringify(bad)} (not Geoapify categories)`);
+    next.demandCategories = ok.length ? ok : base.demandCategories;
+  }
+  const parsed = ScoutPlanSchema.safeParse(next);
+  if (!parsed.success) {
+    notes.push(`plan overrides rejected (${parsed.error.issues.map((i) => i.path.join(".") + ": " + i.message).join("; ")}); used the planner's plan`);
+    return base;
+  }
+  return validatePlan(parsed.data, notes);
+}
 
 export function buildServer(): McpServer {
   const server = new McpServer(
@@ -155,9 +205,7 @@ export function buildServer(): McpServer {
     async ({ question, plan, creditCap }) => {
       const base = heuristicPlan(question);
       const notes = [...base.notes];
-      const merged: PlanOutcome = plan
-        ? { ...base, plan: validatePlan(ScoutPlanSchema.parse({ ...base.plan, ...plan }), notes), notes, planner: "llm", model: "mcp-host (plan overrides)" }
-        : base;
+      const merged: PlanOutcome = plan ? { ...base, plan: mergeOverrides(base.plan, plan, notes), notes, planner: "llm", model: "mcp-host (plan overrides)" } : base;
       const api = makeApi(creditCap);
       const r = await runScout(question, merged, { api });
       last = r;

@@ -17,7 +17,7 @@
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 const [question, outFile = "agent/transcripts/run.jsonl"] = process.argv.slice(2);
@@ -28,7 +28,10 @@ if (!BASE) throw new Error("set LLM_BASE_URL");
 
 const system = readFileSync(new URL("./SYSTEM_PROMPT.md", import.meta.url), "utf8");
 const lines = [];
-const log = (o) => { lines.push(JSON.stringify({ ts: new Date().toISOString(), ...o })); };
+mkdirSync(dirname(outFile), { recursive: true });
+writeFileSync(outFile, "");
+// append as we go, so an interrupted session still leaves a transcript
+const log = (o) => { const l = JSON.stringify({ ts: new Date().toISOString(), ...o }); lines.push(l); appendFileSync(outFile, l + "\n"); };
 
 const transport = new StdioClientTransport({ command: "node", args: ["dist/mcp-server.js"], env: process.env, stderr: "inherit" });
 const client = new Client({ name: "sitescout-transcript-host", version: "1.0.0" });
@@ -45,7 +48,7 @@ const clip = (s, n = 6000) => (s.length > n ? s.slice(0, n) + `… [truncated ${
 for (let step = 0; step < 10; step++) {
   const headers = { "content-type": "application/json" };
   if (process.env.LLM_API_KEY) headers.authorization = `Bearer ${process.env.LLM_API_KEY}`;
-  const res = await fetch(`${BASE}/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: MODEL, messages, tools: oaTools, temperature: 0.2, max_tokens: 1500 }) });
+  const res = await fetch(`${BASE}/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: MODEL, messages, tools: oaTools, temperature: 0.2, max_tokens: Number(process.env.LLM_MAX_TOKENS ?? 3000) }) });
   const data = await res.json();
   const msg = data.choices?.[0]?.message;
   if (!msg) { log({ type: "error", status: res.status, body: data }); break; }
@@ -72,6 +75,4 @@ for (let step = 0; step < 10; step++) {
   }
 }
 await client.close();
-mkdirSync(dirname(outFile), { recursive: true });
-writeFileSync(outFile, lines.join("\n") + "\n");
 console.log(`wrote ${outFile} (${lines.length} events)`);
