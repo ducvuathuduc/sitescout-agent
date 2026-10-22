@@ -22,3 +22,5 @@ Thumbs.db
 
 # Bench run outputs (regenerable via `sitescout bench run`)
 bench/vngeobench/results/
+node_modules
+web/worker/assets.gen.ts

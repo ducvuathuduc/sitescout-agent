@@ -1,0 +1,22 @@
+# SiteScout live demo — Cloudflare Workers (free plan) with static assets.
+# Secret (set once, never committed):  wrangler secret put GEOAPIFY_KEY
+name = "sitescout"
+main = "worker/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Static files are embedded into the script by web/build.mjs (worker/assets.gen.ts).
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sitescout-demo"
+database_id = "d2247353-faf3-4515-9eb4-868b4d542225"
+
+[ai]
+binding = "AI"
+
+[vars]
+# Keep well under the Geoapify free plan (3,000 credits/day).
+DAILY_CREDIT_CAP = "1500"
+PER_IP_CALL_CAP = "180"
+TILE_CAP = "2500"
