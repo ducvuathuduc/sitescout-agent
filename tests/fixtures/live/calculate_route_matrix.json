@@ -1,0 +1,59 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"sources\": [\n    {\n      \"lat\": 10.770515,\n      \"lon\": 106.695049\n    },\n    {\n      \"lat\": 10.760908,\n      \"lon\": 106.726111\n    },\n    {\n      \"lat\": 10.731483,\n      \"lon\": 106.707595\n    }\n  ],\n  \"targets\": [\n    {\n      \"lat\": 10.803502,\n      \"lon\": 106.737583\n    }\n  ],\n  \"sources_to_targets\": [\n    [\n      {\n        \"distance\": 9792,\n        \"time\": 1891,\n        \"source_index\": 0,\n        \"target_index\": 0\n      }\n    ],\n    [\n      {\n        \"distance\": 9252,\n        \"time\": 1632,\n        \"source_index\": 1,\n        \"target_index\": 0\n      }\n    ],\n    [\n      {\n        \"distance\": 17359,\n        \"time\": 2692,\n        \"source_index\": 2,\n        \"target_index\": 0\n      }\n    ]\n  ],\n  \"units\": \"metric\",\n  \"distance_units\": \"meters\",\n  \"time_units\": \"seconds\"\n}"
+    }
+  ],
+  "structuredContent": {
+    "sources": [
+      {
+        "lat": 10.770515,
+        "lon": 106.695049
+      },
+      {
+        "lat": 10.760908,
+        "lon": 106.726111
+      },
+      {
+        "lat": 10.731483,
+        "lon": 106.707595
+      }
+    ],
+    "targets": [
+      {
+        "lat": 10.803502,
+        "lon": 106.737583
+      }
+    ],
+    "sources_to_targets": [
+      [
+        {
+          "distance": 9792,
+          "time": 1891,
+          "source_index": 0,
+          "target_index": 0
+        }
+      ],
+      [
+        {
+          "distance": 9252,
+          "time": 1632,
+          "source_index": 1,
+          "target_index": 0
+        }
+      ],
+      [
+        {
+          "distance": 17359,
+          "time": 2692,
+          "source_index": 2,
+          "target_index": 0
+        }
+      ]
+    ],
+    "units": "metric",
+    "distance_units": "meters",
+    "time_units": "seconds"
+  }
+}

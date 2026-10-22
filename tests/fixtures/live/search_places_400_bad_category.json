@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"statusCode\":400,\"error\":\"Bad Request\",\"message\":\"Unsupported place category \\\"commercial.gym\\\". Call list_place_categories, choose one of the returned category values, and retry search_places.\"}"
+    }
+  ]
+}

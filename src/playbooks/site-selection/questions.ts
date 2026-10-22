@@ -11,8 +11,8 @@
  *   6. calculate_route_matrix: demand origins × candidates → accessibility.
  *   7. Score (src/scoring/model.ts) → rank → Markdown + visual report.
  *
- * Same question pattern, same scoring model, 3 regions — only region, seeds,
- * and category change (ARCHITECTURE.md §2).
+ * Three HCMC questions (Geoapify Batch #2 scope). Same pattern and scoring
+ * model; only the area seed, categories and demand origins change.
  */
 import { candidateQueries } from "../../geo/vietnam-address.js";
 
@@ -31,6 +31,10 @@ export interface SiteSelectionQuestion {
   demandOrigins: string[];
   /** Catchment buffer radius in metres (default 800). */
   catchmentRadiusM: number;
+  /** Expand each seed into centre + hexagonal ring (default true → 7 candidates). */
+  generateCandidates?: boolean;
+  /** Spacing of generated candidates in metres (default 550). */
+  candidateSpacingM?: number;
 }
 
 const q = (
@@ -59,32 +63,33 @@ export const SITE_SELECTION_QUESTIONS: SiteSelectionQuestion[] = [
   q(
     "thaodien-coffee",
     "hcmc",
-    "Specialty coffee shop — Thảo Điền, Thủ Đức, HCMC",
+    "Specialty coffee shop — Thảo Điền (Phường An Khánh), HCMC",
     "Where should I open a specialty coffee shop in Thảo Điền?",
     "catering.cafe",
-    ["office", "commercial.gym", "commercial.boutique"],
+    // validated against list_place_categories (2026-10-22)
+    ["office", "sport.fitness", "commercial.clothing"],
     ["Xuân Thủy, Thảo Điền, Thủ Đức, Hồ Chí Minh"],
     ["Bến Thành, Hồ Chí Minh", "Thủ Thiêm, Hồ Chí Minh", "Phú Mỹ Hưng, Hồ Chí Minh"],
   ),
   q(
-    "tayho-coworking",
-    "hanoi",
-    "Coworking space — Tây Hồ, Hanoi",
-    "Where should I open a coworking space in Tây Hồ?",
-    "office.coworking",
-    ["catering.cafe", "catering.restaurant", "commercial"],
-    ["Xuân Diệu, Tây Hồ, Hà Nội"],
-    ["Hoàn Kiếm, Hà Nội", "Mỹ Đình, Hà Nội", "Cầu Giấy, Hà Nội"],
+    "binhthanh-pharmacy",
+    "hcmc",
+    "Pharmacy — Bình Thạnh (around Hàng Xanh), HCMC",
+    "Where should I open a pharmacy in Bình Thạnh?",
+    "healthcare.pharmacy",
+    ["healthcare.hospital", "healthcare.clinic_or_praxis", "commercial.supermarket"],
+    ["Ngã tư Hàng Xanh, Bình Thạnh, Hồ Chí Minh"],
+    ["Bến Thành, Hồ Chí Minh", "Gò Vấp, Hồ Chí Minh", "Thảo Điền, Hồ Chí Minh"],
   ),
   q(
-    "mykhe-pharmacy",
-    "danang",
-    "Pharmacy — Mỹ Khê, Da Nang",
-    "Where should I open a pharmacy near Mỹ Khê?",
-    "healthcare.pharmacy",
-    ["healthcare.hospital", "healthcare.clinic", "commercial"],
-    ["Võ Nguyên Giáp, Mỹ Khê, Đà Nẵng"],
-    ["Hải Châu, Đà Nẵng", "Sơn Trà, Đà Nẵng", "Ngũ Hành Sơn, Đà Nẵng"],
+    "saigon-lunch",
+    "hcmc",
+    "Office-lunch restaurant — Phường Sài Gòn (old District 1 CBD), HCMC",
+    "Where should I open an office-lunch restaurant in the District 1 CBD?",
+    "catering.restaurant",
+    ["office", "office.company", "office.coworking"],
+    ["Nhà hát Thành phố, Quận 1, Hồ Chí Minh"],
+    ["Thảo Điền, Hồ Chí Minh", "Bình Thạnh, Hồ Chí Minh", "Quận 7, Hồ Chí Minh"],
   ),
 ];
 

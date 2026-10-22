@@ -34,6 +34,7 @@ import { BudgetTracker, settleActual } from "./budget.js";
 import {
   GeocodedPoint,
   parseGeocodeResults,
+  parseCategoryCatalog,
   parseGeometryResult,
   parseMeasureValue,
   parsePlacesResults,
@@ -44,6 +45,7 @@ import {
   type PlaceHit,
 } from "../mcp/results.js";
 import { candidateQueries } from "../geo/vietnam-address.js";
+import { hexRing } from "../geo/grid.js";
 import {
   EvidenceBundle,
   INSUFFICIENT_DATA_POI_FLOOR,
@@ -220,24 +222,34 @@ export async function geocodeFromPlan(
   deps: RunDeps,
   planned: PlannedCall[],
   seed: string,
-): Promise<{ outcome: GeocodeOutcome | null; refs: number[] }> {
+): Promise<{ outcome: GeocodeOutcome | null; refs: number[]; failures: string[] }> {
   const refs: number[] = [];
+  const failures: string[] = [];
   for (const [i, pc] of planned.entries()) {
     let call: ExecutedCall;
     try {
       call = await executeCall(trace, deps, pc);
-    } catch {
+    } catch (e) {
+      failures.push(`transport: ${e instanceof Error ? e.message : String(e)}`);
       continue; // transport/validation failure → next fallback query
     }
     refs.push(call.seq);
-    if (call.isError) continue;
+    if (call.isError) {
+      failures.push(`T${call.seq}: server error`);
+      continue;
+    }
     let pts: GeocodedPoint[];
     try {
       pts = parseGeocodeResults(call.result);
     } catch {
+      // A parse failure is OUR bug, never evidence that Geoapify has no data.
+      failures.push(`T${call.seq}: client parse error (SiteScout bug, not a data gap)`);
       continue;
     }
-    if (pts.length === 0) continue; // empty result → next fallback query
+    if (pts.length === 0) {
+      failures.push(`T${call.seq}: empty result`);
+      continue; // empty result → next fallback query
+    }
     const ranked = [...pts].sort(
       (a, b) =>
         RESULT_TYPE_PREFERENCE.indexOf(a.resultType ?? "") -
@@ -253,6 +265,7 @@ export async function geocodeFromPlan(
         alternatives: pts.length - 1,
       },
       refs,
+      failures,
     };
   }
   // Last resort: structured address (name-only) without the vn filter.
@@ -270,13 +283,14 @@ export async function geocodeFromPlan(
         return {
           outcome: { point: pts[0], queryIndex: planned.length, alternatives: pts.length - 1 },
           refs,
+          failures,
         };
       }
     }
-  } catch {
-    // fall through to unevaluable
+  } catch (e) {
+    failures.push(`structured last resort: ${e instanceof Error ? e.message : String(e)}`);
   }
-  return { outcome: null, refs };
+  return { outcome: null, refs, failures };
 }
 
 /** Group a phase-1 plan by seed (from summaryExtra.seed). */
@@ -340,25 +354,79 @@ export async function runSiteSelection(
 
   // Phase 1 — geocode candidate seeds + demand origins.
   const geocoded = new Map<string, GeocodeOutcome>();
-  const unevaluable: Array<{ seed: string; refs: number[] }> = [];
+  const unevaluable: Array<{ seed: string; refs: number[]; failures: string[] }> = [];
   const seeds = [...planBySeed.keys()];
   for (const seed of seeds) {
-    const { outcome, refs } = await geocodeFromPlan(
+    const { outcome, refs, failures } = await geocodeFromPlan(
       trace,
       deps,
       planBySeed.get(seed) ?? [],
       seed,
     );
     if (outcome) geocoded.set(seed, outcome);
-    else unevaluable.push({ seed, refs });
+    else unevaluable.push({ seed, refs, failures });
+  }
+
+  // Phase 1b — validate categories against the live catalog
+  // (list_place_categories). v0.1 shipped invented categories
+  // (commercial.gym, commercial.boutique) that the server rejects with 400.
+  const catalogCall = await executeCall(trace, deps, {
+    tool: "list_place_categories",
+    args: {},
+    rationale: "Fetch the live category catalog to validate every category before searching",
+  });
+  const catalog = new Set<string>(parseCategoryCatalog(catalogCall.result));
+  const validCats = (cats: string[]): string[] =>
+    catalog.size === 0 ? cats : cats.filter((c) => catalog.has(c));
+  const complementaryCategories = validCats(question.complementaryCategories);
+  const droppedCategories = question.complementaryCategories.filter(
+    (c) => !complementaryCategories.includes(c),
+  );
+
+  // Phase 1c — cross-check the first seed with the structured geocoder
+  // (documents the confidence gap noted in docs/FEEDBACK.md).
+  const firstSeed = question.candidateSeeds[0];
+  if (firstSeed) {
+    await executeCall(trace, deps, {
+      tool: "geocode_structured_address",
+      args: { street: firstSeed.split(",")[0].trim(), city: "Hồ Chí Minh", country: "Vietnam", lang: "vi", limit: 3 },
+      rationale: `Cross-check "${firstSeed}" with the structured geocoder (confidence comparison)`,
+      summaryExtra: { seed: firstSeed, crossCheck: true },
+    }).catch(() => undefined);
+  }
+
+  // Phase 1d — candidate generation: each area seed expands to its centre +
+  // a hexagonal ring (7 candidates, ~question.candidateSpacingM apart), each
+  // labelled by reverse_geocode_coordinates.
+  const candidatePoints: Array<{ id: string; point: GeocodedPoint }> = [];
+  for (const seed of question.candidateSeeds) {
+    const outcome = geocoded.get(seed);
+    if (!outcome) continue; // listed under `excluded`
+    const ring = question.generateCandidates === false
+      ? [outcome.point]
+      : hexRing(outcome.point, question.candidateSpacingM ?? 550);
+    for (const [k, p] of ring.entries()) {
+      let label = k === 0 ? (outcome.point.formatted ?? seed) : `${seed} — cell ${k}`;
+      try {
+        const rev = await executeCall(trace, deps, {
+          tool: "reverse_geocode_coordinates",
+          args: { lat: p.lat, lon: p.lon, lang: "vi", limit: 1 },
+          rationale: `Label generated candidate ${k} around "${seed}"`,
+        });
+        if (!rev.isError) label = parseReverseGeocode(rev.result);
+      } catch {
+        /* keep synthetic label; trace records the failure */
+      }
+      candidatePoints.push({
+        id: k === 0 ? seed : `${seed}#${k}`,
+        point: { ...p, formatted: label },
+      });
+    }
   }
 
   // Phase 2 — per-candidate evidence.
   const candidates: CandidateEvidence[] = [];
-  for (const seed of question.candidateSeeds) {
-    const outcome = geocoded.get(seed);
-    if (!outcome) continue; // listed under `excluded`
-    const { point } = outcome;
+  for (const { id: seed, point } of candidatePoints) {
     const refs: number[] = [];
     const call = async (c: PlannedCall): Promise<ExecutedCall> => {
       const r = await executeCall(trace, deps, c);
@@ -373,7 +441,8 @@ export async function runSiteSelection(
       args: {
         operation: "buffer",
         geometry: pointGeometry(point),
-        distance: radiusKm, // kilometers (Geoapify default units)
+        distance: radiusKm,
+        units: "kilometers",
       },
       rationale: `Buffer ${question.catchmentRadiusM} m catchment around "${seed}"`,
     });
@@ -424,7 +493,7 @@ export async function runSiteSelection(
 
     // Complementary POIs: demand signals.
     const complementaryHits: PlaceHit[] = [];
-    for (const category of question.complementaryCategories) {
+    for (const category of complementaryCategories) {
       const c = await call({
         tool: "search_places",
         args: {
@@ -494,10 +563,63 @@ export async function runSiteSelection(
     }
   }
 
+  // Phase 2c — coverage: union of all catchments (combine_geometries) and
+  // its area (measure_geometry) → how much the shortlist overlaps.
+  let coverage: { unionAreaM2?: number; sumAreaM2: number; refs: number[] } = {
+    sumAreaM2: candidates.reduce((a, c) => a + c.evidence.catchmentAreaM2, 0),
+    refs: [],
+  };
+  const buffers = candidates.map((c) => c.bufferGeometry).filter((g) => g !== null);
+  if (buffers.length >= 2) {
+    try {
+      const u = await executeCall(trace, deps, {
+        tool: "combine_geometries",
+        args: { operation: "union", geometries: buffers as unknown as ToolArgs[] },
+        rationale: `Union of ${buffers.length} candidate catchments (overlap / coverage)`,
+      });
+      coverage.refs.push(u.seq);
+      if (!u.isError) {
+        const ug = parseGeometryResult(u.result);
+        const m = await executeCall(trace, deps, {
+          tool: "measure_geometry",
+          args: { operation: "area", geometry: ug },
+          rationale: "Area of the union of catchments",
+        });
+        coverage.refs.push(m.seq);
+        if (!m.isError) coverage = { ...coverage, unionAreaM2: parseMeasureValue(m.result) };
+      }
+    } catch {
+      /* coverage stays partial; trace has the failure */
+    }
+  }
+
   // Phase 3 — score, rank, render.
   const scored = rankCandidates(
     rankable.map((c) => scoreCandidate(c.evidence, undefined, c.refs)),
   );
+
+  // Phase 3b — route from the first demand origin to the #1 candidate
+  // (calculate_route) for the report narrative.
+  let winnerRoute: { origin: string; timeS?: number; distanceM?: number; ref?: number } | null = null;
+  const winner = scored[0] ? candidates.find((c) => c.candidateId === scored[0].candidateId) : undefined;
+  if (winner && origins[0]) {
+    try {
+      const r = await executeCall(trace, deps, {
+        tool: "calculate_route",
+        args: {
+          waypoints: [
+            { lat: origins[0].outcome.point.lat, lon: origins[0].outcome.point.lon },
+            { lat: winner.point.lat, lon: winner.point.lon },
+          ],
+          mode: "drive",
+        },
+        rationale: `Route ${origins[0].seed} → #1 candidate`,
+      });
+      if (!r.isError) winnerRoute = { origin: origins[0].seed, ...parseRouteSummary(r.result), ref: r.seq };
+    } catch {
+      /* optional */
+    }
+  }
   const excluded = [
     ...candidates
       .filter((c) => c.insufficientData)
@@ -510,7 +632,7 @@ export async function runSiteSelection(
     ...unevaluable.map((u) => ({
       candidateId: u.seed,
       candidateLabel: u.seed,
-      reason: "unevaluable: geocoding fallback chain exhausted (no-result) — seed not scored",
+      reason: `unevaluable: no usable geocode for this seed — ${u.failures.join("; ") || "no attempts"}. Inspect the raw responses at the trace refs before attributing this to data coverage.`,
       refs: u.refs,
     })),
   ];
@@ -522,6 +644,7 @@ export async function runSiteSelection(
     trace: trace.all(),
     weightsVersion: WEIGHTS_VERSION,
     creditsReport: deps.budget.report(),
+    extras: { droppedCategories, coverage, winnerRoute, toolsUsed: [...new Set(trace.all().map((e) => e.tool))] },
   };
   const reportMarkdown = renderReport(data);
   const visualHtml = renderVisualReport(buildSiteVisualInput(question, scored, candidates, trace.all()));
@@ -540,6 +663,10 @@ export async function runSiteSelection(
         playbook: "site-selection",
         question,
         evidence: candidates.map((c) => c.evidence),
+        candidates: candidates.map((c) => ({ id: c.candidateId, label: c.candidateLabel, lat: c.point.lat, lon: c.point.lon })),
+        coverage,
+        winnerRoute,
+        droppedCategories,
         scored,
         excluded,
         weightsVersion: WEIGHTS_VERSION,

@@ -38,6 +38,12 @@ export interface SiteReportData {
   trace: readonly TraceEntry[];
   weightsVersion: string;
   creditsReport: string;
+  extras?: {
+    droppedCategories: string[];
+    coverage: { unionAreaM2?: number; sumAreaM2: number; refs: number[] };
+    winnerRoute: { origin: string; timeS?: number; distanceM?: number; ref?: number } | null;
+    toolsUsed: string[];
+  };
 }
 
 export interface MeetupLeg {
@@ -82,7 +88,7 @@ function siteLimitationsMd(): string[] {
     "## Limitations (read before acting on this report)",
     "",
     "- **Catchments are circular-buffer approximations** (`transform_geometry` buffer), not drive-time isochrones. The Geoapify MCP server exposes no isochrone tool (Isoline is REST-only); this gap is filed as `docs/FEEDBACK.md#1`. Treat accessibility scores as directional.",
-    `- Scores use heuristic weights (version \`${WEIGHTS_VERSION}\`); calibration against ground truth is pending a live key.`,
+    `- Scores use heuristic weights (version \`${WEIGHTS_VERSION}\`); not calibrated against real store outcomes.`,
     "- Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition”.",
     "- POI data reflects Geoapify's places index at query time, not live foot traffic. Route times use approximated traffic at query time — time-of-day dependent.",
     "- This report is decision support, not a guarantee of business outcomes.",
@@ -132,6 +138,28 @@ export function renderReport(data: SiteReportData): string {
       lines.push(`- Accessibility sub-score ${fmt(c.scores.accessibility)} ${refs}`);
       lines.push("");
     }
+  }
+
+  if (data.extras) {
+    const x = data.extras;
+    lines.push("## Run notes");
+    lines.push("");
+    lines.push(`- MCP tools exercised in this run (${x.toolsUsed.length}/11): ${x.toolsUsed.map((t) => "`" + t + "`").join(", ")}`);
+    if (x.coverage.unionAreaM2 !== undefined) {
+      const overlap = 1 - x.coverage.unionAreaM2 / Math.max(1, x.coverage.sumAreaM2);
+      lines.push(
+        `- Union of all catchments: ${(x.coverage.unionAreaM2 / 1e6).toFixed(2)} km² vs. ${(x.coverage.sumAreaM2 / 1e6).toFixed(2)} km² summed → ${(overlap * 100).toFixed(0)}% overlap between candidates ${x.coverage.refs.map(TraceLog.cite).join(" ")}`,
+      );
+    }
+    if (x.winnerRoute?.timeS !== undefined) {
+      lines.push(
+        `- Drive from ${x.winnerRoute.origin} to #1: ${Math.round(x.winnerRoute.timeS / 60)} min, ${((x.winnerRoute.distanceM ?? 0) / 1000).toFixed(1)} km ${x.winnerRoute.ref !== undefined ? TraceLog.cite(x.winnerRoute.ref) : ""}`,
+      );
+    }
+    if (x.droppedCategories.length > 0) {
+      lines.push(`- Categories dropped because they are not in the live catalog: ${x.droppedCategories.join(", ")}`);
+    }
+    lines.push("");
   }
 
   if (excluded.length > 0) {

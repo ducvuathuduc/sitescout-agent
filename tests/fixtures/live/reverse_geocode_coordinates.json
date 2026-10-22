@@ -1,0 +1,50 @@
+{
+ "content": [
+  {
+   "type": "text",
+   "text": "{\n  \"coordinates\": {\n    \"lat\": 10.8034834,\n    \"lon\": 106.7375412\n  },\n  \"count\": 1,\n  \"results\": [\n    {\n      \"formatted\": \"Đường Xuân Thuỷ, 23, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam\",\n      \"address_line1\": \"Đường Xuân Thuỷ\",\n      \"address_line2\": \"23, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam\",\n      \"lon\": 106.7375412,\n      \"lat\": 10.8034834,\n      \"place_id\": \"51f75c01e033af5a4059fdc11b2d629b2540f00103f90198eab42003000000c00201920316c490c6b0e1bb9d6e67205875c3a26e20546875e1bbb7\",\n      \"result_type\": \"amenity\",\n      \"rank\": {\n        \"importance\": 0.00006703364614323671,\n        \"popularity\": 4.925215990267755\n      },\n      \"housenumber\": \"23\",\n      \"street\": \"Thảo Điền\",\n      \"postcode\": \"71108\",\n      \"city\": \"Thành phố Thủ Đức\",\n      \"country\": \"Việt Nam\",\n      \"country_code\": \"vn\",\n      \"timezone\": {\n        \"name\": \"Asia/Ho_Chi_Minh\",\n        \"offset_STD\": \"+07:00\",\n        \"offset_DST\": \"+07:00\",\n        \"offset_STD_seconds\": 25200,\n        \"offset_DST_seconds\": 25200\n      },\n      \"bbox\": {\n        \"lon1\": 106.7374912,\n        \"lat1\": 10.8034334,\n        \"lon2\": 106.7375912,\n        \"lat2\": 10.8035334\n      }\n    }\n  ]\n}"
+  }
+ ],
+ "structuredContent": {
+  "coordinates": {
+   "lat": 10.8034834,
+   "lon": 106.7375412
+  },
+  "count": 1,
+  "results": [
+   {
+    "formatted": "Đường Xuân Thuỷ, 23, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam",
+    "address_line1": "Đường Xuân Thuỷ",
+    "address_line2": "23, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam",
+    "lon": 106.7375412,
+    "lat": 10.8034834,
+    "place_id": "51f75c01e033af5a4059fdc11b2d629b2540f00103f90198eab42003000000c00201920316c490c6b0e1bb9d6e67205875c3a26e20546875e1bbb7",
+    "result_type": "amenity",
+    "rank": {
+     "importance": 6.703364614323671e-05,
+     "popularity": 4.925215990267755
+    },
+    "housenumber": "23",
+    "street": "Thảo Điền",
+    "postcode": "71108",
+    "city": "Thành phố Thủ Đức",
+    "country": "Việt Nam",
+    "country_code": "vn",
+    "timezone": {
+     "name": "Asia/Ho_Chi_Minh",
+     "offset_STD": "+07:00",
+     "offset_DST": "+07:00",
+     "offset_STD_seconds": 25200,
+     "offset_DST_seconds": 25200
+    },
+    "bbox": {
+     "lon1": 106.7374912,
+     "lat1": 10.8034334,
+     "lon2": 106.7375912,
+     "lat2": 10.8035334
+    }
+   }
+  ]
+ },
+ "isError": false
+}

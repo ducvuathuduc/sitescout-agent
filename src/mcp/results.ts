@@ -2,13 +2,13 @@
  * Defensive parsers for Geoapify MCP tool-call responses.
  *
  * An MCP `tools/call` result carries `{ content: [...], structuredContent?, isError? }`.
- * The exact JSON shapes of `structuredContent` per tool are NOT yet verified
- * against the live server (key-blocked); these parsers try the most plausible
- * paths (Geoapify REST shapes echoed through the MCP layer) and fail with a
- * descriptive error — never with an invented value — when nothing matches.
+ * Shapes verified against the live server on 2026-10-22: every tool returns a
+ * JSON text block AND `structuredContent` (tools/list publishes an
+ * outputSchema per tool). Geometry tools wrap results as
+ * `{type: "geojson"|"number"|"boolean", data}`. Parsers fail with a
+ * descriptive error — never an invented value — when nothing matches.
  *
- * Every parser is pure and unit-tested against SYNTHETIC fixtures
- * (tests/fixtures/*.json, clearly labeled, not real API responses).
+ * Unit tests use REAL captured responses (tests/fixtures/live/*.json).
  */
 import type { ToolCallResult } from "./client.js";
 
@@ -216,7 +216,11 @@ export function parseGeometryResult(raw: unknown): {
   coordinates: unknown;
 } {
   for (const payload of payloads(raw)) {
-    const o = payload as Record<string, unknown>;
+    let o = payload as Record<string, unknown>;
+    // Live shape (verified 2026-10-22): {type:"geojson", data: Feature|Geometry}
+    if (o && o.type === "geojson" && o.data && typeof o.data === "object") {
+      o = o.data as Record<string, unknown>;
+    }
     const g = (o.geometry ?? o) as Record<string, unknown>;
     if (typeof g.type === "string" && g.coordinates !== undefined) {
       return { type: g.type, coordinates: g.coordinates };
@@ -231,7 +235,9 @@ export function parseGeometryResult(raw: unknown): {
 export function parseMeasureValue(raw: unknown): number {
   for (const payload of payloads(raw)) {
     const o = payload as Record<string, unknown>;
+    // Live shape (verified 2026-10-22): {type:"number", data: 1997724.89}
     const v =
+      (o?.type === "number" ? num(o.data) : undefined) ??
       num(o.value) ?? num(o.area) ?? num(o.result) ?? num(payload);
     if (v !== undefined) return v;
   }
@@ -242,11 +248,22 @@ export function parseMeasureValue(raw: unknown): number {
 export function parseSpatialRelation(raw: unknown): boolean {
   for (const payload of payloads(raw)) {
     const o = payload as Record<string, unknown>;
+    // Live shape (verified 2026-10-22): {type:"boolean", data: true}
+    if (o?.type === "boolean" && typeof o.data === "boolean") return o.data;
     if (typeof o.result === "boolean") return o.result;
     if (typeof o.value === "boolean") return o.value;
     if (typeof payload === "boolean") return payload;
   }
   throw new Error("parseSpatialRelation: no boolean result found in response.");
+}
+
+/** Category list from list_place_categories ({count, categories:[...]}). */
+export function parseCategoryCatalog(raw: unknown): string[] {
+  for (const payload of payloads(raw)) {
+    const cats = asArray((payload as Record<string, unknown> | undefined)?.categories);
+    if (cats) return cats.filter((c): c is string => typeof c === "string");
+  }
+  return [];
 }
 
 /** Human-readable summary for the trace's resultSummary field. */
@@ -281,6 +298,10 @@ export function summarizeToolResult(tool: string, raw: unknown): Record<string, 
         return { result: parseSpatialRelation(raw) };
       case "reverse_geocode_coordinates":
         return { label: parseReverseGeocode(raw) };
+      case "list_place_categories":
+        return { count: parseCategoryCatalog(raw).length };
+      case "calculate_route":
+        return parseRouteSummary(raw);
       default:
         return {};
     }

@@ -90,6 +90,22 @@ interface JsonRpcResponse {
   error?: { code: number | string; message: string; data?: unknown };
 }
 
+/** Detect `{statusCode>=400, message}` payloads inside an MCP text block. */
+export function upstreamError(result: unknown): { statusCode: number; message: string } | undefined {
+  const blocks = (result as { content?: Array<{ text?: unknown }> }).content;
+  const text = Array.isArray(blocks) ? blocks.find((b) => typeof b?.text === "string")?.text : undefined;
+  if (typeof text !== "string" || !text.includes("statusCode")) return undefined;
+  try {
+    const o = JSON.parse(text) as { statusCode?: unknown; message?: unknown };
+    if (typeof o.statusCode === "number" && o.statusCode >= 400) {
+      return { statusCode: o.statusCode, message: String(o.message ?? "") };
+    }
+  } catch {
+    /* not JSON */
+  }
+  return undefined;
+}
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
@@ -174,8 +190,17 @@ export class GeoapifyMcpClient {
     const res = (await this.rawRequest("tools/call", {
       name,
       arguments: validated,
-    })) as { content?: unknown; isError?: boolean };
-    return { result: res.content ?? res, isError: res.isError === true };
+    })) as { content?: unknown; structuredContent?: unknown; isError?: boolean };
+    // Keep the whole MCP result object ({content, structuredContent}); the
+    // parsers in results.ts read structuredContent first, then the text block.
+    // (v0.1 returned res.content — a bare array — which every parser rejected.)
+    const result = Array.isArray(res.content)
+      ? { content: res.content, structuredContent: res.structuredContent }
+      : res;
+    // Geoapify reports upstream 4xx (e.g. unsupported category) as a text
+    // block {statusCode:400,...} with isError=false — surface it as an error.
+    const upstream = upstreamError(result);
+    return { result, isError: res.isError === true || upstream !== undefined };
   }
 
   private async rawRequest(

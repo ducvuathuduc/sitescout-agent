@@ -1,0 +1,957 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"category\": \"catering.cafe\",\n  \"coordinates\": {\n    \"lat\": 10.8034834,\n    \"lon\": 106.7375412\n  },\n  \"radius_meters\": 800,\n  \"count\": 27,\n  \"results\": [\n    {\n      \"name\": \"Starbucks\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 8\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Nguyen Duy Dieu\",\n      \"lon\": 106.7376209,\n      \"lat\": 10.8031005,\n      \"formatted\": \"Starbucks, Nguyen Duy Dieu, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"brand\": \"Starbucks\",\n      \"brand_details\": {\n        \"wikipedia\": \"en:Starbucks\"\n      },\n      \"name_other\": {\n        \"official_name\": \"Starbucks Coffee\"\n      },\n      \"name_international\": {\n        \"vi\": \"Starbucks\"\n      },\n      \"facilities\": {\n        \"internet_access\": true,\n        \"takeaway\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop\"\n      },\n      \"distance\": 43,\n      \"place_id\": \"5126964a2e35af5a405970cd1dfd2f9b2540f00103f901f0773a0001000000920309537461726275636b73\"\n    },\n    {\n      \"name\": \"Cà Phê Chez Nous\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7366554,\n      \"lat\": 10.804076,\n      \"formatted\": \"Cà Phê Chez Nous, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"distance\": 117,\n      \"place_id\": \"51ffdab05c25af5a40593bff76d9af9b2540f00103f9019da830000100000092031243c3a0205068c3aa204368657a204e6f7573\"\n    },\n    {\n      \"name\": \"QUÁN BỤI\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Trần Ngọc Diện\",\n      \"lon\": 106.7385838,\n      \"lat\": 10.8029128,\n      \"formatted\": \"QUÁN BỤI, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"distance\": 130,\n      \"place_id\": \"51bf96fcf444af5a40595f14f362179b2540f00103f901d28f9d060300000092030b5155c3814e2042e1bba449\"\n    },\n    {\n      \"name\": \"Cộng Cà Phê\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7357279,\n      \"lat\": 10.8042032,\n      \"formatted\": \"Cộng Cà Phê, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"brand\": \"Cộng Cà Phê\",\n      \"brand_details\": {\n        \"wikidata\": \"Q63864181\"\n      },\n      \"name_international\": {\n        \"vi\": \"Cộng Cà Phê\"\n      },\n      \"facilities\": {\n        \"takeaway\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop;vietnamese\"\n      },\n      \"distance\": 214,\n      \"place_id\": \"514e50792a16af5a405956ad9685c09b2540f00103f9011c95623b0200000092030f43e1bb996e672043c3a0205068c3aa\"\n    },\n    {\n      \"name\": \"Phuc Long Premium\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"housenumber\": \"87\",\n      \"lon\": 106.7351901,\n      \"lat\": 10.8039153,\n      \"formatted\": \"Phuc Long Premium, 87, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"opening_hours\": \"Mo-Su 07:00-22:30\",\n      \"name_international\": {\n        \"vi\": \"Phúc Long\"\n      },\n      \"contact\": {\n        \"phone\": \"+84 02\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"distance\": 262,\n      \"place_id\": \"51f3f5c65a0daf5a4059108244c99a9b2540f00103f901730660590200000092031150687563204c6f6e67205072656d69756d\"\n    },\n    {\n      \"name\": \"ObsterScream\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7347028,\n      \"lat\": 10.8037536,\n      \"formatted\": \"ObsterScream, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"name_international\": {\n        \"en\": \"ObsterScream\"\n      },\n      \"distance\": 312,\n      \"place_id\": \"51e591e45e05af5a4059a4158497859b2540f00103f901a192ce2a01000000\"\n    },\n    {\n      \"name\": \"Wagwel Canine\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Hẻm 24 Trần Ngọc Diện\",\n      \"housenumber\": \"24/2\",\n      \"lon\": 106.7401389,\n      \"lat\": 10.8047258,\n      \"formatted\": \"Wagwel Canine, 24/2, Hẻm 24 Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"opening_hours\": \"Mo-Su 09:00-21:00\",\n      \"facilities\": {\n        \"internet_access\": true,\n        \"toilets\": true,\n        \"air_conditioning\": true,\n        \"outdoor_seating\": true\n      },\n      \"catering\": {\n        \"diet\": {\n          \"vegan\": true,\n          \"vegetarian\": true\n        }\n      },\n      \"distance\": 316,\n      \"place_id\": \"51d67f8c6f5eaf5a4059b07e2205059c2540f00103f901a7943e020300000092030d57616777656c2043616e696e65\"\n    },\n    {\n      \"name\": \"Wagwel Feline\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Hẻm 24 Trần Ngọc Diện\",\n      \"housenumber\": \"24/2\",\n      \"lon\": 106.7402537,\n      \"lat\": 10.8047212,\n      \"formatted\": \"Wagwel Feline, 24/2, Hẻm 24 Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"website\": \"https://www.wagwelrescue.org/\",\n      \"opening_hours\": \"Mo-Su 09:00-21:00\",\n      \"facilities\": {\n        \"internet_access\": true,\n        \"toilets\": true,\n        \"air_conditioning\": true\n      },\n      \"catering\": {\n        \"diet\": {\n          \"vegan\": true,\n          \"vegetarian\": true\n        }\n      },\n      \"distance\": 327,\n      \"place_id\": \"518d0f0e5160af5a4059b6cbc86a049c2540f00103f901d4a73d020300000092030d57616777656c2046656c696e65\"\n    },\n    {\n      \"name\": \"108 eatery\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Thảo Điền\",\n      \"housenumber\": \"28\",\n      \"lon\": 106.7388527,\n      \"lat\": 10.8062999,\n      \"formatted\": \"108 eatery, 28, Thảo Điền, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"name_international\": {\n        \"en\": \"108 eatery\"\n      },\n      \"distance\": 343,\n      \"place_id\": \"51ecc3d55c49af5a405941892a57d39c2540f00103f9015585a97501000000\"\n    },\n    {\n      \"name\": \"Highlands Coffee\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 2\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Vo Nguyen Giap Boulevard\",\n      \"housenumber\": \"159-161\",\n      \"lon\": 106.740627,\n      \"lat\": 10.8021446,\n      \"formatted\": \"Highlands Coffee, 159-161, Vo Nguyen Giap Boulevard, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"brand\": \"Highlands Coffee\",\n      \"brand_details\": {\n        \"wikidata\": \"Q5759361\",\n        \"wikipedia\": \"vi:Highlands Coffee\"\n      },\n      \"name_international\": {\n        \"en\": \"Highlands Coffee\",\n        \"vi\": \"Highlands Coffee\"\n      },\n      \"facilities\": {\n        \"takeaway\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop;vietnamese\"\n      },\n      \"distance\": 369,\n      \"place_id\": \"5137e2c96e66af5a405975536fb2b29a2540f00103f9019a23c09b01000000920310486967686c616e647320436f66666565\"\n    },\n    {\n      \"name\": \"The Snap Cafe\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Trần Ngọc Diện\",\n      \"lon\": 106.7404338,\n      \"lat\": 10.805285,\n      \"formatted\": \"The Snap Cafe, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"distance\": 374,\n      \"place_id\": \"5198f6724463af5a405931ebc5504e9c2540f00103f901be73773b0200000092030d54686520536e61702043616665\"\n    },\n    {\n      \"name\": \"Hue Cafe\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7338951,\n      \"lat\": 10.8036984,\n      \"formatted\": \"Hue Cafe, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"description\": \"Vietnamese coffee\",\n      \"name_international\": {\n        \"en\": \"Hue Cafe\",\n        \"vi\": \"Hue Cafe\"\n      },\n      \"facilities\": {\n        \"wheelchair\": false,\n        \"air_conditioning\": true,\n        \"outdoor_seating\": true\n      },\n      \"payment_options\": {\n        \"cash\": true,\n        \"cards\": false,\n        \"debit_cards\": false,\n        \"credit_cards\": false\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop\"\n      },\n      \"distance\": 399,\n      \"place_id\": \"51754c2723f8ae5a4059efb14f5b7e9b2540f00103f901888464ac020000009203084875652043616665\"\n    },\n    {\n      \"name\": \"Cà Phê Snap\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Trần Ngọc Diện\",\n      \"lon\": 106.7407473,\n      \"lat\": 10.8054337,\n      \"formatted\": \"Cà Phê Snap, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"distance\": 412,\n      \"place_id\": \"516b065d6768af5a40594b3151ce619c2540f00103f9014cbc46260100000092030d43c3a0205068c3aa20536e6170\"\n    },\n    {\n      \"name\": \"Cà Phê Thảo Điền\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 7\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Trần Ngọc Diện\",\n      \"lon\": 106.740886,\n      \"lat\": 10.8059272,\n      \"formatted\": \"Cà Phê Thảo Điền, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop\"\n      },\n      \"distance\": 455,\n      \"place_id\": \"511d041dad6aaf5a4059e8e96d7da29c2540f00103f901a1dd0a000100000092031743c3a0205068c3aa205468e1baa36f20c49069e1bb816e\"\n    },\n    {\n      \"name\": \"The Coffee House\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7327832,\n      \"lat\": 10.8036583,\n      \"formatted\": \"The Coffee House, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"brand\": \"The Coffee House\",\n      \"brand_details\": {\n        \"wikidata\": \"Q60775742\",\n        \"wikipedia\": \"en:The Coffee House (coffeehouse chain)\"\n      },\n      \"name_international\": {\n        \"en\": \"The Coffee House\",\n        \"vi\": \"The Coffee House\"\n      },\n      \"facilities\": {\n        \"takeaway\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop;vietnamese\"\n      },\n      \"distance\": 521,\n      \"place_id\": \"51bac381ebe5ae5a40596351c719799b2540f00103f9011e95623b0200000092031054686520436f6666656520486f757365\"\n    },\n    {\n      \"name\": \"Gong Cha Thảo Điền Pearl\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 8\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Quốc Hương\",\n      \"housenumber\": \"12\",\n      \"lon\": 106.7331096,\n      \"lat\": 10.8015102,\n      \"formatted\": \"Gong Cha Thảo Điền Pearl, 12, Quốc Hương, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"distance\": 532,\n      \"place_id\": \"518e188744ebae5a405922d2808b5f9a2540f00103f901700660590200000092031d476f6e6720436861205468e1baa36f20c49069e1bb816e20506561726c\"\n    },\n    {\n      \"name\": \"Cà Phê Brobingsu\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Đường Số 38\",\n      \"lon\": 106.732707,\n      \"lat\": 10.8028716,\n      \"formatted\": \"Cà Phê Brobingsu, Đường Số 38, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop\"\n      },\n      \"distance\": 533,\n      \"place_id\": \"5138a3e6abe4ae5a40593ec681fc119b2540f00103f9018dd70a000100000092031243c3a0205068c3aa2042726f62696e677375\"\n    },\n    {\n      \"name\": \"Cà Phê Xì Trum\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 18\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"housenumber\": \"47\",\n      \"lon\": 106.7322998,\n      \"lat\": 10.803361,\n      \"formatted\": \"Cà Phê Xì Trum, 47, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"distance\": 573,\n      \"place_id\": \"5183f7faffddae5a405983c30b22529b2540f00103f9015de50d410100000092031143c3a0205068c3aa2058c3ac205472756d\"\n    },\n    {\n      \"name\": \"Highlands Coffee\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 18\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"lon\": 106.7322501,\n      \"lat\": 10.8032599,\n      \"formatted\": \"Highlands Coffee, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"brand\": \"Highlands Coffee\",\n      \"brand_details\": {\n        \"wikidata\": \"Q5759361\"\n      },\n      \"name_international\": {\n        \"en\": \"Highlands Coffee\",\n        \"vi\": \"Highlands Coffee\"\n      },\n      \"facilities\": {\n        \"takeaway\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop;vietnamese\"\n      },\n      \"distance\": 579,\n      \"place_id\": \"5189ff852fddae5a40596060b1e1449b2540f00103f9011d0fc18e01000000920310486967686c616e647320436f66666565\"\n    },\n    {\n      \"name\": \"Cafio Coffee & Ice Cream\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 4\",\n      \"suburb\": \"Phường Bình Trưng\",\n      \"street\": \"Đường song hành\",\n      \"housenumber\": \"02\",\n      \"lon\": 106.7337222,\n      \"lat\": 10.7991455,\n      \"formatted\": \"Cafio Coffee & Ice Cream, 02, Đường song hành, Phường Bình Trưng, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"website\": \"https://www.facebook.com/Cafio.vn/\",\n      \"opening_hours\": \"Mo-Su 08:00-20:00\",\n      \"contact\": {\n        \"phone\": \"0907577267\"\n      },\n      \"facilities\": {\n        \"internet_access\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop;ice_cream;bingsu;bubble_tea;trà_trái_cây;trà_nhiệt_đới;cake;photobooth;sữa;sữa_chua\"\n      },\n      \"distance\": 636,\n      \"place_id\": \"515956f54df5ae5a4059bb7d569929992540f00103f901dc2707dd02000000920318436166696f20436f6666656520262049636520437265616d\"\n    },\n    {\n      \"name\": \"Aramour Coffee Roasters Thao Dien\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 9\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Le Van Mien\",\n      \"housenumber\": \"7\",\n      \"lon\": 106.7318676,\n      \"lat\": 10.8047856,\n      \"formatted\": \"Aramour Coffee Roasters Thao Dien, 7, Le Van Mien, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"contact\": {\n        \"phone\": \"+84 768025381\"\n      },\n      \"facilities\": {\n        \"internet_access\": true,\n        \"outdoor_seating\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"vietnamese\"\n      },\n      \"distance\": 637,\n      \"place_id\": \"5121c033ebd6ae5a40595f95b0db0c9c2540f00103f901f88dc406030000009203214172616d6f757220436f6666656520526f617374657273205468616f204469656e\"\n    },\n    {\n      \"name\": \"Be Nuts\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 18\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"housenumber\": \"43\",\n      \"lon\": 106.7317089,\n      \"lat\": 10.8032699,\n      \"formatted\": \"Be Nuts, 43, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"building\",\n        \"building.catering\",\n        \"catering\",\n        \"catering.cafe\",\n        \"catering.cafe.coffee\",\n        \"catering.cafe.coffee_shop\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"opening_hours\": \"Mo-Su 07:30-20:30\",\n      \"contact\": {\n        \"phone\": \"+84908561918\"\n      },\n      \"facilities\": {\n        \"internet_access\": true,\n        \"wheelchair\": false,\n        \"air_conditioning\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"coffee_shop\"\n      },\n      \"distance\": 638,\n      \"place_id\": \"51202d8451d4ae5a40595eeca333469b2540f00102f9017c087c50000000009203074265204e757473\"\n    },\n    {\n      \"name\": \"Zero Plant Based\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 5\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Đường D10\",\n      \"lon\": 106.7435779,\n      \"lat\": 10.8040639,\n      \"formatted\": \"Zero Plant Based, Đường D10, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"opening_hours\": \"Mo-Su 06:30-22:30\",\n      \"contact\": {\n        \"phone\": \"+84777811105\"\n      },\n      \"facilities\": {\n        \"wheelchair\": false,\n        \"smoking\": false,\n        \"changing_table\": false,\n        \"outdoor_seating\": true\n      },\n      \"catering\": {\n        \"diet\": {\n          \"halal\": true,\n          \"vegan\": true,\n          \"vegetarian\": true,\n          \"gluten_free\": true\n        }\n      },\n      \"distance\": 663,\n      \"place_id\": \"51d1a1c2c796af5a4059d6c97443ae9b2540f00103f9011f1e3138030000009203105a65726f20506c616e74204261736564\"\n    },\n    {\n      \"name\": \"Hue Cafe Roastery\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71107\",\n      \"district\": \"Khu phố 11\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Thảo Điền\",\n      \"lon\": 106.7333452,\n      \"lat\": 10.8083002,\n      \"formatted\": \"Hue Cafe Roastery, Thảo Điền, Phường An Khánh, Thủ Đức, 71107, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"name_international\": {\n        \"en\": \"Hue Cafe Roastery\",\n        \"vi\": \"Hue Cafe Roastery\"\n      },\n      \"distance\": 703,\n      \"place_id\": \"516eabb420efae5a405955b31886d99d2540f00103f901ba34066f01000000920311487565204361666520526f617374657279\"\n    },\n    {\n      \"name\": \"Cà Phê Rita Võ\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 19\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Đường Số 5\",\n      \"lon\": 106.7328138,\n      \"lat\": 10.7982919,\n      \"formatted\": \"Cà Phê Rita Võ, Đường Số 5, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"distance\": 773,\n      \"place_id\": \"51ae43da6be6ae5a4059cb5246b7b9982540f00103f90170947f090100000092031143c3a0205068c3aa20526974612056c3b5\"\n    },\n    {\n      \"name\": \"Bluish Cafe\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71107\",\n      \"district\": \"Khu phố 11\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Truc Duong\",\n      \"housenumber\": \"15A\",\n      \"lon\": 106.7334551,\n      \"lat\": 10.8092487,\n      \"formatted\": \"Bluish Cafe, 15A, Truc Duong, Phường An Khánh, Thủ Đức, 71107, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"website\": \"http://bluishrecords.com/\",\n      \"name_international\": {\n        \"en\": \"Bluish Cafe\",\n        \"vi\": \"Bluish Cafe\"\n      },\n      \"contact\": {\n        \"phone\": \"+84 798 072 237\"\n      },\n      \"distance\": 779,\n      \"place_id\": \"5167e5a8edf0ae5a405939a979d8559e2540f00103f9011af79dc00200000092030b426c756973682043616665\"\n    },\n    {\n      \"name\": \"TAO BANH MI CAFE\",\n      \"country\": \"Vietnam\",\n      \"country_code\": \"vn\",\n      \"city\": \"Thủ Đức\",\n      \"postcode\": \"71108\",\n      \"district\": \"Khu phố 18\",\n      \"suburb\": \"Phường An Khánh\",\n      \"street\": \"Xuân Thủy\",\n      \"housenumber\": \"44\",\n      \"lon\": 106.7303513,\n      \"lat\": 10.8029248,\n      \"formatted\": \"TAO BANH MI CAFE, 44, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam\",\n      \"categories\": [\n        \"catering\",\n        \"catering.cafe\"\n      ],\n      \"datasource\": {\n        \"sourcename\": \"openstreetmap\",\n        \"attribution\": \"© OpenStreetMap contributors\",\n        \"license\": \"Open Database License\",\n        \"url\": \"https://www.openstreetmap.org/copyright\"\n      },\n      \"website\": \"http://taobanhmicafe.com/\",\n      \"opening_hours\": \"07:00-22:00\",\n      \"contact\": {\n        \"phone\": \"+84 764 861 069\"\n      },\n      \"facilities\": {\n        \"internet_access\": true,\n        \"air_conditioning\": true,\n        \"outdoor_seating\": true,\n        \"takeaway\": true,\n        \"delivery\": true\n      },\n      \"catering\": {\n        \"cuisine\": \"banh_mi\"\n      },\n      \"distance\": 789,\n      \"place_id\": \"51d4056113beae5a4059704b9af5189b2540f00103f901871a5f040300000092031054414f2042414e48204d492043414645\"\n    }\n  ]\n}"
+    }
+  ],
+  "structuredContent": {
+    "category": "catering.cafe",
+    "coordinates": {
+      "lat": 10.8034834,
+      "lon": 106.7375412
+    },
+    "radius_meters": 800,
+    "count": 27,
+    "results": [
+      {
+        "name": "Starbucks",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 8",
+        "suburb": "Phường An Khánh",
+        "street": "Nguyen Duy Dieu",
+        "lon": 106.7376209,
+        "lat": 10.8031005,
+        "formatted": "Starbucks, Nguyen Duy Dieu, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "brand": "Starbucks",
+        "brand_details": {
+          "wikipedia": "en:Starbucks"
+        },
+        "name_other": {
+          "official_name": "Starbucks Coffee"
+        },
+        "name_international": {
+          "vi": "Starbucks"
+        },
+        "facilities": {
+          "internet_access": true,
+          "takeaway": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop"
+        },
+        "distance": 43,
+        "place_id": "5126964a2e35af5a405970cd1dfd2f9b2540f00103f901f0773a0001000000920309537461726275636b73"
+      },
+      {
+        "name": "Cà Phê Chez Nous",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7366554,
+        "lat": 10.804076,
+        "formatted": "Cà Phê Chez Nous, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "distance": 117,
+        "place_id": "51ffdab05c25af5a40593bff76d9af9b2540f00103f9019da830000100000092031243c3a0205068c3aa204368657a204e6f7573"
+      },
+      {
+        "name": "QUÁN BỤI",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Trần Ngọc Diện",
+        "lon": 106.7385838,
+        "lat": 10.8029128,
+        "formatted": "QUÁN BỤI, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "distance": 130,
+        "place_id": "51bf96fcf444af5a40595f14f362179b2540f00103f901d28f9d060300000092030b5155c3814e2042e1bba449"
+      },
+      {
+        "name": "Cộng Cà Phê",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7357279,
+        "lat": 10.8042032,
+        "formatted": "Cộng Cà Phê, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "brand": "Cộng Cà Phê",
+        "brand_details": {
+          "wikidata": "Q63864181"
+        },
+        "name_international": {
+          "vi": "Cộng Cà Phê"
+        },
+        "facilities": {
+          "takeaway": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop;vietnamese"
+        },
+        "distance": 214,
+        "place_id": "514e50792a16af5a405956ad9685c09b2540f00103f9011c95623b0200000092030f43e1bb996e672043c3a0205068c3aa"
+      },
+      {
+        "name": "Phuc Long Premium",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "housenumber": "87",
+        "lon": 106.7351901,
+        "lat": 10.8039153,
+        "formatted": "Phuc Long Premium, 87, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "opening_hours": "Mo-Su 07:00-22:30",
+        "name_international": {
+          "vi": "Phúc Long"
+        },
+        "contact": {
+          "phone": "+84 02"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "distance": 262,
+        "place_id": "51f3f5c65a0daf5a4059108244c99a9b2540f00103f901730660590200000092031150687563204c6f6e67205072656d69756d"
+      },
+      {
+        "name": "ObsterScream",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7347028,
+        "lat": 10.8037536,
+        "formatted": "ObsterScream, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "name_international": {
+          "en": "ObsterScream"
+        },
+        "distance": 312,
+        "place_id": "51e591e45e05af5a4059a4158497859b2540f00103f901a192ce2a01000000"
+      },
+      {
+        "name": "Wagwel Canine",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Hẻm 24 Trần Ngọc Diện",
+        "housenumber": "24/2",
+        "lon": 106.7401389,
+        "lat": 10.8047258,
+        "formatted": "Wagwel Canine, 24/2, Hẻm 24 Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "opening_hours": "Mo-Su 09:00-21:00",
+        "facilities": {
+          "internet_access": true,
+          "toilets": true,
+          "air_conditioning": true,
+          "outdoor_seating": true
+        },
+        "catering": {
+          "diet": {
+            "vegan": true,
+            "vegetarian": true
+          }
+        },
+        "distance": 316,
+        "place_id": "51d67f8c6f5eaf5a4059b07e2205059c2540f00103f901a7943e020300000092030d57616777656c2043616e696e65"
+      },
+      {
+        "name": "Wagwel Feline",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Hẻm 24 Trần Ngọc Diện",
+        "housenumber": "24/2",
+        "lon": 106.7402537,
+        "lat": 10.8047212,
+        "formatted": "Wagwel Feline, 24/2, Hẻm 24 Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "website": "https://www.wagwelrescue.org/",
+        "opening_hours": "Mo-Su 09:00-21:00",
+        "facilities": {
+          "internet_access": true,
+          "toilets": true,
+          "air_conditioning": true
+        },
+        "catering": {
+          "diet": {
+            "vegan": true,
+            "vegetarian": true
+          }
+        },
+        "distance": 327,
+        "place_id": "518d0f0e5160af5a4059b6cbc86a049c2540f00103f901d4a73d020300000092030d57616777656c2046656c696e65"
+      },
+      {
+        "name": "108 eatery",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Thảo Điền",
+        "housenumber": "28",
+        "lon": 106.7388527,
+        "lat": 10.8062999,
+        "formatted": "108 eatery, 28, Thảo Điền, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "name_international": {
+          "en": "108 eatery"
+        },
+        "distance": 343,
+        "place_id": "51ecc3d55c49af5a405941892a57d39c2540f00103f9015585a97501000000"
+      },
+      {
+        "name": "Highlands Coffee",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 2",
+        "suburb": "Phường An Khánh",
+        "street": "Vo Nguyen Giap Boulevard",
+        "housenumber": "159-161",
+        "lon": 106.740627,
+        "lat": 10.8021446,
+        "formatted": "Highlands Coffee, 159-161, Vo Nguyen Giap Boulevard, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "brand": "Highlands Coffee",
+        "brand_details": {
+          "wikidata": "Q5759361",
+          "wikipedia": "vi:Highlands Coffee"
+        },
+        "name_international": {
+          "en": "Highlands Coffee",
+          "vi": "Highlands Coffee"
+        },
+        "facilities": {
+          "takeaway": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop;vietnamese"
+        },
+        "distance": 369,
+        "place_id": "5137e2c96e66af5a405975536fb2b29a2540f00103f9019a23c09b01000000920310486967686c616e647320436f66666565"
+      },
+      {
+        "name": "The Snap Cafe",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Trần Ngọc Diện",
+        "lon": 106.7404338,
+        "lat": 10.805285,
+        "formatted": "The Snap Cafe, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "distance": 374,
+        "place_id": "5198f6724463af5a405931ebc5504e9c2540f00103f901be73773b0200000092030d54686520536e61702043616665"
+      },
+      {
+        "name": "Hue Cafe",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7338951,
+        "lat": 10.8036984,
+        "formatted": "Hue Cafe, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "description": "Vietnamese coffee",
+        "name_international": {
+          "en": "Hue Cafe",
+          "vi": "Hue Cafe"
+        },
+        "facilities": {
+          "wheelchair": false,
+          "air_conditioning": true,
+          "outdoor_seating": true
+        },
+        "payment_options": {
+          "cash": true,
+          "cards": false,
+          "debit_cards": false,
+          "credit_cards": false
+        },
+        "catering": {
+          "cuisine": "coffee_shop"
+        },
+        "distance": 399,
+        "place_id": "51754c2723f8ae5a4059efb14f5b7e9b2540f00103f901888464ac020000009203084875652043616665"
+      },
+      {
+        "name": "Cà Phê Snap",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Trần Ngọc Diện",
+        "lon": 106.7407473,
+        "lat": 10.8054337,
+        "formatted": "Cà Phê Snap, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "distance": 412,
+        "place_id": "516b065d6768af5a40594b3151ce619c2540f00103f9014cbc46260100000092030d43c3a0205068c3aa20536e6170"
+      },
+      {
+        "name": "Cà Phê Thảo Điền",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 7",
+        "suburb": "Phường An Khánh",
+        "street": "Trần Ngọc Diện",
+        "lon": 106.740886,
+        "lat": 10.8059272,
+        "formatted": "Cà Phê Thảo Điền, Trần Ngọc Diện, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop"
+        },
+        "distance": 455,
+        "place_id": "511d041dad6aaf5a4059e8e96d7da29c2540f00103f901a1dd0a000100000092031743c3a0205068c3aa205468e1baa36f20c49069e1bb816e"
+      },
+      {
+        "name": "The Coffee House",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7327832,
+        "lat": 10.8036583,
+        "formatted": "The Coffee House, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "brand": "The Coffee House",
+        "brand_details": {
+          "wikidata": "Q60775742",
+          "wikipedia": "en:The Coffee House (coffeehouse chain)"
+        },
+        "name_international": {
+          "en": "The Coffee House",
+          "vi": "The Coffee House"
+        },
+        "facilities": {
+          "takeaway": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop;vietnamese"
+        },
+        "distance": 521,
+        "place_id": "51bac381ebe5ae5a40596351c719799b2540f00103f9011e95623b0200000092031054686520436f6666656520486f757365"
+      },
+      {
+        "name": "Gong Cha Thảo Điền Pearl",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 8",
+        "suburb": "Phường An Khánh",
+        "street": "Quốc Hương",
+        "housenumber": "12",
+        "lon": 106.7331096,
+        "lat": 10.8015102,
+        "formatted": "Gong Cha Thảo Điền Pearl, 12, Quốc Hương, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "distance": 532,
+        "place_id": "518e188744ebae5a405922d2808b5f9a2540f00103f901700660590200000092031d476f6e6720436861205468e1baa36f20c49069e1bb816e20506561726c"
+      },
+      {
+        "name": "Cà Phê Brobingsu",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Đường Số 38",
+        "lon": 106.732707,
+        "lat": 10.8028716,
+        "formatted": "Cà Phê Brobingsu, Đường Số 38, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop"
+        },
+        "distance": 533,
+        "place_id": "5138a3e6abe4ae5a40593ec681fc119b2540f00103f9018dd70a000100000092031243c3a0205068c3aa2042726f62696e677375"
+      },
+      {
+        "name": "Cà Phê Xì Trum",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 18",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "housenumber": "47",
+        "lon": 106.7322998,
+        "lat": 10.803361,
+        "formatted": "Cà Phê Xì Trum, 47, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "distance": 573,
+        "place_id": "5183f7faffddae5a405983c30b22529b2540f00103f9015de50d410100000092031143c3a0205068c3aa2058c3ac205472756d"
+      },
+      {
+        "name": "Highlands Coffee",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 18",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "lon": 106.7322501,
+        "lat": 10.8032599,
+        "formatted": "Highlands Coffee, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "brand": "Highlands Coffee",
+        "brand_details": {
+          "wikidata": "Q5759361"
+        },
+        "name_international": {
+          "en": "Highlands Coffee",
+          "vi": "Highlands Coffee"
+        },
+        "facilities": {
+          "takeaway": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop;vietnamese"
+        },
+        "distance": 579,
+        "place_id": "5189ff852fddae5a40596060b1e1449b2540f00103f9011d0fc18e01000000920310486967686c616e647320436f66666565"
+      },
+      {
+        "name": "Cafio Coffee & Ice Cream",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 4",
+        "suburb": "Phường Bình Trưng",
+        "street": "Đường song hành",
+        "housenumber": "02",
+        "lon": 106.7337222,
+        "lat": 10.7991455,
+        "formatted": "Cafio Coffee & Ice Cream, 02, Đường song hành, Phường Bình Trưng, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "website": "https://www.facebook.com/Cafio.vn/",
+        "opening_hours": "Mo-Su 08:00-20:00",
+        "contact": {
+          "phone": "0907577267"
+        },
+        "facilities": {
+          "internet_access": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop;ice_cream;bingsu;bubble_tea;trà_trái_cây;trà_nhiệt_đới;cake;photobooth;sữa;sữa_chua"
+        },
+        "distance": 636,
+        "place_id": "515956f54df5ae5a4059bb7d569929992540f00103f901dc2707dd02000000920318436166696f20436f6666656520262049636520437265616d"
+      },
+      {
+        "name": "Aramour Coffee Roasters Thao Dien",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 9",
+        "suburb": "Phường An Khánh",
+        "street": "Le Van Mien",
+        "housenumber": "7",
+        "lon": 106.7318676,
+        "lat": 10.8047856,
+        "formatted": "Aramour Coffee Roasters Thao Dien, 7, Le Van Mien, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "contact": {
+          "phone": "+84 768025381"
+        },
+        "facilities": {
+          "internet_access": true,
+          "outdoor_seating": true
+        },
+        "catering": {
+          "cuisine": "vietnamese"
+        },
+        "distance": 637,
+        "place_id": "5121c033ebd6ae5a40595f95b0db0c9c2540f00103f901f88dc406030000009203214172616d6f757220436f6666656520526f617374657273205468616f204469656e"
+      },
+      {
+        "name": "Be Nuts",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 18",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "housenumber": "43",
+        "lon": 106.7317089,
+        "lat": 10.8032699,
+        "formatted": "Be Nuts, 43, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "building",
+          "building.catering",
+          "catering",
+          "catering.cafe",
+          "catering.cafe.coffee",
+          "catering.cafe.coffee_shop"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "opening_hours": "Mo-Su 07:30-20:30",
+        "contact": {
+          "phone": "+84908561918"
+        },
+        "facilities": {
+          "internet_access": true,
+          "wheelchair": false,
+          "air_conditioning": true
+        },
+        "catering": {
+          "cuisine": "coffee_shop"
+        },
+        "distance": 638,
+        "place_id": "51202d8451d4ae5a40595eeca333469b2540f00102f9017c087c50000000009203074265204e757473"
+      },
+      {
+        "name": "Zero Plant Based",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 5",
+        "suburb": "Phường An Khánh",
+        "street": "Đường D10",
+        "lon": 106.7435779,
+        "lat": 10.8040639,
+        "formatted": "Zero Plant Based, Đường D10, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "opening_hours": "Mo-Su 06:30-22:30",
+        "contact": {
+          "phone": "+84777811105"
+        },
+        "facilities": {
+          "wheelchair": false,
+          "smoking": false,
+          "changing_table": false,
+          "outdoor_seating": true
+        },
+        "catering": {
+          "diet": {
+            "halal": true,
+            "vegan": true,
+            "vegetarian": true,
+            "gluten_free": true
+          }
+        },
+        "distance": 663,
+        "place_id": "51d1a1c2c796af5a4059d6c97443ae9b2540f00103f9011f1e3138030000009203105a65726f20506c616e74204261736564"
+      },
+      {
+        "name": "Hue Cafe Roastery",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71107",
+        "district": "Khu phố 11",
+        "suburb": "Phường An Khánh",
+        "street": "Thảo Điền",
+        "lon": 106.7333452,
+        "lat": 10.8083002,
+        "formatted": "Hue Cafe Roastery, Thảo Điền, Phường An Khánh, Thủ Đức, 71107, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "name_international": {
+          "en": "Hue Cafe Roastery",
+          "vi": "Hue Cafe Roastery"
+        },
+        "distance": 703,
+        "place_id": "516eabb420efae5a405955b31886d99d2540f00103f901ba34066f01000000920311487565204361666520526f617374657279"
+      },
+      {
+        "name": "Cà Phê Rita Võ",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 19",
+        "suburb": "Phường An Khánh",
+        "street": "Đường Số 5",
+        "lon": 106.7328138,
+        "lat": 10.7982919,
+        "formatted": "Cà Phê Rita Võ, Đường Số 5, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "distance": 773,
+        "place_id": "51ae43da6be6ae5a4059cb5246b7b9982540f00103f90170947f090100000092031143c3a0205068c3aa20526974612056c3b5"
+      },
+      {
+        "name": "Bluish Cafe",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71107",
+        "district": "Khu phố 11",
+        "suburb": "Phường An Khánh",
+        "street": "Truc Duong",
+        "housenumber": "15A",
+        "lon": 106.7334551,
+        "lat": 10.8092487,
+        "formatted": "Bluish Cafe, 15A, Truc Duong, Phường An Khánh, Thủ Đức, 71107, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "website": "http://bluishrecords.com/",
+        "name_international": {
+          "en": "Bluish Cafe",
+          "vi": "Bluish Cafe"
+        },
+        "contact": {
+          "phone": "+84 798 072 237"
+        },
+        "distance": 779,
+        "place_id": "5167e5a8edf0ae5a405939a979d8559e2540f00103f9011af79dc00200000092030b426c756973682043616665"
+      },
+      {
+        "name": "TAO BANH MI CAFE",
+        "country": "Vietnam",
+        "country_code": "vn",
+        "city": "Thủ Đức",
+        "postcode": "71108",
+        "district": "Khu phố 18",
+        "suburb": "Phường An Khánh",
+        "street": "Xuân Thủy",
+        "housenumber": "44",
+        "lon": 106.7303513,
+        "lat": 10.8029248,
+        "formatted": "TAO BANH MI CAFE, 44, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+        "categories": [
+          "catering",
+          "catering.cafe"
+        ],
+        "datasource": {
+          "sourcename": "openstreetmap",
+          "attribution": "© OpenStreetMap contributors",
+          "license": "Open Database License",
+          "url": "https://www.openstreetmap.org/copyright"
+        },
+        "website": "http://taobanhmicafe.com/",
+        "opening_hours": "07:00-22:00",
+        "contact": {
+          "phone": "+84 764 861 069"
+        },
+        "facilities": {
+          "internet_access": true,
+          "air_conditioning": true,
+          "outdoor_seating": true,
+          "takeaway": true,
+          "delivery": true
+        },
+        "catering": {
+          "cuisine": "banh_mi"
+        },
+        "distance": 789,
+        "place_id": "51d4056113beae5a4059704b9af5189b2540f00103f901871a5f040300000092031054414f2042414e48204d492043414645"
+      }
+    ]
+  }
+}

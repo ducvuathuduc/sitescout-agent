@@ -1,0 +1,87 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\n  \"query\": \"Xuân Thủy, Thảo Điền, Thủ Đức, Hồ Chí Minh\",\n  \"count\": 2,\n  \"results\": [\n    {\n      \"formatted\": \"Đường Xuân Thuỷ, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam\",\n      \"address_line1\": \"Đường Xuân Thuỷ\",\n      \"address_line2\": \"Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam\",\n      \"lon\": 106.7375412,\n      \"lat\": 10.8034834,\n      \"place_id\": \"51f75c01e033af5a4059fdc11b2d629b2540f00103f90198eab42003000000c00201920316c490c6b0e1bb9d6e67205875c3a26e20546875e1bbb7\",\n      \"result_type\": \"amenity\",\n      \"rank\": {\n        \"importance\": 0.00006703364614323671,\n        \"popularity\": 4.925215990267755,\n        \"confidence\": 0.4725,\n        \"confidence_city_level\": 1,\n        \"confidence_street_level\": 1,\n        \"match_type\": \"full_match\"\n      },\n      \"confidence\": 0.4725,\n      \"street\": \"Thảo Điền\",\n      \"postcode\": \"71108\",\n      \"city\": \"Thành phố Thủ Đức\",\n      \"country\": \"Việt Nam\",\n      \"country_code\": \"vn\",\n      \"timezone\": {\n        \"name\": \"Asia/Ho_Chi_Minh\",\n        \"offset_STD\": \"+07:00\",\n        \"offset_DST\": \"+07:00\",\n        \"offset_STD_seconds\": 25200,\n        \"offset_DST_seconds\": 25200\n      },\n      \"bbox\": {\n        \"lon1\": 106.7374912,\n        \"lat1\": 10.8034334,\n        \"lon2\": 106.7375912,\n        \"lat2\": 10.8035334\n      }\n    },\n    {\n      \"formatted\": \"Sinh Tố - Xuân Thủy, 64, Xuân Thủy, Phường An Khánh, Thành phố Hồ Chí Minh, 71108, Việt Nam\",\n      \"address_line1\": \"Sinh Tố - Xuân Thủy\",\n      \"address_line2\": \"64, Xuân Thủy, Phường An Khánh, Thành phố Hồ Chí Minh, 71108, Việt Nam\",\n      \"lon\": 106.7320594,\n      \"lat\": 10.8031882,\n      \"place_id\": \"51ae6eab0fdaae5a4059f310d77b3b9b2540f00103f901c6fbfd0603000000c0020192031853696e682054e1bb91202d205875c3a26e205468e1bba779\",\n      \"result_type\": \"amenity\",\n      \"rank\": {\n        \"importance\": 0.00006703364614323671,\n        \"popularity\": 5.00017880616743,\n        \"confidence\": 0.08100000000000003,\n        \"confidence_city_level\": 1,\n        \"confidence_street_level\": 0.9,\n        \"match_type\": \"full_match\"\n      },\n      \"confidence\": 0.08100000000000003,\n      \"housenumber\": \"64\",\n      \"street\": \"Xuân Thủy\",\n      \"postcode\": \"71108\",\n      \"city\": \"Thành phố Hồ Chí Minh\",\n      \"country\": \"Việt Nam\",\n      \"country_code\": \"vn\",\n      \"timezone\": {\n        \"name\": \"Asia/Ho_Chi_Minh\",\n        \"offset_STD\": \"+07:00\",\n        \"offset_DST\": \"+07:00\",\n        \"offset_STD_seconds\": 25200,\n        \"offset_DST_seconds\": 25200\n      },\n      \"bbox\": {\n        \"lon1\": 106.7320094,\n        \"lat1\": 10.8031382,\n        \"lon2\": 106.7321094,\n        \"lat2\": 10.8032382\n      }\n    }\n  ]\n}"
+    }
+  ],
+  "structuredContent": {
+    "query": "Xuân Thủy, Thảo Điền, Thủ Đức, Hồ Chí Minh",
+    "count": 2,
+    "results": [
+      {
+        "formatted": "Đường Xuân Thuỷ, Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam",
+        "address_line1": "Đường Xuân Thuỷ",
+        "address_line2": "Thảo Điền, Phường An Khánh, Thành phố Thủ Đức, 71108, Việt Nam",
+        "lon": 106.7375412,
+        "lat": 10.8034834,
+        "place_id": "51f75c01e033af5a4059fdc11b2d629b2540f00103f90198eab42003000000c00201920316c490c6b0e1bb9d6e67205875c3a26e20546875e1bbb7",
+        "result_type": "amenity",
+        "rank": {
+          "importance": 0.00006703364614323671,
+          "popularity": 4.925215990267755,
+          "confidence": 0.4725,
+          "confidence_city_level": 1,
+          "confidence_street_level": 1,
+          "match_type": "full_match"
+        },
+        "confidence": 0.4725,
+        "street": "Thảo Điền",
+        "postcode": "71108",
+        "city": "Thành phố Thủ Đức",
+        "country": "Việt Nam",
+        "country_code": "vn",
+        "timezone": {
+          "name": "Asia/Ho_Chi_Minh",
+          "offset_STD": "+07:00",
+          "offset_DST": "+07:00",
+          "offset_STD_seconds": 25200,
+          "offset_DST_seconds": 25200
+        },
+        "bbox": {
+          "lon1": 106.7374912,
+          "lat1": 10.8034334,
+          "lon2": 106.7375912,
+          "lat2": 10.8035334
+        }
+      },
+      {
+        "formatted": "Sinh Tố - Xuân Thủy, 64, Xuân Thủy, Phường An Khánh, Thành phố Hồ Chí Minh, 71108, Việt Nam",
+        "address_line1": "Sinh Tố - Xuân Thủy",
+        "address_line2": "64, Xuân Thủy, Phường An Khánh, Thành phố Hồ Chí Minh, 71108, Việt Nam",
+        "lon": 106.7320594,
+        "lat": 10.8031882,
+        "place_id": "51ae6eab0fdaae5a4059f310d77b3b9b2540f00103f901c6fbfd0603000000c0020192031853696e682054e1bb91202d205875c3a26e205468e1bba779",
+        "result_type": "amenity",
+        "rank": {
+          "importance": 0.00006703364614323671,
+          "popularity": 5.00017880616743,
+          "confidence": 0.08100000000000003,
+          "confidence_city_level": 1,
+          "confidence_street_level": 0.9,
+          "match_type": "full_match"
+        },
+        "confidence": 0.08100000000000003,
+        "housenumber": "64",
+        "street": "Xuân Thủy",
+        "postcode": "71108",
+        "city": "Thành phố Hồ Chí Minh",
+        "country": "Việt Nam",
+        "country_code": "vn",
+        "timezone": {
+          "name": "Asia/Ho_Chi_Minh",
+          "offset_STD": "+07:00",
+          "offset_DST": "+07:00",
+          "offset_STD_seconds": 25200,
+          "offset_DST_seconds": 25200
+        },
+        "bbox": {
+          "lon1": 106.7320094,
+          "lat1": 10.8031382,
+          "lon2": 106.7321094,
+          "lat2": 10.8032382
+        }
+      }
+    ]
+  }
+}
