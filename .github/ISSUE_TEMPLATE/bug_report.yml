@@ -1,0 +1,28 @@
+name: Bug report
+description: Something did not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the question you asked and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: node dist/cli.js scout "Where should I open ..."
+    validations:
+      required: true
+  - type: textarea
+    id: trace
+    attributes:
+      label: Relevant trace lines
+      description: Paste the trace.jsonl lines ([Tn]) involved. They never contain your key.
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Node 20.x, macOS / web demo / Claude Code"

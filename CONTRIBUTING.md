@@ -1,45 +1,32 @@
 # Contributing to SiteScout
 
+Thanks for helping. SiteScout is small on purpose; these rules keep it trustworthy.
+
 ## Ground rules
 
-- **MCP-first is non-negotiable.** The agent runtime (`src/mcp/`,
-  `src/agent/`) speaks only to `https://api.geoapify.com/v1/mcp`. No REST
-  fallbacks — a missing capability becomes a `docs/FEEDBACK.md` item.
-- **No citation, no claim.** Every new claim path needs trace coverage and a
-  `trace validate` fixture. Numbers that didn't come from a trace entry
-  don't ship.
-- **Never commit** `.env.local`, `logs/*.jsonl`, or
-  `research/smoke/results/`. Committed `examples/**/report.html` must embed
-  `GEOAPIFY_API_KEY_PLACEHOLDER`, never a real key.
+- **No citation, no claim.** Any new number in a report must come from a traced Geoapify call (`[Tn]`).
+- **Never commit keys.** `GEOAPIFY_API_KEY` comes from the environment; `.env.local` is gitignored.
+- **Keep failures honest.** If a run fails or a model misbehaves, keep the evidence and write down what changed.
+- **HCMC first.** New cities are welcome as separate question packs with their own benchmark.
 
-## Layout
-
-- `src/mcp/` — the only network boundary (`client.ts`: handshake, retries,
-  per-tool zod validation; `schemas.ts`: the 11 verified arg shapes;
-  `results.ts`: defensive response parsers).
-- `src/agent/` — plan → act → trace loop (`run.ts`, HeuristicPlanner only),
-  evidence trace (`trace.ts`), credit budgeting (`budget.ts`).
-- `src/scoring/` — pure, deterministic scoring over traced evidence.
-  Weights are versioned (`WEIGHTS_VERSION`); calibration bumps the version.
-- `src/geo/` — standalone Vietnamese address normalization library.
-- `src/report/` — Markdown renderer, Leaflet visual report, static export.
-- `src/playbooks/` — `site-selection` + `meetup-planning` ship runtimes;
-  `coverage-analysis`, `neighborhood-profile`, `tourism-dayplan` are
-  **docs-only** (workflow + questions, no runtime — red-team cut).
-- `src/bench/` — VN-GeoBench scorer; suite data in `bench/vngeobench/`.
-- `tests/` — vitest. Parser tests use SYNTHETIC fixtures (labeled, not real
-  API responses).
-
-## Checks
+## Setup
 
 ```sh
-npm run typecheck   # tsc --noEmit, must be clean
-npm run lint        # eslint, zero warnings
-npm test            # vitest, all green
+npm ci
+npm run typecheck && npm run lint && npm test && npm run build
 ```
 
-New tools, new arg shapes, or new response shapes: update `src/mcp/schemas.ts`
-/ `src/mcp/results.ts` + tests + the correction table in
-`research/track1-geopify-deepdive.md` §1.1. Verify against a live
-`tools/list` snapshot (`./research/smoke/smoke.sh hcmc`, step 00) before
-trusting a shape.
+Tests run offline against recorded fixtures in `tests/fixtures/` — no key needed.
+To run a live analysis, export `GEOAPIFY_API_KEY` and use `node dist/cli.js scout "<question>"`.
+
+## Pull requests
+
+1. Open an issue first for anything bigger than a bug fix.
+2. One topic per PR; include a test for engine or scoring changes.
+3. If you change scoring weights, bump the weights version in `src/engine/scout.ts` and re-record the examples.
+4. CI (typecheck, lint, test, build) must be green.
+
+## Reporting Geoapify findings
+
+Product observations go to `docs/FEEDBACK.md` in the format
+**observation → impact → reproduction → suggestion**, with the raw data committed.

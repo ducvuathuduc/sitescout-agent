@@ -38,5 +38,5 @@
     "lint": "eslint src tests --max-warnings 0"
   },
   "type": "module",
-  "version": "0.1.0"
+  "version": "1.0.0"
 }
