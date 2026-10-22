@@ -2,6 +2,10 @@
 /**
  * sitescout CLI.
  *
+ *   sitescout scout "<question>" [--planner heuristic|llm] [--id <id>]
+ *       Isoline-first engine on the Geoapify REST APIs (geocoding, boundaries,
+ *       places, isoline, route matrix, routing, place details, static maps).
+ *
  *   sitescout ask --question <id> [--region hcmc|hanoi|danang]
  *                 [--playbook site-selection|meetup-planning] [--budget N]
  *       Run a research question end-to-end (plan → MCP tools → trace →
@@ -49,6 +53,7 @@ import { renderReport } from "./report/render.js";
 import { rankCandidates } from "./scoring/model.js";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { cmdScout } from "./scout-cli.js";
 
 loadDotenv({ path: ".env.local" });
 
@@ -249,6 +254,7 @@ async function main(): Promise<void> {
   }
 
   if (cmd === "trace" && rest[0] === "validate") return cmdTraceValidate(rest);
+  if (cmd === "scout") return cmdScout(rest, requireApiKey());
   if (cmd === "ask") return cmdAsk(rest);
   if (cmd === "smoke") return cmdSmoke(rest);
   if (cmd === "report") return cmdReport(rest);
