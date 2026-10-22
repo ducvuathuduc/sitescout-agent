@@ -51,13 +51,13 @@ interface BusinessRule {
 
 /** Keyword → categories. Every category here exists in the live catalog (tested). */
 export const BUSINESS_RULES: BusinessRule[] = [
+  { match: /ti[eệ]m b[aá]nh|b[aá]nh m[iì]|banh mi|l[oò] b[aá]nh|bakery|boulangerie|patisserie/i, business: "bakery", competitor: "commercial.food_and_drink.bakery", demand: ["office", "education.school", "commercial.supermarket"] },
   { match: /c[aà]\s?ph[eê]|coffee|caf[eé]|specialty/i, business: "coffee shop", competitor: "catering.cafe", demand: ["office", "sport.fitness", "commercial.clothing", "education.university"] },
   { match: /tr[aà] s[uữ]a|bubble tea|milk tea/i, business: "bubble tea shop", competitor: "catering.cafe", demand: ["education.school", "education.university", "commercial.shopping_mall"] },
   { match: /nh[aà] thu[oố]c|pharmac|drugstore/i, business: "pharmacy", competitor: "healthcare.pharmacy", demand: ["healthcare.hospital", "healthcare.clinic_or_praxis", "commercial.supermarket"] },
   { match: /ph[oở]|b[uú]n|c[oơ]m|qu[aá]n [aă]n|restaurant|lunch|nh[aà] h[aà]ng|food/i, business: "restaurant", competitor: "catering.restaurant", demand: ["office", "education.university", "commercial.shopping_mall"] },
   { match: /gym|fitness|yoga|ph[oò]ng t[aậ]p/i, business: "gym", competitor: "sport.fitness", demand: ["office", "building.residential", "education.university"] },
   { match: /coworking|v[aă]n ph[oò]ng chia s[eẻ]/i, business: "coworking space", competitor: "office.coworking", demand: ["catering.cafe", "office.company", "education.university"] },
-  { match: /ti[eệ]m b[aá]nh|bakery/i, business: "bakery", competitor: "commercial.food_and_drink.bakery", demand: ["office", "education.school", "commercial.supermarket"] },
   { match: /c[uử]a h[aà]ng ti[eệ]n l[oợ]i|convenience|minimart/i, business: "convenience store", competitor: "commercial.convenience", demand: ["building.residential", "education.school", "office"] },
   { match: /spa|nail|salon|l[aà]m [dđ][eẹ]p|beauty/i, business: "beauty salon", competitor: "service.beauty", demand: ["office", "commercial.shopping_mall", "building.residential"] },
   { match: /nha khoa|dental|dentist/i, business: "dental clinic", competitor: "healthcare.dentist", demand: ["building.residential", "office", "education.school"] },
@@ -166,7 +166,7 @@ export async function llmPlan(question: string, cfg: LlmConfig): Promise<PlanOut
     const body = (await res.json()) as { choices?: Array<{ message?: { content?: string } }>; error?: unknown };
     if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${JSON.stringify(body.error ?? body).slice(0, 200)}`);
     raw = body.choices?.[0]?.message?.content ?? "";
-    return { plan: parseLlmPlan(raw, notes), planner: "llm", model: cfg.model, notes, raw };
+    return { plan: parseLlmPlan(raw, notes, question), planner: "llm", model: cfg.model, notes, raw };
   } catch (e) {
     const fb = heuristicPlan(question);
     return { ...fb, notes: [`LLM plan rejected (${e instanceof Error ? e.message : String(e)}) — heuristic fallback`, ...fb.notes], raw };
@@ -174,7 +174,7 @@ export async function llmPlan(question: string, cfg: LlmConfig): Promise<PlanOut
 }
 
 /** Parse + validate a model's JSON (also used by the Workers AI path). */
-export function parseLlmPlan(raw: string, notes: string[]): ScoutPlan {
+export function parseLlmPlan(raw: string, notes: string[], question?: string): ScoutPlan {
   const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
   const obj = JSON.parse(json) as Record<string, unknown>;
   // tolerate small type slips before strict validation
@@ -184,5 +184,35 @@ export function parseLlmPlan(raw: string, notes: string[]): ScoutPlan {
   if (typeof obj.candidates === "number") obj.candidates = Math.min(8, Math.max(5, Math.round(obj.candidates)));
   if (Array.isArray(obj.demandCategories)) obj.demandCategories = obj.demandCategories.slice(0, 4);
   if (Array.isArray(obj.origins)) obj.origins = obj.origins.slice(0, 3);
-  return validatePlan(obj as ScoutPlan, notes);
+  const plan = validatePlan(obj as ScoutPlan, notes);
+  return question ? reconcileArea(question, reconcileCompetitor(question, plan, notes), notes) : plan;
+}
+
+/**
+ * When the question names an area we have a verified geocode text for (AREA_ALIASES),
+ * use it instead of the model's free-text area: the model once sent "Quận 3" to a
+ * point in Phường Minh Phụng.
+ */
+export function reconcileArea(question: string, plan: ScoutPlan, notes: string[]): ScoutPlan {
+  const alias = AREA_ALIASES.find((a) => a.match.test(question));
+  if (!alias || plan.area === alias.area) return plan;
+  notes.push(`area "${plan.area}" replaced by the verified geocode text "${alias.area}"`);
+  const keep = (o: string): boolean => !alias.area.includes(o.split(",")[0]);
+  const origins = plan.origins.filter(keep);
+  return { ...plan, area: alias.area, origins: origins.length ? origins : DEFAULT_ORIGINS.filter(keep).slice(0, 3) };
+}
+
+/**
+ * Guard against a model picking the wrong competitor family (e.g. catering.cafe
+ * for a bánh mì bakery). When the question names a business we have a rule for,
+ * the rule's competitor wins unless the model chose that category or a subcategory of it.
+ */
+export function reconcileCompetitor(question: string, plan: ScoutPlan, notes: string[]): ScoutPlan {
+  const rule = BUSINESS_RULES.find((r) => r.match.test(question));
+  if (!rule) return plan;
+  const c = plan.competitorCategory;
+  if (c === rule.competitor || c.startsWith(rule.competitor + ".")) return plan;
+  notes.push(`competitor ${c} does not match "${rule.business}" — using ${rule.competitor}`);
+  const demand = plan.demandCategories.filter((d) => d !== rule.competitor);
+  return { ...plan, business: plan.business || rule.business, competitorCategory: rule.competitor, demandCategories: demand.length ? demand : rule.demand.slice(0, 3) };
 }

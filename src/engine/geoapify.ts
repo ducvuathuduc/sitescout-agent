@@ -340,6 +340,26 @@ export class GeoapifyApi {
     throw new Error("isoline: still pending after 10 polls");
   }
 
+  /** Several isochrone bands (e.g. 5/10/15 min) in ONE request; features sorted by range ascending. */
+  async isolineBands(o: { lat: number; lon: number; mode: "walk" | "bicycle" | "scooter" | "motorcycle" | "drive"; ranges: number[] }): Promise<{ features: Feature[]; seq: number }> {
+    const params: Params = { lat: o.lat, lon: o.lon, type: "time", mode: o.mode, range: o.ranges.join(",") };
+    for (let i = 0; i < 10; i++) {
+      const { data, record } = await this.request<FeatureCollection & { properties?: { id?: string } }>(
+        "isoline", "GET", "/v1/isoline", params, undefined,
+        (d) => ({ mode: o.mode, range: o.ranges.join(","), type: "time", bands: d.features?.length ?? 0, geometry: d.features?.length ? "bands" : "pending" }),
+        () => o.ranges.length,
+      );
+      if (data.features?.length) {
+        const fs = [...data.features].sort((a, b) => Number(a.properties.range ?? 0) - Number(b.properties.range ?? 0));
+        return { features: fs, seq: record.seq };
+      }
+      const pendingId = data.properties?.id;
+      if (pendingId) params.id = pendingId;
+      await sleep(1000);
+    }
+    throw new Error("isoline: still pending after 10 polls");
+  }
+
   /* ----------------------------- Routing ----------------------------- */
 
   async routeMatrix(o: { sources: Array<{ lat: number; lon: number }>; targets: Array<{ lat: number; lon: number }>; mode: string; traffic?: "free_flow" | "approximated" }): Promise<{ timesS: number[][]; distancesM: number[][]; seq: number }> {

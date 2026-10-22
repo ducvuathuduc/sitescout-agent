@@ -6,7 +6,9 @@ By the end you will have asked SiteScout *"Where should I open a specialty coffe
 read the ranked shortlist, followed one number back to the exact Geoapify request that produced it, and
 connected the same engine to an AI assistant through MCP.
 
-Everything shown here comes from real runs recorded on 2026-10-22 and committed in [`examples/`](../examples/).
+Everything shown here comes from real runs, recorded on 2026-10-22 and committed in [`examples/`](../examples/),
+plus one live web run recorded on 2026-10-23. The screenshots are of the current web demo (design v2, see
+[docs/design/DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md)).
 
 > Video version: [sitescout-tutorial.mp4](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) follows these same chapters.
 
@@ -28,20 +30,99 @@ The key idea: a shop's catchment is **where people can walk in 10 minutes**, not
 Isoline API draws that area, and its Places API can count POIs *inside* it by id. Everything else is
 bookkeeping — and the bookkeeping is what makes the answer trustworthy.
 
-## 2. Try it in the browser first (2 min)
+## 2. Try it in the browser first (5 min)
 
-Open **https://sitescout.huynhthanh.workers.dev**.
+Open **https://sitescout.huynhthanh.workers.dev**. On a laptop the screen has three parts: a blue **rail** on the left
+(about, GitHub, tutorial, MCP setup), the **map** with a floating legend, and the **panel** on the right. On a phone the
+panel turns into a bottom sheet. Drag or tap its handle to resize it.
 
-1. The map opens on a **recorded run** (instant, costs nothing): 7 blue walking isochrones in Thảo Điền and a
-   shortlist on the right.
-2. Click candidate **#2** on the map or in the list. The card shows the score breakdown, the 10-minute walk
-   area, drive times, and **Evidence (Geoapify calls)** — the `[Tn]` refs behind each number.
-3. Pick another question (pharmacy in Bình Thạnh, office lunch in District 1) or type your own, then press
-   **Run live analysis**. Live runs go through a Cloudflare Worker that holds the Geoapify key, with per-visitor
-   and daily caps. When the daily cap is reached, the demo says so and falls back to recorded runs.
-4. The **Geoapify calls** panel lists every request of the run, with latency.
+![SiteScout default view](design/overhaul/after-default.jpg)
 
-![Candidate detail](assets/detail.jpg)
+### 2.1 Read the answer first
+
+The map opens on a **recorded run** (instant, no credits): *a specialty coffee shop in Thảo Điền*. Under the question
+box, **Best spot for a coffee shop** gives the answer straight away: site **#1, 159 Võ Nguyên Giáp, score 0.66**,
+with four numbers. In this run they are 4 demand places, 4 competitors, a 34′ average drive and a 0.31 km² walk zone.
+**How the agent planned this** opens the plan: area, planner, competitor category, demand categories, walk minutes
+and origins.
+
+On the map, each candidate is a numbered pin. Its colour is its score, from light (lower) to dark blue (higher). Each
+candidate's 10-minute walk zone is a dashed outline. Site #1 is filled with **5 / 10 / 15-minute walking bands**,
+explained in the legend.
+
+### 2.2 Ranking and "why this spot"
+
+The **Ranking** tab lists all 7 sites with a score bar. Hover a row and its pin and walk zone light up on the map.
+Hover a pin and the row lights up. Click a row (or a pin) to open it:
+
+- **Score breakdown:** four bars with their weights. Demand 35 %, competition 25 %, access 25 %, reach 15 %.
+- **Why this spot:** one sentence per factor, each with its rank among the 7 sites and the `[Tn]` calls behind it.
+  For example: *"4 direct competitors (cafe) in the same zone — #4 of 7 for low competition. [T14] [T15] [T16] [T17]"*.
+
+![Score breakdown and why this spot](design/overhaul/after-detail.jpg)
+
+### 2.3 Reach explorer: walk, bike, motorbike
+
+Inside an open site, **Reach explorer** draws 5 / 10 / 15-minute bands for **Walk**, **Bike** or **Motorbike**. Each
+press is one live Geoapify Isoline call with three ranges (`range=300,600,900`, about 3 credits). It shows up as a new
+`[Tn]` in Evidence. The walking bands for the top 3 sites of each example are pre-recorded, so they cost nothing.
+
+![Motorbike bands](design/overhaul/after-reach.jpg)
+
+### 2.4 Compare
+
+The **Compare** tab puts the top 3 side by side by default. To choose your own, tick up to 3 checkboxes in Ranking.
+The best value in each row is green. Below the table, **Why #1 beats #2** names the factors that decide it, with
+evidence chips.
+
+![Compare](design/overhaul/after-compare.jpg)
+
+### 2.5 Evidence: follow any number
+
+Click any `[Tn]` chip. The **Evidence** tab opens at that call and shows the method, the endpoint (no key: requests go
+through the demo proxy), the status, the latency and the credits. The tab lists every Geoapify call in the run. The
+recorded coffee run has 57, plus 3 for the pre-recorded bands.
+
+![Evidence](design/overhaul/after-evidence.jpg)
+
+### 2.6 Map layers
+
+The legend has toggles for **Walk zones**, **Competitors** (red diamonds), **Demand places** (teal dots) and
+**Density hexagons**. The hexagons are 120 m bins of the places already fetched, so they use no extra credits. A hex
+is red where competitors make up half or more of its places. Hover a hexagon or a place for its counts or name.
+
+![Density hexagons](design/overhaul/after-hex.jpg)
+
+### 2.7 Ask your own question (live)
+
+Type a question in English or Vietnamese, for example *"Mở tiệm bánh mì ở Quận 3 thì chỗ nào tốt?"*. Choose **AI plan**
+(an LLM on Cloudflare Workers AI writes the plan, which is checked against the Geoapify category list) or **Rules**
+(keyword rules). Then press **Analyze**. The panel shows the **agent plan** as steps, ticking each one as it finishes,
+with a live count of calls and credits. Each walk zone appears on the map as soon as its call returns.
+
+![Running](design/overhaul/after-running.jpg)
+
+In our recorded live run (2026-10-23, 48 calls, roughly 40 s) the model picked `catering.cafe` as the competitor for a
+bakery and `Phường 6, Quận 3` as the area. The engine replaced both with the known-good values
+(`commercial.food_and_drink.bakery`, and the verified geocode text for District 3) and wrote the change into **Notes**
+under *How the agent planned this*. A live run uses about 80–130 credits. The quota bar under the examples shows how
+much of the demo's shared daily budget (1,500 credits) is left.
+
+### 2.8 Share and export
+
+- **Share link** copies a URL that opens the same analysis, including the selected site and tab. Recorded runs get a
+  `#ex=…` link. A live run is stored once (no extra Geoapify calls) and gets a short `#r=…` link, for example
+  <https://sitescout.huynhthanh.workers.dev/#r=2vz43hp5>.
+- **Export PDF** prints an A4 report: the map, the ranking table, "why this spot" for the top 3 with `[Tn]`
+  references, the full call list and the limitations. Example: [sample-report.pdf](assets/sample-report.pdf).
+
+### 2.9 When the live budget is used up
+
+The Worker caps the demo at 1,500 credits a day overall and 180 calls per visitor. When a cap is hit, an amber banner
+says so, shows the closest recorded run instead, and says when live runs reset (07:00 UTC+7). Any other failure gets
+a red banner with **Retry** and **Retry with rules planner**.
+
+![Quota fallback](design/overhaul/after-quota.jpg)
 
 ## 3. Install and run it yourself (5 min)
 
@@ -170,7 +251,8 @@ The biggest win was on old-ward street addresses (2/8 → 6/8). What we could no
 ## 7. Use it from an AI assistant (5 min)
 
 SiteScout includes an MCP server with five tools: `plan_site_question`, `scout_site`, `resolve_place`,
-`walk_isochrone`, `get_evidence`.
+`walk_isochrone`, `get_evidence`. In the web demo, the plug icon at the top of the panel (or **Use from Claude / Cursor**
+in the rail) opens these setup commands, with copy buttons.
 
 ```sh
 # Claude Code

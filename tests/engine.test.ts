@@ -4,7 +4,7 @@
  * generation, scoring and rendering deterministically.
  */
 import { describe, expect, it } from "vitest";
-import { BUSINESS_RULES, heuristicPlan, parseLlmPlan, AREA_ALIASES } from "../src/engine/plan.js";
+import { BUSINESS_RULES, heuristicPlan, parseLlmPlan, AREA_ALIASES, reconcileCompetitor } from "../src/engine/plan.js";
 import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
 import { runScout } from "../src/engine/scout.js";
@@ -22,6 +22,19 @@ describe("planner", () => {
     const p = heuristicPlan("Mở nhà thuốc ở Bình Thạnh thì chỗ nào tốt?").plan;
     expect(p.competitorCategory).toBe("healthcare.pharmacy");
     expect(p.area).toContain("Hàng Xanh");
+  });
+  it("bánh mì → bakery competitor, even when the AI picks catering.cafe", () => {
+    expect(heuristicPlan("Mở tiệm bánh mì ở Quận 3").plan.competitorCategory).toBe("commercial.food_and_drink.bakery");
+    const notes: string[] = [];
+    const raw = JSON.stringify({ business: "bánh mì shop", competitorCategory: "catering.cafe", demandCategories: ["office", "education.school"], area: "Quận 3, Hồ Chí Minh", walkMinutes: 10, candidates: 7, origins: ["Chợ Bến Thành, Quận 1, Hồ Chí Minh"] });
+    const p = parseLlmPlan(raw, notes, "Where should I open a bánh mì bakery in District 3?");
+    expect(p.competitorCategory).toBe("commercial.food_and_drink.bakery");
+    expect(notes.join(" ")).toMatch(/does not match/);
+    // a subcategory of the rule's competitor is kept
+    const keep = reconcileCompetitor("coffee in Thảo Điền", { ...p, competitorCategory: "catering.cafe.coffee_shop" }, []);
+    expect(keep.competitorCategory).toBe("catering.cafe.coffee_shop");
+    // the question names District 3, so the verified alias text wins over the model's area
+    expect(p.area).toBe("Hồ Con Rùa, Quận 3, Hồ Chí Minh");
   });
   it("aliases cover the three HCMC questions", () => {
     for (const q of ["Thảo Điền", "Bình Thạnh", "District 1"]) expect(AREA_ALIASES.some((a) => a.match.test(q))).toBe(true);

@@ -8,6 +8,8 @@
  *  /api/plan       optional LLM planner on Workers AI (no third-party key);
  *                  the browser validates the JSON with zod before use.
  *  /api/status     today's usage vs caps (shown in the UI).
+ *  /api/share      POST a finished run → short id; GET /api/share/<id> → the run
+ *                  (D1, 1.5 MB cap, 20 shares per visitor per day). No Geoapify credits.
  *  everything else static assets (web/public).
  *
  * When a cap is reached the proxy answers 429 {fallback:true} and the UI
@@ -26,17 +28,17 @@ function serveEmbedded(url: URL): Response {
 
 // 404 layout follows the CARTO error page (centred badge, title, one line, one action); our colours/copy.
 const NOT_FOUND_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 — SiteScout</title><link rel="icon" href="/favicon.svg"><style>
-@font-face{font-family:"Open Sans";src:url(/fonts/open-sans-latin-400-normal.woff2) format("woff2");font-weight:400}
-@font-face{font-family:"Open Sans";src:url(/fonts/open-sans-latin-600-normal.woff2) format("woff2");font-weight:600}
-html,body{margin:0;height:100%;background:#1785FB;color:#fff;font-family:"Open Sans",system-ui,sans-serif}
+@font-face{font-family:"Be Vietnam Pro";src:url(/fonts/be-vietnam-pro-latin-400-normal.woff2) format("woff2");font-weight:400}
+@font-face{font-family:"Be Vietnam Pro";src:url(/fonts/be-vietnam-pro-latin-600-normal.woff2) format("woff2");font-weight:600}
+html,body{margin:0;height:100%;background:#1570EF;color:#fff;font-family:"Be Vietnam Pro",system-ui,sans-serif}
 header{display:flex;justify-content:space-between;align-items:center;padding:24px 15%;font-weight:600;letter-spacing:.2em;font-size:13px}
 header a{color:#fff;text-decoration:none;letter-spacing:0;font-size:13px}
 main{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100% - 140px);text-align:center}
 .badge{width:68px;height:68px;border:2px solid rgba(255,255,255,.35);border-radius:50%;display:grid;place-items:center;margin-bottom:24px}
 h1{font-size:22px;font-weight:600;margin:0 0 10px}p{font-size:18px;line-height:1.5;max-width:420px;margin:0 0 26px}
-.btn{background:#fff;color:#1785FB;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none}
+.btn{background:#fff;color:#1570EF;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none}
 </style></head><body><header><span>SITESCOUT</span><a href="https://github.com/ducvuathuduc/sitescout-agent">GitHub</a></header><main>
-<div class="badge"><svg width="24" height="27" viewBox="0 0 24 27"><path d="M12 1C6.5 1 2 5.3 2 10.6 2 17.6 12 26 12 26s10-8.4 10-15.4C22 5.3 17.5 1 12 1z" fill="#fff"/><circle cx="12" cy="10.5" r="3.6" fill="#1785FB"/></svg></div>
+<div class="badge"><svg width="24" height="27" viewBox="0 0 24 27"><path d="M12 1C6.5 1 2 5.3 2 10.6 2 17.6 12 26 12 26s10-8.4 10-15.4C22 5.3 17.5 1 12 1z" fill="#fff"/><circle cx="12" cy="10.5" r="3.6" fill="#1570EF"/></svg></div>
 <h1>404 ERROR</h1><p>This place isn't on our map. The demo covers Ho Chi Minh City site analyses.</p><a class="btn" href="/">Back to the map</a></main></body></html>`;
 
 export interface Env {
@@ -89,7 +91,8 @@ function scopeError(path: string, q: URLSearchParams, body: unknown): string | n
     if (!/^(rect|circle|geometry):/.test(f)) return "filter required";
   }
   if (path === "/v1/isoline") {
-    if (Number(q.get("range")) > 1800) return "range too large";
+    const ranges = (q.get("range") ?? "").split(",").map(Number);
+    if (ranges.length > 3 || ranges.some((r) => !(r > 0 && r <= 1800))) return "range too large";
     if (!["walk", "drive", "bicycle", "scooter", "motorcycle"].includes(q.get("mode") ?? "")) return "mode not allowed";
   }
   if (path === "/v1/routing") {
@@ -113,6 +116,7 @@ function credits(path: string, data: unknown, body: unknown): number {
     const s = b?.sources?.length ?? 1, t = b?.targets?.length ?? 1;
     return Math.max(s, t) * Math.min(s, t, 10);
   }
+  if (path === "/v1/isoline") return Math.max(1, ((data as { features?: unknown[] })?.features?.length ?? 1));
   return 1;
 }
 
@@ -223,6 +227,29 @@ async function plan(req: Request, env: Env): Promise<Response> {
   return json({ raw, model: LLM_MODEL });
 }
 
+const SHARE_MAX = 1_500_000;
+async function share(req: Request, env: Env, url: URL): Promise<Response> {
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, day TEXT NOT NULL, ip TEXT NOT NULL, body TEXT NOT NULL)").run();
+  if (req.method === "GET") {
+    const id = url.pathname.split("/")[3] ?? "";
+    if (!/^[a-z0-9]{8}$/.test(id)) return json({ error: "bad id" }, 400);
+    const row = await env.DB.prepare("SELECT body FROM shares WHERE id=?").bind(id).first<{ body: string }>();
+    if (!row) return json({ error: "shared run not found" }, 404);
+    return new Response(row.body, { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400" } });
+  }
+  const text = await req.text();
+  if (text.length > SHARE_MAX) return json({ error: "run too large to share" }, 413);
+  let r: { candidates?: unknown[]; calls?: unknown[]; engine?: string };
+  try { r = JSON.parse(text); } catch { return json({ error: "bad json" }, 400); }
+  if (!Array.isArray(r.candidates) || !Array.isArray(r.calls) || !r.engine) return json({ error: "not a SiteScout run" }, 400);
+  const ip = await visitor(req);
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM shares WHERE day=? AND ip=?").bind(today(), ip).first<{ n: number }>();
+  if ((n?.n ?? 0) >= 20) return json({ error: "share limit reached for today" }, 429);
+  const id = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
+  await env.DB.prepare("INSERT INTO shares(id,day,ip,body) VALUES(?,?,?,?)").bind(id, today(), ip, text).run();
+  return json({ id });
+}
+
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
@@ -230,6 +257,8 @@ export default {
       if (url.pathname.startsWith("/geo/")) return await proxyGeo(req, env, url, ctx);
       if (url.pathname.startsWith("/tiles/")) return await proxyTile(req, env, url, ctx);
       if (url.pathname === "/api/plan" && req.method === "POST") return await plan(req, env);
+      if (url.pathname === "/api/share" && req.method === "POST") return await share(req, env, url);
+      if (url.pathname.startsWith("/api/share/") && req.method === "GET") return await share(req, env, url);
       if (url.pathname === "/api/status") {
         const u = await usage(env, await visitor(req));
         return json({ day: today(), credits: u.credits, creditCap: Number(env.DAILY_CREDIT_CAP ?? 1500), yourCalls: u.ipCalls, yourCap: Number(env.PER_IP_CALL_CAP ?? 180), tiles: u.tiles, liveKey: Boolean(env.GEOAPIFY_KEY) });

@@ -34,6 +34,22 @@ trace file holding the exact request (without the key), its status, latency and 
 
 ## ✨ Features
 
+**New in the web demo (v1.1):**
+
+- 🧭 **"Why this spot" plus Compare.** Every site gets a score breakdown with one evidence-linked sentence per factor
+  (*"4 direct competitors (cafe) in the same zone — #4 of 7 for low competition [T14]…"*). Compare puts up to 3 sites
+  side by side and explains why #1 beats #2.
+- 🛵 **Reach explorer.** 5 / 10 / 15-minute bands for **walk, bike or motorbike** around any site. It is one Geoapify
+  Isoline call with three ranges (~3 credits), cached at the edge.
+- 🔗 **Share link and PDF report.** A link opens the exact analysis, including live runs. Export PDF gives an A4 report
+  with the map, ranking, reasons and the full call list ([sample](docs/assets/sample-report.pdf)).
+- 🔌 **One-click MCP setup.** The plug button opens copy-ready commands for Claude Code and Cursor / Claude Desktop.
+- Design system v2: Be Vietnam Pro, AA contrast, numbered score-coloured pins, competitor and demand layers, density
+  hexagons, agent-plan progress, quota and error states, and a mobile bottom sheet.
+  [Before/after](docs/design/DESIGN_SYSTEM.md).
+
+**Core:**
+
 - **Isoline-first catchments.** Real walking (or motorbike/drive) isochrones from the Geoapify Isoline API, not circles.
   POIs are counted with `filter=geometry:<isoline id>`, so "inside a 10-minute walk" means exactly that.
 - **Evidence trace for every number.** `trace.jsonl` holds one line per API call; `[Tn]` in the report points at it.
@@ -57,7 +73,7 @@ trace file holding the exact request (without the key), its status, latency and 
 Each folder also has `report.html` (interactive map), `map.jpg` (Geoapify Static Maps) and `result.json`.
 Scores are min-max normalised within one question, so they compare candidates, not cities.
 
-<img src="docs/assets/detail.jpg" alt="Candidate detail: score breakdown, 10-minute walk area, drive times and the Geoapify calls behind them" width="860">
+<img src="docs/assets/detail.jpg" alt="Candidate detail: score breakdown, why this spot with evidence refs, reach explorer" width="860">
 
 ## 🧭 How it works
 
@@ -165,9 +181,11 @@ boundaries gap) are written up with reproductions in [docs/FEEDBACK.md](docs/FEE
 
 ## 🎨 Design
 
-The web demo follows a measured reference — CARTO Builder public maps — rather than an invented UI.
-Measurements, side-by-side screenshots and the remaining differences are in
-[docs/design/REFERENCE_RESEARCH.md](docs/design/REFERENCE_RESEARCH.md).
+The web demo uses a small design system: a 4/8 px grid, one type scale, Be Vietnam Pro with full Vietnamese glyphs,
+semantic colours checked for WCAG AA, and progressive disclosure (summary → ranking → breakdown → evidence).
+The frame (rail, floating legend, right panel) is inspired by CARTO Builder public maps. It is not a pixel copy.
+Tokens, map encoding and before/after screenshots: [docs/design/DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md).
+The original reference measurements: [docs/design/REFERENCE_RESEARCH.md](docs/design/REFERENCE_RESEARCH.md).
 
 ## ✅ Can and cannot
 
@@ -185,7 +203,8 @@ every number; run from a browser, a terminal or an AI assistant; run free within
 - [x] HCMC address benchmark and Geoapify feedback
 - [ ] Hanoi and Đà Nẵng question packs
 - [ ] Rent and footfall layers from open sources where licences allow
-- [ ] Compare two shortlists side by side in the web demo
+- [x] Compare candidates side by side, reach explorer (walk/bike/motorbike), share link and PDF export
+- [ ] Compare two shortlists (two questions) side by side
 
 ## 🧑‍💻 Development
 

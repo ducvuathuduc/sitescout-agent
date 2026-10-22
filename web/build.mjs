@@ -24,6 +24,8 @@ mkdirSync(join(here, "public/examples"), { recursive: true });
 for (const d of readdirSync(join(root, "examples"))) {
   const f = join(root, "examples", d, "result.json");
   if (existsSync(f)) copyFileSync(f, join(here, "public/examples", `${d}.json`));
+  const b = join(root, "examples", d, "bands.json");
+  if (existsSync(b)) copyFileSync(b, join(here, "public/examples", `${d}.bands.json`));
 }
 
 // Embed public/ into the Worker bundle (worker/assets.gen.ts). Wrangler's

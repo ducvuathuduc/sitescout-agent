@@ -29,7 +29,7 @@ import { runScout, resolvePlace, type ScoutResult } from "./engine/scout.js";
 import { renderMarkdown } from "./engine/render.js";
 import { CATEGORY_SET } from "./engine/categories.js";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const DEMO_PROXY = "https://sitescout.huynhthanh.workers.dev/geo";
 
 function makeApi(creditCap: number): GeoapifyApi {
