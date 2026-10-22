@@ -14,7 +14,7 @@
 
 <a href="https://sitescout.huynhthanh.workers.dev"><img src="docs/assets/demo.gif" alt="SiteScout demo: a question becomes 7 walking isochrones and a ranked shortlist" width="860"></a>
 
-🎬 Videos (v1.0.0 release assets): [60-second demo](https://github.com/ducvuathuduc/sitescout-agent/releases/download/v1.0.0/sitescout-demo-16x9.mp4) · [full tutorial](https://github.com/ducvuathuduc/sitescout-agent/releases/download/v1.0.0/sitescout-tutorial.mp4) · [vertical cut](https://github.com/ducvuathuduc/sitescout-agent/releases/download/v1.0.0/sitescout-demo-9x16.mp4)
+🎬 Videos: [demo (67 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-16x9.mp4) · [full tutorial](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) · [vertical cut](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-9x16.mp4)
 
 </div>
 

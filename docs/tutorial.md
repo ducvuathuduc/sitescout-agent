@@ -8,7 +8,7 @@ connected the same engine to an AI assistant through MCP.
 
 Everything shown here comes from real runs recorded on 2026-10-22 and committed in [`examples/`](../examples/).
 
-> Video version: the full tutorial video follows these same chapters (see the v1.0.0 release assets).
+> Video version: [sitescout-tutorial.mp4](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) follows these same chapters.
 
 ---
 
