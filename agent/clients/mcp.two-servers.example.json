@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "sitescout": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/sitescout-agent/dist/mcp-server.js"],
+      "env": { "GEOAPIFY_API_KEY": "YOUR_KEY" }
+    },
+    "geoapify": {
+      "type": "http",
+      "url": "https://api.geoapify.com/v1/mcp",
+      "headers": { "x-api-key": "YOUR_KEY" }
+    }
+  }
+}

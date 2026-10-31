@@ -1,0 +1,46 @@
+{
+  "_about": "One recorded Geoapify MCP tools/call (search_places). Source: tests/fixtures/live/search_places_cafe.json, recorded 2026-10-22. The request is reconstructed from the arguments that the response echoes (category, coordinates, radius_meters). The fixture does not echo limit, so limit is omitted here. The id is illustrative. The result keeps structuredContent only, shows 2 of 27 places, and drops the duplicate text block and most fields. No key appears in the recorded data.",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "search_places",
+      "arguments": {
+        "category": "catering.cafe",
+        "lat": 10.8034834,
+        "lon": 106.7375412,
+        "radius_meters": 800
+      }
+    }
+  },
+  "result": {
+    "structuredContent": {
+      "category": "catering.cafe",
+      "coordinates": {
+        "lat": 10.8034834,
+        "lon": 106.7375412
+      },
+      "radius_meters": 800,
+      "count": 27,
+      "results": [
+        {
+          "name": "Starbucks",
+          "lat": 10.8031005,
+          "lon": 106.7376209,
+          "formatted": "Starbucks, Nguyen Duy Dieu, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+          "categories": ["catering", "catering.cafe", "catering.cafe.coffee", "catering.cafe.coffee_shop"],
+          "distance": 43
+        },
+        {
+          "name": "Cà Phê Chez Nous",
+          "lat": 10.804076,
+          "lon": 106.7366554,
+          "formatted": "Cà Phê Chez Nous, Xuân Thủy, Phường An Khánh, Thủ Đức, 71108, Vietnam",
+          "categories": ["catering", "catering.cafe"],
+          "distance": 117
+        }
+      ]
+    }
+  }
+}

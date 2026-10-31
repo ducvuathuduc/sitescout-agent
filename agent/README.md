@@ -7,12 +7,15 @@ only plans, asks for the analysis, and explains it. **"AI proposes, engine verif
 | Tool | What it does | Geoapify APIs behind it | Credits |
 |---|---|---|---|
 | `plan_site_question` | question → validated plan (business, categories, area, walk minutes, origins) | none (category catalog is bundled) | 0 |
-| `scout_site` | full analysis → ranked shortlist, isochrones, `[Tn]` citations, `areaCheck`, `topCandidateCalls` | Autocomplete, Geocoding, Reverse, Boundaries, Isoline, Places, Route Matrix, Routing, Place Details | ~60–100 |
+| `scout_site` | full analysis → ranked shortlist, isochrones, `[Tn]` citations, `areaCheck`, `topCandidateCalls` | Autocomplete, Geocoding, Reverse, Boundaries, Isoline, Places, Route Matrix, Routing, Place Details | ~85–140 |
 | `resolve_place` | Vietnamese place text → best match + confidence | Autocomplete, Geocoding | 1–3 |
-| `walk_isochrone` | point + minutes → isoline polygon | Isoline | 1+ |
+| `walk_isochrone` | point + minutes → isoline polygon | Isoline | 1 per 5 minutes (10 min = 2) |
 | `get_evidence` | `[Tn]` → the exact request (no key), status, summary | none (reads the last run) | 0 |
 
 Every tool declares an `outputSchema` and returns `structuredContent`.
+
+Which Geoapify calls sit behind each tool, and where the Geoapify MCP server is used instead of REST:
+[docs/mcp.md](../docs/mcp.md).
 
 ## Setup per client
 

@@ -10,7 +10,7 @@
 [![Built with Geoapify](https://img.shields.io/badge/Built_with-Geoapify-1785FB.svg)](https://www.geoapify.com/)
 [![MCP server](https://img.shields.io/badge/MCP-5_tools-6b4fbb.svg)](agent/README.md)
 
-**[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude / Cursor](agent/README.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
+**[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude / Cursor](agent/README.md) · [How we use the Geoapify MCP server](docs/mcp.md) · [Demo proxy: key, limits, cache](docs/demo-proxy.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
 
 <a href="https://sitescout.huynhthanh.workers.dev"><img src="docs/assets/demo.gif" alt="SiteScout demo: why this spot, reach explorer, compare and evidence" width="860"></a>
 
@@ -40,7 +40,7 @@ trace file holding the exact request (without the key), its status, latency and 
   (*"4 direct competitors (cafe) in the same zone — #4 of 7 for low competition [T14]…"*). Compare puts up to 3 sites
   side by side and explains why #1 beats #2.
 - 🛵 **Reach explorer.** 5 / 10 / 15-minute bands for **walk, bike or motorbike** around any site. It is one Geoapify
-  Isoline call with three ranges (~3 credits), cached at the edge.
+  Isoline call with three ranges (counted as 6 credits), cached at the edge.
 - 🔗 **Share link and PDF report.** A link opens the exact analysis, including live runs. Export PDF gives an A4 report
   with the map, ranking, reasons and the full call list ([sample](docs/assets/sample-report.pdf)).
 - 🔌 **One-click MCP setup.** The plug button opens copy-ready commands for Claude Code and Cursor / Claude Desktop.
@@ -59,8 +59,9 @@ trace file holding the exact request (without the key), its status, latency and 
   deterministic engine do the geography. *AI proposes, engine verifies.*
 - **Three ways to use it:** a [public web demo](https://sitescout.huynhthanh.workers.dev), a CLI, and an
   **MCP server** (5 tools) for Claude Code, Cursor and Claude Desktop.
-- **Safe public demo.** The Geoapify key lives only in a Cloudflare Worker secret; per-IP and daily caps,
-  edge caching, and recorded runs as a fallback when the cap is reached.
+- **Safe public demo.** The Geoapify key lives only in a Cloudflare Worker secret; one daily credit budget for
+  live calls and map tiles, per-visitor caps, edge caching, and recorded runs as a fallback when a cap is reached.
+  How it works and how to deploy your own: [docs/demo-proxy.md](docs/demo-proxy.md).
 
 ## 🧪 Real results (recorded 2026-10-22)
 
@@ -71,6 +72,9 @@ trace file holding the exact request (without the key), its status, latency and 
 | Where should I open an office-lunch restaurant in District 1? | Phường Sài Gòn | Nguyễn Thị Minh Khai (near the French Consulate) | 0.82 | 59 · ~127 | [report](examples/saigon-lunch/report.md) · [trace](examples/saigon-lunch/trace.jsonl) |
 
 Each folder also has `report.html` (interactive map), `map.jpg` (Geoapify Static Maps) and `result.json`.
+Credits are SiteScout's estimates at recording time. On 2026-10-31 we corrected three estimates (isolines, boundary
+polygons, Place Details features; see [docs/demo-proxy.md](docs/demo-proxy.md#how-credits-are-counted)); with the
+corrected rules these runs are ~91, ~90 and ~139 credits.
 Scores are min-max normalised within one question, so they compare candidates, not cities.
 
 <img src="docs/assets/detail.jpg" alt="Candidate detail: score breakdown, why this spot with evidence refs, reach explorer" width="860">
@@ -113,7 +117,7 @@ node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Đ
 ```
 
 Output lands in `examples/<id>/`: `report.md`, `report.html`, `map.jpg`, `result.json`, `trace.jsonl`.
-A run costs roughly 60–130 Geoapify credits; the free plan allows 3,000 per day.
+A run costs roughly 85–140 Geoapify credits; the free plan allows 3,000 per day.
 
 ## ⚙️ Configuration
 
@@ -145,7 +149,7 @@ The MCP server also runs **without** a key: it then uses the public demo proxy
 | [Static Maps](https://apidocs.geoapify.com/docs/maps/static/) | `map.jpg` in each report |
 | [Map Tiles](https://apidocs.geoapify.com/docs/maps/map-tiles/) | Basemap in the web demo (proxied, cached) |
 | [Batch Geocoding](https://apidocs.geoapify.com/docs/geocoding/batch/) | `batchGeocode()` client in `src/engine/geoapify.ts` for bulk lists (not used in the default run) |
-| [MCP server](https://apidocs.geoapify.com/mcp/) | Legacy `ask` pipeline; fixtures in `tests/fixtures/live/` |
+| [MCP server](https://apidocs.geoapify.com/docs/mcp/) | `sitescout ask` / `smoke` pipeline, all 11 tools; why the product path uses REST: [docs/mcp.md](docs/mcp.md) |
 
 ## 🤖 Use it from your AI tool
 
@@ -159,6 +163,7 @@ claude mcp add sitescout -e GEOAPIFY_API_KEY=YOUR_KEY -- node "$PWD/dist/mcp-ser
 
 Setup for [Claude Code](agent/clients/claude-code.md), [Cursor](agent/clients/cursor.md) and
 [Claude Desktop](agent/clients/claude-desktop.md), plus a [system prompt](agent/SYSTEM_PROMPT.md).
+How this server relates to the official Geoapify MCP server, and how to use both together: [docs/mcp.md](docs/mcp.md).
 
 **About the transcripts:** the 8 sessions in [`agent/transcripts/`](agent/transcripts/) were recorded with a small
 MCP host ([`agent/host.mjs`](agent/host.mjs)) driving **open-weight models on Cloudflare Workers AI** (Llama 3.3 70B,
