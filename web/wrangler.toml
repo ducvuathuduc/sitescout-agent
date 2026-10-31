@@ -16,7 +16,11 @@ database_id = "d2247353-faf3-4515-9eb4-868b4d542225"
 binding = "AI"
 
 [vars]
-# Keep well under the Geoapify free plan (3,000 credits/day).
-DAILY_CREDIT_CAP = "1500"
+# ONE daily budget for API calls and map tiles (a tile costs 0.25 credit):
+# 2,400 = 80 % of the Geoapify free plan (3,000 credits/day). The rest is headroom
+# for the account owner's own use and for the few calls that can pass the cap
+# check at the same moment.
+DAILY_CREDIT_CAP = "2400"
 PER_IP_CALL_CAP = "180"
+# Extra ceiling for tiles inside that budget (2,500 tiles = 625 credits).
 TILE_CAP = "2500"

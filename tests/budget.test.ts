@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BudgetTracker, estimateCall, settleActual } from "../src/agent/budget.js";
 
 /**
- * Credit budgeting — verified rules from research/track1-geopify-deepdive.md §3.
+ * Credit budgeting — verified rules from docs/mcp-reference.md#credit-rules.
  */
 describe("estimateCall", () => {
   it("geocoding costs 1 credit per call", () => {
@@ -27,13 +27,15 @@ describe("estimateCall", () => {
     expect(estimateCall("calculate_route_matrix", { sources: s5, targets: t7 })).toBe(35);
   });
 
-  it("geometry ops and list_place_categories cost 0 on the MCP path", () => {
+  // https://apidocs.geoapify.com/docs/mcp/ "Pricing" (read 2026-10-31): each geometry tool "1 call costs 1 credit";
+  // https://www.geoapify.com/mcp/: list_place_categories "costs zero credits".
+  it("list_place_categories costs 0; each geometry op costs 1 on the MCP path", () => {
     const point = { type: "Point", coordinates: [106, 10] };
     expect(estimateCall("list_place_categories", {})).toBe(0);
-    expect(estimateCall("transform_geometry", { operation: "buffer", geometry: point, distance: 0.8 })).toBe(0);
-    expect(estimateCall("measure_geometry", { operation: "area", geometry: point })).toBe(0);
-    expect(estimateCall("evaluate_spatial_relation", { operation: "valid", geometry: point })).toBe(0);
-    expect(estimateCall("combine_geometries", { operation: "union", geometries: [point, point] })).toBe(0);
+    expect(estimateCall("transform_geometry", { operation: "buffer", geometry: point, distance: 0.8 })).toBe(1);
+    expect(estimateCall("measure_geometry", { operation: "area", geometry: point })).toBe(1);
+    expect(estimateCall("evaluate_spatial_relation", { operation: "valid", geometry: point })).toBe(1);
+    expect(estimateCall("combine_geometries", { operation: "union", geometries: [point, point] })).toBe(1);
   });
 
   it("calculate_route costs 1 per waypoint pair + avoid toggles", () => {

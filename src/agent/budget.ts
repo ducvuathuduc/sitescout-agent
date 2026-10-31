@@ -2,17 +2,18 @@
  * API-credit budgeting.
  *
  * Per-tool credit estimators from the verified rules
- * (research/track1-geopify-deepdive.md §3):
+ * (docs/mcp-reference.md#credit-rules):
  *  - geocode_address / geocode_structured_address / reverse_geocode_coordinates: 1/call
  *  - search_places: ceil(results / 20) — estimated from the requested `limit`,
  *    settled from the actual result count after the call
  *  - calculate_route: 1 per waypoint pair + 1 per `avoid` toggle
- *    (route_details/elevation/optimize surcharges not used by SiteScout)
+ *    (route_details/elevation/optimize surcharges and the +1 per 500 km distance
+ *    charge are not modelled; see docs/mcp-reference.md#credit-rules)
  *  - calculate_route_matrix: max(sources, targets) × min(sources, targets, 10)
- *  - list_place_categories: 0
+ *  - list_place_categories: 0 (https://www.geoapify.com/mcp/: "costs zero credits")
  *  - combine_geometries / evaluate_spatial_relation / measure_geometry /
- *    transform_geometry: 0 — no per-call credit documented for the MCP path
- *    (geometry ops; the MCP server adds no surcharge — track1 §1).
+ *    transform_geometry: 1 per call (https://apidocs.geoapify.com/docs/mcp/
+ *    "Pricing", read 2026-10-31: "Geometry operation pricing, 1 call costs 1 credit").
  *
  * Every run prints `credits used / estimated` per question; a `--budget` cap
  * aborts planning before overspend. Free-tier headroom: ~100 credits/question
@@ -50,11 +51,12 @@ export function estimateCall(tool: McpToolName, args: ToolArgs): number {
       return Math.max(s, t) * Math.min(s, t, 10);
     }
     case "list_place_categories":
+      return 0;
     case "combine_geometries":
     case "evaluate_spatial_relation":
     case "measure_geometry":
     case "transform_geometry":
-      return 0;
+      return 1;
     default:
       return 1; // conservative for unknown tools
   }

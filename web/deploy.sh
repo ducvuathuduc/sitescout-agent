@@ -11,7 +11,7 @@ cat > .dist/metadata.json <<JSON
 {"main_module":"index.js","compatibility_date":"2026-10-01","keep_bindings":["secret_text"],
  "bindings":[{"type":"ai","name":"AI"},
   {"type":"d1","name":"DB","id":"d2247353-faf3-4515-9eb4-868b4d542225"},
-  {"type":"plain_text","name":"DAILY_CREDIT_CAP","text":"1500"},
+  {"type":"plain_text","name":"DAILY_CREDIT_CAP","text":"2400"},
   {"type":"plain_text","name":"PER_IP_CALL_CAP","text":"180"},
   {"type":"plain_text","name":"TILE_CAP","text":"2500"}]}
 JSON

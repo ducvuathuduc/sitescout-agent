@@ -1,0 +1,833 @@
+{
+  "measuredAt": "2026-10-31T08:42:56.589Z",
+  "proxy": "https://sitescout.huynhthanh.workers.dev/geo",
+  "question": "Where should I open a pharmacy in Bình Thạnh?",
+  "statusBefore": {
+    "day": "2026-10-31",
+    "credits": 77,
+    "creditCap": 1500,
+    "yourCalls": 55,
+    "yourCap": 180,
+    "tiles": 1,
+    "liveKey": true
+  },
+  "statusAfter": {
+    "day": "2026-10-31",
+    "credits": 150,
+    "creditCap": 1500,
+    "yourCalls": 108,
+    "yourCap": 180,
+    "tiles": 1,
+    "liveKey": true
+  },
+  "runs": [
+    {
+      "label": "run 1",
+      "ms": 54210,
+      "calls": 56,
+      "fetches": 56,
+      "hits": 3,
+      "misses": 53,
+      "credits": 87,
+      "missCredits": 84,
+      "perCall": [
+        {
+          "seq": 0,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 1,
+          "api": "geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 2,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 3,
+          "api": "boundaries",
+          "status": 200,
+          "credits": 4,
+          "cache": "MISS"
+        },
+        {
+          "seq": 4,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 5,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 6,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 7,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 8,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 9,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 10,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 11,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 12,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 13,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 14,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 15,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 16,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 17,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 18,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 19,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 20,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 21,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 22,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 23,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 24,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 25,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 26,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 27,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 28,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 29,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 30,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 31,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 32,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 33,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 34,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 35,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 36,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 37,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 38,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 39,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 40,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 41,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 42,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 43,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 44,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 45,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        },
+        {
+          "seq": 46,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 47,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 48,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 49,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 50,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 51,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 52,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 53,
+          "api": "route-matrix",
+          "status": 200,
+          "credits": 21,
+          "cache": "MISS"
+        },
+        {
+          "seq": 54,
+          "api": "routing",
+          "status": 200,
+          "credits": 1,
+          "cache": "MISS"
+        },
+        {
+          "seq": 55,
+          "api": "place-details",
+          "status": 200,
+          "credits": 2,
+          "cache": "MISS"
+        }
+      ]
+    },
+    {
+      "label": "run 2",
+      "ms": 3735,
+      "calls": 56,
+      "fetches": 56,
+      "hits": 56,
+      "misses": 0,
+      "credits": 87,
+      "missCredits": 0,
+      "perCall": [
+        {
+          "seq": 0,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 1,
+          "api": "geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 2,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 3,
+          "api": "boundaries",
+          "status": 200,
+          "credits": 4,
+          "cache": "HIT"
+        },
+        {
+          "seq": 4,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 5,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 6,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 7,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 8,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 9,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 10,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 11,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 12,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 13,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 14,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 15,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 16,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 17,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 18,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 19,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 20,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 21,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 22,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 23,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 24,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 25,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 26,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 27,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 28,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 29,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 30,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 31,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 32,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 33,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 34,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 35,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 36,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 37,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 38,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 39,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 40,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 41,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 42,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 43,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 44,
+          "api": "reverse-geocoding",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 45,
+          "api": "isoline",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        },
+        {
+          "seq": 46,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 47,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 48,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 49,
+          "api": "places",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 50,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 51,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 52,
+          "api": "autocomplete",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 53,
+          "api": "route-matrix",
+          "status": 200,
+          "credits": 21,
+          "cache": "HIT"
+        },
+        {
+          "seq": 54,
+          "api": "routing",
+          "status": 200,
+          "credits": 1,
+          "cache": "HIT"
+        },
+        {
+          "seq": 55,
+          "api": "place-details",
+          "status": 200,
+          "credits": 2,
+          "cache": "HIT"
+        }
+      ]
+    }
+  ]
+}
