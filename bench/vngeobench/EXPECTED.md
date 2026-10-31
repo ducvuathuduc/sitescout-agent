@@ -13,7 +13,7 @@ trace (`logs/<qid>.jsonl`). Scoring rubric per question:
 
 - **geobench-01/02/03 (geocoding):** diacritics fidelity, 2025 ward names, informal landmarks.
   Behavior checks are manual until the key-gated smoke run records real responses
-  (`research/smoke/vn-data-quality.md`).
+  (`sitescout smoke`; see `docs/mcp-reference.md`).
 - **geobench-04 (places):** `list_place_categories` → `search_places` ordering; exact category ids.
 - **geobench-05/06 (site selection):** full pipeline per playbook 1; limitation disclosure required.
 - **geobench-07 (meetup):** min-max fairness must be *stated*, not just implied.

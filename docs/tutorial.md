@@ -1,10 +1,11 @@
 # Tutorial: build an evidence-traced site-selection agent on Geoapify
 
-**Time:** ~30 minutes · **Level:** you know some TypeScript and a terminal · **Cost:** $0 (Geoapify free plan)
+**Time:** ~40 minutes · **Level:** you know some TypeScript and a terminal · **Cost:** $0 (Geoapify free plan)
 
 By the end you will have asked SiteScout *"Where should I open a specialty coffee shop in Thảo Điền?"*,
-read the ranked shortlist, followed one number back to the exact Geoapify request that produced it, and
-connected the same engine to an AI assistant through MCP.
+read the ranked shortlist, followed one number back to the exact Geoapify request that produced it,
+connected the same engine to an AI assistant through MCP, seen where SiteScout uses the Geoapify MCP server and
+where the REST APIs, and seen how the public demo keeps its Geoapify key secret.
 
 Everything shown here comes from real runs, recorded on 2026-10-22 and committed in [`examples/`](../examples/),
 plus one live web run recorded on 2026-10-23. The screenshots are of the current web demo (design v2, see
@@ -64,7 +65,7 @@ Hover a pin and the row lights up. Click a row (or a pin) to open it:
 ### 2.3 Reach explorer: walk, bike, motorbike
 
 Inside an open site, **Reach explorer** draws 5 / 10 / 15-minute bands for **Walk**, **Bike** or **Motorbike**. Each
-press is one live Geoapify Isoline call with three ranges (`range=300,600,900`, about 3 credits). It shows up as a new
+press is one live Geoapify Isoline call with three ranges (`range=300,600,900`, counted as 6 credits: 1 per 5 minutes of each band). It shows up as a new
 `[Tn]` in Evidence. The walking bands for the top 3 sites of each example are pre-recorded, so they cost nothing.
 
 ![Motorbike bands](design/overhaul/after-reach.jpg)
@@ -105,8 +106,8 @@ with a live count of calls and credits. Each walk zone appears on the map as soo
 In our recorded live run (2026-10-23, 48 calls, roughly 40 s) the model picked `catering.cafe` as the competitor for a
 bakery and `Phường 6, Quận 3` as the area. The engine replaced both with the known-good values
 (`commercial.food_and_drink.bakery`, and the verified geocode text for District 3) and wrote the change into **Notes**
-under *How the agent planned this*. A live run uses about 80–130 credits. The quota bar under the examples shows how
-much of the demo's shared daily budget (1,500 credits) is left.
+under *How the agent planned this*. A live run uses about 85–140 credits. The quota bar under the examples shows how
+much of the demo's shared daily budget (2,400 credits, live calls and map tiles together) is left.
 
 ### 2.8 Share and export
 
@@ -118,9 +119,10 @@ much of the demo's shared daily budget (1,500 credits) is left.
 
 ### 2.9 When the live budget is used up
 
-The Worker caps the demo at 1,500 credits a day overall and 180 calls per visitor. When a cap is hit, an amber banner
-says so, shows the closest recorded run instead, and says when live runs reset (07:00 UTC+7). Any other failure gets
-a red banner with **Retry** and **Retry with rules planner**.
+The Worker caps the demo at 2,400 credits a day for live calls and map tiles together (a tile is 0.25 credit), and
+at 180 live calls per visitor. When a cap is hit, an amber banner says which one, shows the closest recorded run
+instead, and says when live runs reset (07:00 UTC+7). Any other failure gets a red banner with **Retry** and
+**Retry with rules planner**. How the proxy, the limits and the cache work is in [§9](#9-put-it-online-safely-the-demo-proxy-5-min).
 
 ![Quota fallback](design/overhaul/after-quota.jpg)
 
@@ -155,7 +157,7 @@ Output in `examples/my-coffee/`:
 | `result.json` | Everything, machine-readable |
 | `trace.jsonl` | One line per API call — the evidence |
 
-A run uses about 60–130 credits. `--credit-cap 300` (the default) stops a run before it goes over.
+A run uses about 85–140 credits. `--credit-cap 300` (the default) stops a run before it goes over.
 
 ## 4. How the engine answers (10 min)
 
@@ -268,7 +270,59 @@ Workers AI through a small host script, not Claude or Cursor. The failures are k
 "Bình Thạnh" sent the analysis to the wrong ward, so `scout_site` now returns an `areaCheck`; a model that
 invented a Places URL led us to return the real requests (`topCandidateCalls`) in every result.
 
-## 8. Make it yours (2 min)
+## 8. How SiteScout uses the Geoapify MCP server (5 min)
+
+Full write-up, with the tool-by-tool table, a real call and the agent sessions: **[docs/mcp.md](mcp.md)**.
+
+SiteScout talks to Geoapify in two ways:
+
+| Command / surface | Talks to Geoapify through | Code |
+|---|---|---|
+| `sitescout ask`, `sitescout smoke` | the **Geoapify MCP server** (`https://api.geoapify.com/v1/mcp`), all 11 tools | `src/mcp/client.ts` → `src/agent/run.ts` |
+| `sitescout scout`, the web demo, SiteScout's own MCP server | the **Geoapify REST APIs** | `src/engine/geoapify.ts` → `src/engine/scout.ts` |
+
+The `ask` pipeline was the first version. It geocodes the seeds (`geocode_address`), checks the categories against
+`list_place_categories`, labels candidates with `reverse_geocode_coordinates`, draws an 800 m catchment with
+`transform_geometry`, measures and checks it with `measure_geometry` and `evaluate_spatial_relation`, counts POIs
+with `search_places`, gets drive times with `calculate_route_matrix`, unions the catchments with
+`combine_geometries` and routes to the winner with `calculate_route`.
+
+The product path moved to REST for one reason: **walking time**. The MCP server has no isoline tool, and its
+`search_places` searches a circle (`radius_meters`). The REST Isoline API returns the real 10-minute walk area, and
+REST Places can count POIs inside it with `filter=geometry:<isoline id>`. A circle counts places across the river
+that nobody walks to. Autocomplete and Boundaries (needed for Vietnamese addresses and post-2025 ward names) are also
+REST-only.
+
+SiteScout's own MCP server sits one level up. Its five tools (`plan_site_question`, `scout_site`, `resolve_place`,
+`walk_isochrone`, `get_evidence`) run a whole analysis and return cited results. In Claude Code or Cursor you can
+register both servers: SiteScout for the analysis, the Geoapify MCP server for follow-up questions such as a single
+route or a nearby search. [docs/mcp.md](mcp.md) shows the configuration and walks through a recorded session.
+
+## 9. Put it online safely: the demo proxy (5 min)
+
+Full write-up, with code and deploy steps: **[docs/demo-proxy.md](demo-proxy.md)**.
+
+```mermaid
+flowchart LR
+    B["Browser"] -->|"/geo/*, /tiles/*"| W["Cloudflare Worker<br/>key = Worker secret"]
+    W -->|"x-api-key"| G["Geoapify"]
+    W <--> C[("Edge cache")]
+    W <--> D[("D1 counters")]
+```
+
+- **The key never reaches the browser.** It is a Worker secret. Only the Worker adds it, as a header. An allow-list
+  of 9 endpoints and an HCMC-only scope check limit what a visitor can do with the proxy.
+- **One daily budget.** Live API calls and map tiles share 2,400 credits a day (a tile is 0.25 credit), 80 % of the
+  free plan. Each visitor also gets 180 live calls a day. The counters live in D1, keyed by the UTC day and a
+  daily-rotating hash of the IP (no raw IPs).
+- **At a limit**, the Worker answers 429 with `fallback: true`. The app shows an amber banner and opens the closest
+  recorded run.
+- **Caching.** API answers are cached at the edge for 24 h, tiles for 30 days. Measured on 2026-10-31 with the
+  pharmacy question asked twice: the first run sent 53 of its 56 calls to Geoapify (84 credits, 54 s); the second
+  run got all 56 from the cache (0 credits, 4 s).
+- **Your own copy:** `wrangler d1 create`, `wrangler secret put GEOAPIFY_KEY`, `node build.mjs`, `wrangler deploy`.
+
+## 10. Make it yours (2 min)
 
 - **New business type:** add a rule to `BUSINESS_RULES` in `src/engine/plan.ts` (keywords, competitor category,
   demand categories). Use only categories from the Geoapify Places list.
@@ -278,7 +332,7 @@ invented a Places URL led us to return the real requests (`topCandidateCalls`) i
 
 Then run `npm test` — the tests run offline on recorded fixtures.
 
-## 9. Limits and lessons
+## 11. Limits and lessons
 
 - POIs come from OpenStreetMap via Geoapify. Coverage is good on main streets and thinner in alleys; counts are a
   lower bound.

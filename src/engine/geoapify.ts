@@ -120,9 +120,19 @@ export interface PlaceProps {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-/** Rough credit model from Geoapify pricing docs (documented in docs/geoapify-apis.md). */
-export function estimateCredits(api: GeoapifyApiName, info: { results?: number; sources?: number; targets?: number; items?: number; range?: number }): number {
+/**
+ * Credit model from https://www.geoapify.com/pricing-details/ (read 2026-10-31).
+ * Isoline: 1 credit for each 5 minutes; a multi-range request is counted as
+ * the sum of its ranges (the conservative reading). `range` is in seconds.
+ * Boundaries: 1 credit per 20 results, plus 1 per result when a polygon
+ * (geometry other than "point") is returned.
+ */
+export function estimateCredits(api: GeoapifyApiName, info: { results?: number; sources?: number; targets?: number; items?: number; range?: number; ranges?: number[]; geometry?: string }): number {
   switch (api) {
+    case "boundaries": {
+      const n = info.results ?? 0;
+      return Math.max(1, Math.ceil(n / 20)) + (info.geometry && info.geometry !== "point" ? n : 0);
+    }
     case "places":
       return Math.max(1, Math.ceil((info.results ?? 20) / 20));
     case "route-matrix": {
@@ -132,8 +142,11 @@ export function estimateCredits(api: GeoapifyApiName, info: { results?: number; 
     }
     case "batch-geocoding":
       return Math.max(1, Math.ceil((info.items ?? 1) / 2));
-    case "isoline":
-      return 1;
+    case "isoline": {
+      const ranges = info.ranges ?? (info.range !== undefined ? [info.range] : []);
+      if (ranges.length === 0) return 1;
+      return ranges.reduce((sum, r) => sum + Math.max(1, Math.ceil(r / 300)), 0);
+    }
     default:
       return 1;
   }
@@ -198,13 +211,16 @@ export class GeoapifyApi {
           signal: ctrl.signal,
         });
         status = res.status;
-        if ((status === 429 || status >= 500) && attempt < 3) {
+        // The demo proxy marks "daily budget used up" 429s; retrying cannot help there.
+        const quota = status === 429 && res.headers?.get("x-sitescout-fallback") != null;
+        if ((status === 429 || status >= 500) && attempt < 3 && !quota) {
           await sleep(400 * 2 ** (attempt - 1));
           continue;
         }
         const data = (raw ? await res.arrayBuffer() : await res.json().catch(() => ({}))) as T;
         if (status >= 400) {
-          const msg = String((data as { message?: unknown })?.message ?? res.statusText);
+          // Geoapify errors carry `message`; the demo proxy's own answers carry `error`.
+          const msg = String((data as { message?: unknown; error?: unknown })?.message ?? (data as { error?: unknown })?.error ?? res.statusText);
           const record = this.record({ seq, api, method, endpoint, body, status, durationMs: Date.now() - started, summary: { error: msg }, credits: 0, error: msg });
           throw Object.assign(new GeoapifyError(status, msg, endpoint), { record });
         }
@@ -315,7 +331,8 @@ export class GeoapifyApi {
       { id: o.id, lat: o.lat, lon: o.lon, features: (o.features ?? ["details"]).join(","), lang: o.lang ?? "vi" },
       undefined,
       (d) => ({ features: (d.features ?? []).map((f) => String(f.properties?.feature_type ?? "?")).join(",") }),
-      () => 1,
+      // 1 credit, plus 1 for each 5 minutes of an isochrone feature such as walk_10 / drive_5 (pricing-details)
+      () => 1 + (o.features ?? []).reduce((s, f) => { const m = /^(walk|drive)_(\d+)$/.exec(f); return s + (m ? Math.ceil(Number(m[2]) / 5) : 0); }, 0),
     );
     return { features: data.features ?? [], seq: record.seq };
   }
@@ -329,7 +346,7 @@ export class GeoapifyApi {
       const { data, record } = await this.request<FeatureCollection & { properties?: { id?: string } }>(
         "isoline", "GET", "/v1/isoline", params, undefined,
         (d) => ({ mode: o.mode, range: o.range, type: o.type ?? "time", id: d.features?.[0]?.properties?.id ?? d.properties?.id, geometry: d.features?.[0]?.geometry?.type ?? "pending" }),
-        () => estimateCredits("isoline", { range: o.range }),
+        () => estimateCredits("isoline", (o.type ?? "time") === "time" ? { range: o.range } : {}),
       );
       const f = data.features?.[0];
       if (f) return { feature: f, id: String(f.properties.id ?? ""), seq: record.seq };
@@ -347,7 +364,7 @@ export class GeoapifyApi {
       const { data, record } = await this.request<FeatureCollection & { properties?: { id?: string } }>(
         "isoline", "GET", "/v1/isoline", params, undefined,
         (d) => ({ mode: o.mode, range: o.ranges.join(","), type: "time", bands: d.features?.length ?? 0, geometry: d.features?.length ? "bands" : "pending" }),
-        () => o.ranges.length,
+        () => estimateCredits("isoline", { ranges: o.ranges }),
       );
       if (data.features?.length) {
         const fs = [...data.features].sort((a, b) => Number(a.properties.range ?? 0) - Number(b.properties.range ?? 0));
@@ -401,7 +418,7 @@ export class GeoapifyApi {
       { lat, lon, lang: o.lang ?? "vi", geometry: o.geometry ?? "geometry_1000" },
       undefined,
       (d) => ({ levels: (d.features ?? []).map((f) => String(f.properties?.name ?? "?")).join(" ⊂ ") }),
-      () => 1,
+      (d) => estimateCredits("boundaries", { results: d.features?.length ?? 0, geometry: o.geometry ?? "geometry_1000" }),
     );
     return { features: data.features ?? [], seq: record.seq };
   }
@@ -412,7 +429,7 @@ export class GeoapifyApi {
       { id, lang: o.lang ?? "vi", sublevel: o.sublevel, geometry: "geometry_1000" },
       undefined,
       (d) => ({ parts: d.features?.length ?? 0 }),
-      () => 1,
+      (d) => estimateCredits("boundaries", { results: d.features?.length ?? 0, geometry: "geometry_1000" }),
     );
     return { features: data.features ?? [], seq: record.seq };
   }

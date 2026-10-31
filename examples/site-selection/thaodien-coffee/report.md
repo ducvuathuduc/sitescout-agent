@@ -68,7 +68,7 @@
 ## Evidence trace
 
 Every claim above traces to one of these tool calls. Full results are
-cached under `research/smoke/results/<question-id>/<seq>.json`; digests
+cached under `logs/results/<question-id>/<seq>.json`; digests
 below let you verify integrity.
 
 | Seq | Tool | Digest | Duration | Error |

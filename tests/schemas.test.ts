@@ -3,7 +3,7 @@ import { validateToolArgs } from "../src/mcp/schemas.js";
 
 /**
  * Per-tool arg-shape validation: the correction table from
- * research/track1-geopify-deepdive.md §1.1 is enforced client-side.
+ * docs/mcp-reference.md#tool-argument-shapes is enforced client-side.
  * Wrong shapes fail fast — never as a wasted API credit.
  */
 describe("validateToolArgs", () => {

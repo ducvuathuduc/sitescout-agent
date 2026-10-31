@@ -16,3 +16,7 @@ geometry tools for follow-up questions. Both can be registered in the same host 
 SiteScout's legacy `ask` pipeline (`src/mcp/client.ts`) talks to this same server; that is where the
 response-shape findings in `docs/FEEDBACK.md` come from. Header/transport field names differ slightly between
 MCP clients — check your client's docs.
+
+For the tools SiteScout calls on this server, and the steps that use REST instead, see
+[docs/mcp.md](../../docs/mcp.md). A procedure for recording a real session with both servers is in
+[record-claude-code.md](record-claude-code.md).

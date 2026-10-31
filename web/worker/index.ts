@@ -12,10 +12,12 @@
  *                  (D1, 1.5 MB cap, 20 shares per visitor per day). No Geoapify credits.
  *  everything else static assets (web/public).
  *
- * When a cap is reached the proxy answers 429 {fallback:true} and the UI
- * switches to the pre-recorded runs in /examples/.
+ * API calls and map tiles share ONE daily credit budget (budget.ts):
+ * spent = credits + tiles × 0.25. When a cap is reached the proxy answers
+ * 429 {fallback:true} and the UI switches to the pre-recorded runs in /examples/.
  */
 import { ASSETS as EMBEDDED } from "./assets.gen.js";
+import { checkCaps, credits, spent, DEFAULT_DAILY_CAP, DEFAULT_PER_IP_CALL_CAP, TILE_CREDITS } from "./budget.js";
 
 const bin = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 function serveEmbedded(url: URL): Response {
@@ -109,16 +111,15 @@ function scopeError(path: string, q: URLSearchParams, body: unknown): string | n
   return null;
 }
 
-function credits(path: string, data: unknown, body: unknown): number {
-  if (path === "/v2/places") return Math.max(1, Math.ceil(((data as { features?: unknown[] })?.features?.length ?? 0) / 20));
-  if (path === "/v1/routematrix") {
-    const b = body as { sources?: unknown[]; targets?: unknown[] };
-    const s = b?.sources?.length ?? 1, t = b?.targets?.length ?? 1;
-    return Math.max(s, t) * Math.min(s, t, 10);
-  }
-  if (path === "/v1/isoline") return Math.max(1, ((data as { features?: unknown[] })?.features?.length ?? 1));
-  return 1;
-}
+const caps = (env: Env): { daily: number; perIp: number; tiles: number } => ({
+  daily: Number(env.DAILY_CREDIT_CAP ?? DEFAULT_DAILY_CAP),
+  perIp: Number(env.PER_IP_CALL_CAP ?? DEFAULT_PER_IP_CALL_CAP),
+  tiles: Number(env.TILE_CAP ?? 2500),
+});
+
+/** 429 answer the UI understands: it switches to a recorded run. */
+const capped = (error: string, used: number, cap: number): Response =>
+  json({ error, fallback: true, used, cap }, 429, { "x-sitescout-fallback": "quota" });
 
 async function usage(env: Env, ip: string): Promise<{ ipCalls: number; credits: number; tiles: number; plans: number }> {
   const d = today();
@@ -135,6 +136,32 @@ async function bump(env: Env, ip: string, c: { calls?: number; credits?: number;
   ]);
 }
 
+/**
+ * Cache statistics (how much the edge cache saves). Kept in their own table so
+ * a missing table can never break the cap counters above; created on first use.
+ */
+const STATS_DDL = "CREATE TABLE IF NOT EXISTS cache_stats (day TEXT PRIMARY KEY, hits INTEGER NOT NULL DEFAULT 0, tile_hits INTEGER NOT NULL DEFAULT 0, saved REAL NOT NULL DEFAULT 0)";
+
+async function bumpStats(env: Env, c: { hits?: number; tileHits?: number; saved?: number }): Promise<void> {
+  try {
+    await env.DB.batch([
+      env.DB.prepare(STATS_DDL),
+      env.DB.prepare("INSERT INTO cache_stats(day,hits,tile_hits,saved) VALUES(?,?,?,?) ON CONFLICT(day) DO UPDATE SET hits=hits+excluded.hits, tile_hits=tile_hits+excluded.tile_hits, saved=saved+excluded.saved").bind(today(), c.hits ?? 0, c.tileHits ?? 0, c.saved ?? 0),
+    ]);
+  } catch {
+    /* statistics are best-effort */
+  }
+}
+
+async function stats(env: Env): Promise<{ hits: number; tileHits: number; saved: number }> {
+  try {
+    const r = await env.DB.prepare("SELECT hits, tile_hits, saved FROM cache_stats WHERE day=?").bind(today()).first<{ hits: number; tile_hits: number; saved: number }>();
+    return { hits: r?.hits ?? 0, tileHits: r?.tile_hits ?? 0, saved: r?.saved ?? 0 };
+  } catch {
+    return { hits: 0, tileHits: 0, saved: 0 }; // table not created yet
+  }
+}
+
 async function proxyGeo(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
   const path = url.pathname.replace(/^\/geo/, "");
   const method = ALLOW[path];
@@ -147,14 +174,18 @@ async function proxyGeo(req: Request, env: Env, url: URL, ctx: ExecutionContext)
   const cacheKey = new Request(method === "GET" ? upstream : `${upstream}#${await sha(JSON.stringify(body))}`, { method: "GET" });
   const cache = caches.default;
   const hit = await cache.match(cacheKey);
-  if (hit) return new Response(hit.body, { status: hit.status, headers: { ...Object.fromEntries(hit.headers), "x-sitescout-cache": "HIT" } });
+  if (hit) {
+    // A hit costs no Geoapify credit; the stored header holds what the original call cost.
+    const saved = Number(hit.headers.get("x-sitescout-credits") ?? 0);
+    ctx.waitUntil(bumpStats(env, { hits: 1, saved }));
+    return new Response(hit.body, { status: hit.status, headers: { ...Object.fromEntries(hit.headers), "x-sitescout-cache": "HIT", "x-sitescout-credits": "0", "x-sitescout-saved": String(saved) } });
+  }
 
   const ip = await visitor(req);
   const u = await usage(env, ip);
-  const cap = Number(env.DAILY_CREDIT_CAP ?? 1500);
-  const ipCap = Number(env.PER_IP_CALL_CAP ?? 180);
-  if (u.credits >= cap) return json({ error: "daily live quota reached", fallback: true, used: u.credits, cap }, 429);
-  if (u.ipCalls >= ipCap) return json({ error: "per-visitor daily limit reached", fallback: true, used: u.ipCalls, cap: ipCap }, 429);
+  const c0 = caps(env);
+  const gate = checkCaps(u, c0);
+  if (!gate.ok) return capped(gate.reason === "daily" ? "daily live quota reached" : "per-visitor daily limit reached", gate.used, gate.cap);
 
   const res = await fetch(upstream, {
     method,
@@ -164,7 +195,8 @@ async function proxyGeo(req: Request, env: Env, url: URL, ctx: ExecutionContext)
   const text = await res.text();
   let data: unknown = null;
   try { data = JSON.parse(text); } catch { /* keep text */ }
-  const c = res.ok ? credits(path, data, body) : 0;
+  // 202 = isoline still computing; the engine polls and the final 200 is the billed answer.
+  const c = res.status === 200 ? credits(path, url.searchParams, data, body) : 0;
   ctx.waitUntil(bump(env, ip, { calls: 1, credits: c }));
   const out = new Response(text, { status: res.status, headers: { "content-type": "application/json", "cache-control": "public, max-age=86400", "x-sitescout-cache": "MISS", "x-sitescout-credits": String(c) } });
   if (res.status === 200) ctx.waitUntil(cache.put(cacheKey, out.clone()));
@@ -199,9 +231,15 @@ async function proxyTile(req: Request, env: Env, url: URL, ctx: ExecutionContext
   const cache = caches.default;
   const key = new Request(upstream);
   const hit = await cache.match(key);
-  if (hit) return hit;
-  const u = await usage(env, req.headers.get("cf-connecting-ip") ?? "0.0.0.0");
-  if (u.tiles >= Number(env.TILE_CAP ?? 2500)) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
+  if (hit) {
+    ctx.waitUntil(bumpStats(env, { tileHits: 1, saved: TILE_CREDITS }));
+    return hit;
+  }
+  // Tiles draw from the same daily credit budget as API calls (0.25 credit each),
+  // plus their own ceiling so a map-browsing spike cannot starve live analyses.
+  const u = await usage(env, "tiles");
+  const c0 = caps(env);
+  if (!checkCaps({ ...u, ipCalls: 0 }, c0).ok || u.tiles >= c0.tiles) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
   const res = await fetch(upstream, { headers: { "x-api-key": env.GEOAPIFY_KEY } });
   if (!res.ok) return new Response(null, { status: res.status });
   const out = new Response(res.body, { headers: { "content-type": "image/png", "cache-control": "public, max-age=2592000" } });
@@ -261,7 +299,16 @@ export default {
       if (url.pathname.startsWith("/api/share/") && req.method === "GET") return await share(req, env, url);
       if (url.pathname === "/api/status") {
         const u = await usage(env, await visitor(req));
-        return json({ day: today(), credits: u.credits, creditCap: Number(env.DAILY_CREDIT_CAP ?? 1500), yourCalls: u.ipCalls, yourCap: Number(env.PER_IP_CALL_CAP ?? 180), tiles: u.tiles, liveKey: Boolean(env.GEOAPIFY_KEY) });
+        const c0 = caps(env);
+        const s = await stats(env);
+        return json({
+          day: today(),
+          spent: spent(u), creditCap: c0.daily, // API credits + tiles × 0.25: the one number the cap applies to
+          credits: u.credits, tiles: u.tiles, tileCap: c0.tiles,
+          yourCalls: u.ipCalls, yourCap: c0.perIp,
+          cache: { hits: s.hits, tileHits: s.tileHits, savedCredits: s.saved },
+          liveKey: Boolean(env.GEOAPIFY_KEY),
+        });
       }
     } catch (e) {
       return json({ error: e instanceof Error ? e.message : String(e), fallback: true }, 502);

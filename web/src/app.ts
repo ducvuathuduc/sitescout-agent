@@ -94,7 +94,8 @@ interface State {
   stepDetail: string;
   planner: "llm" | "heuristic";
   question: string;
-  status: { credits: number; creditCap: number; yourCalls: number; yourCap: number } | null;
+  /** `spent` = API credits + map tiles × 0.25 (one budget); older Workers only sent `credits`. */
+  status: { spent?: number; credits: number; creditCap: number; yourCalls: number; yourCap: number } | null;
   banner: Banner;
   openCall: number | null;
 }
@@ -159,7 +160,20 @@ document.querySelector("#app")!.innerHTML = `
 
 /* ================================= map ================================= */
 const map = L.map("map", { zoomControl: false, attributionControl: false }).setView([10.8035, 106.7375], 14);
-L.tileLayer("/tiles/{z}/{x}/{y}{r}.png", { maxZoom: 18, minZoom: 10, tileSize: 256 }).addTo(map);
+let tileWarned = false;
+let tileCheckedAt = 0;
+L.tileLayer("/tiles/{z}/{x}/{y}{r}.png", { maxZoom: 18, minZoom: 10, tileSize: 256 })
+  // The Worker answers 429 once the shared daily budget is used up (a tile costs 0.25 credit).
+  // Tiles outside HCMC also "fail" (204), so check /api/status, at most once a minute.
+  .on("tileerror", () => {
+    if (tileWarned || Date.now() - tileCheckedAt < 60_000) return;
+    tileCheckedAt = Date.now();
+    fetch("/api/status").then((r) => r.json()).then((s: { spent?: number; creditCap?: number; tiles?: number; tileCap?: number }) => {
+      const over = (s.spent !== undefined && s.creditCap !== undefined && s.spent >= s.creditCap) || (s.tiles !== undefined && s.tileCap !== undefined && s.tiles >= s.tileCap);
+      if (over) { tileWarned = true; toast("Map tiles are paused: today's shared demo budget is used up. Recorded runs still work."); }
+    }).catch(() => undefined);
+  })
+  .addTo(map);
 const zonesLayer = L.layerGroup().addTo(map);
 const hexLayer = L.layerGroup().addTo(map);
 const poiLayer = L.layerGroup().addTo(map);
@@ -322,7 +336,8 @@ function renderLegend(): void {
 /* ================================= ask ================================= */
 function renderAsk(): void {
   const st = S.status;
-  const left = st ? Math.max(0, st.creditCap - st.credits) : null;
+  const used = st ? (st.spent ?? st.credits) : 0;
+  const left = st ? Math.max(0, Math.floor(st.creditCap - used)) : null;
   $("#ask").innerHTML = `
     <label class="h1" for="q">Where should you open your shop?</label>
     <p class="muted">Name a business and an area in Ho Chi Minh City — English or Vietnamese.</p>
@@ -339,7 +354,7 @@ function renderAsk(): void {
     <div class="examples"><span class="muted xs">Recorded examples · instant, no credits</span>
       <div class="chips">${EXAMPLES.map((e) => `<button class="chip ${S.source?.kind === "example" && S.source.id === e.id ? "on" : ""}" data-ex="${e.id}" ${S.running ? "disabled" : ""}>${esc(e.short)}</button>`).join("")}</div>
     </div>
-    ${st ? `<div class="quota" title="Shared daily Geoapify budget for this demo"><div class="quota-bar"><i style="width:${pct(st.credits / st.creditCap)}%"></i></div><span>${left} of ${st.creditCap} live credits left today · a live run uses ~80–130</span></div>` : ""}`;
+    ${st ? `<div class="quota" title="Shared daily Geoapify budget for this demo: live API calls plus map tiles (4 tiles = 1 credit)"><div class="quota-bar"><i style="width:${pct(used / st.creditCap)}%"></i></div><span>${left} of ${st.creditCap} live credits left today · a live run uses ~85–140</span></div>` : ""}`;
   document.querySelectorAll<HTMLButtonElement>("[data-planner]").forEach((b) => (b.onclick = () => { S.planner = b.dataset.planner as State["planner"]; renderAsk(); }));
   const q = $<HTMLTextAreaElement>("#q");
   q.oninput = () => { S.question = q.value; };
@@ -487,7 +502,7 @@ function detailHtml(r: ScoutResult, c: CandidateResult): string {
       <div class="seg" role="radiogroup" aria-label="Travel mode">${MODES.map((m) => `<button role="radio" aria-checked="${S.reachMode === m.id}" data-mode="${m.id}">${m.label}</button>`).join("")}</div>
       <button class="btn btn-sm" id="reachGo" ${S.reachLoading ? "disabled" : ""}>${S.reachLoading ? `<span class="spin"></span> Loading` : b && b.mode === S.reachMode ? "Shown on map" : "Show bands"}</button>
     </div>
-    <p class="muted xs">${b ? `Showing ${MODES.find((m) => m.id === b.mode)!.label.toLowerCase()} bands ${refBtn(b.ref)}.` : ""} One Geoapify Isoline call with three ranges (~3 credits); cached at the edge.</p>
+    <p class="muted xs">${b ? `Showing ${MODES.find((m) => m.id === b.mode)!.label.toLowerCase()} bands ${refBtn(b.ref)}.` : ""} One Geoapify Isoline call with three ranges (counted as 6 credits: 1 per 5 minutes of each band); cached at the edge.</p>
   </div>`;
 }
 
@@ -894,10 +909,17 @@ async function run(): Promise<void> {
   } catch (e) {
     S.running = false;
     const msg = e instanceof Error ? e.message : String(e);
-    const capped = /429|quota|limit reached|credit cap/i.test(msg);
-    S.banner = capped
-      ? { kind: "quota", text: "Today's shared live budget is used up, so this question could not run live. Showing the closest recorded run instead — live runs reset at 07:00 (UTC+7)." }
-      : { kind: "error", text: `${msg.slice(0, 140)}. Showing the closest recorded run instead.` };
+    // Messages come from the Worker's 429 body (`error`) or the engine's own per-run cap (CreditCapError).
+    const visitorCap = /per-visitor/i.test(msg);
+    const runCap = /credit cap \d+ reached/i.test(msg);
+    const capped = visitorCap || runCap || /429|quota|limit reached/i.test(msg);
+    S.banner = !capped
+      ? { kind: "error", text: `${msg.slice(0, 140)}. Showing the closest recorded run instead.` }
+      : visitorCap
+        ? { kind: "quota", text: "You have used today's live-call limit for one visitor, so this question could not run live. Showing the closest recorded run instead — the limit resets at 07:00 (UTC+7)." }
+        : runCap
+          ? { kind: "quota", text: "This question needed more credits than one live run may use (250), so it stopped early. Showing the closest recorded run instead." }
+          : { kind: "quota", text: "Today's shared live budget is used up, so this question could not run live. Showing the closest recorded run instead — live runs reset at 07:00 (UTC+7)." };
     await loadExample(nearestExample(q));
   }
 }
@@ -907,7 +929,7 @@ async function refreshStatus(): Promise<void> {
     const s = (await (await fetch("/api/status")).json()) as State["status"];
     if (!s || typeof s.credits !== "number") return;
     S.status = s;
-    $("#menuTime").textContent = `Live on Geoapify · ${s.credits}/${s.creditCap} credits used today`;
+    $("#menuTime").textContent = `Live on Geoapify · ${Math.round(s.spent ?? s.credits)}/${s.creditCap} credits used today`;
     if (!S.running) renderAsk();
   } catch {
     /* static preview */

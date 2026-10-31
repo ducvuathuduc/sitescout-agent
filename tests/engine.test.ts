@@ -122,3 +122,22 @@ describe("runScout (fake fetch)", () => {
     expect((body.markers as unknown[]).length).toBe(7);
   });
 });
+
+describe("GeoapifyApi against the demo proxy", () => {
+  it("does not retry a 429 the proxy marks as 'daily budget used up'", async () => {
+    let n = 0;
+    const fetchImpl = (async () => {
+      n++;
+      return new Response(JSON.stringify({ error: "daily live quota reached", fallback: true }), { status: 429, headers: { "content-type": "application/json", "x-sitescout-fallback": "quota" } });
+    }) as typeof fetch;
+    const api = new GeoapifyApi({ fetchImpl, baseUrl: "https://demo.example/geo" });
+    await expect(api.autocomplete("Thảo Điền")).rejects.toThrow(/429/);
+    expect(n).toBe(1);
+  });
+
+  it("records 2 credits for a 10-minute walk isoline (1 per 5 minutes)", async () => {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    await api.isoline({ lat: 10.8, lon: 106.73, mode: "walk", range: 600 });
+    expect(api.calls[0].credits).toBe(2);
+  });
+});

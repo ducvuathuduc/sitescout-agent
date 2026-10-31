@@ -188,7 +188,7 @@ async function cmdReport(rest: string[]): Promise<void> {
   const qid = rest[0];
   if (!qid) throw new Error("usage: sitescout report <question-id> [--format md|html]");
   const format = flag(rest, "--format") ?? "md";
-  const manifestPath = join("research", "smoke", "results", qid, "run.json");
+  const manifestPath = join("logs", "results", qid, "run.json");
   const tracePath = join("logs", `${qid}.jsonl`);
   if (!existsSync(manifestPath) || !existsSync(tracePath)) {
     throw new Error(

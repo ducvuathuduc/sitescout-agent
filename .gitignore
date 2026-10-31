@@ -6,13 +6,13 @@ dist/
 .env.local
 .env.*.local
 
-# Trace logs (regenerated per run; samples committed only under research/)
+# Trace logs (regenerated per run; committed samples live under examples/)
 logs/*.jsonl
 logs/*.log
 *.log
 
-# Smoke-test result caches (large, regenerable)
-research/smoke/results/
+# Cached tool results (large, regenerable)
+logs/results/
 
 # OS / editor noise
 .DS_Store
