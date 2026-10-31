@@ -174,7 +174,7 @@ export class GeoapifyMcpClient {
       throw new McpError(
         -32603,
         `MCP tool surface drift: missing ${missing.join(", ")}. ` +
-          `Aborting — shapes re-verify via research/smoke step 00.`,
+          `Aborting — run \`sitescout smoke\` to re-check the live tool surface (docs/mcp-reference.md).`,
       );
     }
   }

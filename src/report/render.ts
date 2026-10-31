@@ -69,7 +69,7 @@ function traceTable(trace: readonly TraceEntry[]): string[] {
   lines.push("## Evidence trace");
   lines.push("");
   lines.push("Every claim above traces to one of these tool calls. Full results are");
-  lines.push("cached under `research/smoke/results/<question-id>/<seq>.json`; digests");
+  lines.push("cached under `logs/results/<question-id>/<seq>.json`; digests");
   lines.push("below let you verify integrity.");
   lines.push("");
   lines.push("| Seq | Tool | Digest | Duration | Error |");

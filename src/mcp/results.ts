@@ -103,7 +103,7 @@ export function parseGeocodeResults(raw: unknown): GeocodedPoint[] {
   }
   throw new Error(
     "parseGeocodeResults: unrecognized response shape (no results/features array). " +
-      "Verify against live tools/list output — see research/smoke step 00.",
+      "Verify against live tools/list output with `sitescout smoke` (docs/mcp-reference.md).",
   );
 }
 

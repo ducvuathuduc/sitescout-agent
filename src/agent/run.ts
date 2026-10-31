@@ -654,8 +654,8 @@ export async function runSiteSelection(
   writeFileSync(join(outDir, "report.md"), reportMarkdown);
   writeFileSync(join(outDir, "report.html"), visualHtml);
 
-  const manifestPath = join("research", "smoke", "results", question.id, "run.json");
-  mkdirSync(join("research", "smoke", "results", question.id), { recursive: true });
+  const manifestPath = join("logs", "results", question.id, "run.json");
+  mkdirSync(join("logs", "results", question.id), { recursive: true });
   writeFileSync(
     manifestPath,
     JSON.stringify(
@@ -909,8 +909,8 @@ export async function runMeetup(
   writeFileSync(join(outDir, "report.md"), reportMarkdown);
   writeFileSync(join(outDir, "report.html"), visualHtml);
 
-  const manifestPath = join("research", "smoke", "results", question.id, "run.json");
-  mkdirSync(join("research", "smoke", "results", question.id), { recursive: true });
+  const manifestPath = join("logs", "results", question.id, "run.json");
+  mkdirSync(join("logs", "results", question.id), { recursive: true });
   writeFileSync(
     manifestPath,
     JSON.stringify(

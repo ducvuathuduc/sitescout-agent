@@ -1,7 +1,7 @@
 /**
  * Per-tool zod input schemas for the 11 Geoapify MCP tools.
  *
- * Verified shapes: research/track1-geopify-deepdive.md §1.1
+ * Verified shapes: docs/mcp-reference.md#tool-argument-shapes
  * (source: https://apidocs.geoapify.com/docs/mcp/<tool>/).
  * Invalid args fail fast with a readable error — never as a wasted API credit.
  *
@@ -343,7 +343,7 @@ export function validateToolArgs(name: McpToolName, args: unknown): unknown {
     throw new Error(
       `Invalid args for ${name}: ${parsed.error.issues.length} issue(s); ` +
         `first at "${first.path.join(".") || "(root)"}": ${first.message}. ` +
-        `Shapes: research/track1-geopify-deepdive.md §1.1`,
+        `Shapes: docs/mcp-reference.md#tool-argument-shapes`,
     );
   }
   return parsed.data;

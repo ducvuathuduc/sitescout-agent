@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "bench/vngeobench/results/**", "research/smoke/results/**", "logs/**", "examples/**"],
+    ignores: ["dist/**", "node_modules/**", "bench/vngeobench/results/**", "logs/**", "examples/**"],
   },
   ...tseslint.configs.recommended,
   {

@@ -10,7 +10,7 @@
  *    "durationMs":341}
  *
  * Full tool results are cached (not inlined) under
- * research/smoke/results/<questionId>/<seq>.json so the trace stays small
+ * logs/results/<questionId>/<seq>.json so the trace stays small
  * while remaining fully reproducible. The report renderer cites trace
  * entries as [T7]; `sitescout trace validate` enforces the schema and the
  * invariant that every claim references >= 1 trace entry.
@@ -141,7 +141,7 @@ export function validateTraceFile(path: string): { ok: boolean; errors: string[]
 
 /** Persist a full tool result for reproducibility (gitignored cache). */
 export function cacheResult(questionId: string, seq: number, result: unknown): string {
-  const dir = join("research", "smoke", "results", questionId);
+  const dir = join("logs", "results", questionId);
   mkdirSync(dir, { recursive: true });
   const path = join(dir, `${seq}.json`);
   writeFileSync(path, JSON.stringify(result, null, 2));
