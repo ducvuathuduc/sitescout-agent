@@ -177,7 +177,7 @@ flowchart LR
   Host["MCP host<br/>Claude Code, Cursor, Codex, Kiro"] -->|stdio| SS["SiteScout MCP server<br/>dist/mcp-server.js"]
   Host -->|streamable HTTP| GM["Geoapify MCP server<br/>api.geoapify.com/v1/mcp"]
   SS -->|REST, GEOAPIFY_API_KEY| REST["Geoapify REST APIs"]
-  SS -.->|no key| Demo["Demo proxy<br/>sitescout.huynhthanh.workers.dev/geo"]
+  SS -.->|no key| Demo["Demo proxy<br/>sitescout.huynhthanh<br/>.workers.dev/geo"]
   CLI["sitescout ask / smoke"] -->|streamable HTTP| GM
 ```
 

@@ -21,7 +21,7 @@ const THEMES = {
     primaryBorderColor: '#e5e5e5',
     secondaryColor: '#f2f2f2',
     tertiaryColor: '#ffffff',
-    lineColor: '#8f8f8f',
+    lineColor: '#737373',
     textColor: '#171717',
     mainBkg: '#fafafa',
     nodeBorder: '#e5e5e5',
@@ -35,7 +35,7 @@ const THEMES = {
     actorBkg: '#fafafa',
     actorBorder: '#e5e5e5',
     actorTextColor: '#171717',
-    signalColor: '#8f8f8f',
+    signalColor: '#737373',
     signalTextColor: '#171717',
     labelBoxBkgColor: '#f2f2f2',
     labelBoxBorderColor: '#e5e5e5',
@@ -53,7 +53,7 @@ const THEMES = {
     primaryBorderColor: '#333333',
     secondaryColor: '#1f1f1f',
     tertiaryColor: '#161616',
-    lineColor: '#6b6b6b',
+    lineColor: '#a1a1a1',
     textColor: '#ededed',
     mainBkg: '#141414',
     nodeBorder: '#333333',
@@ -67,7 +67,7 @@ const THEMES = {
     actorBkg: '#141414',
     actorBorder: '#333333',
     actorTextColor: '#ededed',
-    signalColor: '#6b6b6b',
+    signalColor: '#a1a1a1',
     signalTextColor: '#ededed',
     labelBoxBkgColor: '#1f1f1f',
     labelBoxBorderColor: '#333333',
@@ -93,15 +93,17 @@ function configFor(theme: ThemeName) {
     securityLevel: 'strict' as const,
     suppressErrorRendering: true,
     theme: 'base' as const,
+    // Use SVG text (including <br/> as tspans), independent of article HTML styles.
+    htmlLabels: false,
     fontFamily: 'var(--font-sans)',
     themeVariables: {
       ...THEMES[theme],
       fontFamily: 'var(--font-sans)',
       fontSize: '14px',
     },
-    flowchart: { useMaxWidth: true, htmlLabels: false },
-    sequence: { useMaxWidth: true },
-    gantt: { useMaxWidth: true },
+    flowchart: { useMaxWidth: false, diagramPadding: 32, padding: 24 },
+    sequence: { useMaxWidth: false },
+    gantt: { useMaxWidth: false },
   };
 }
 
@@ -113,6 +115,24 @@ function loadMermaid() {
     mermaidPromise = import('mermaid').then((module) => module.default);
   }
   return mermaidPromise;
+}
+
+function mountDiagram(container: HTMLElement, markup: string) {
+  container.innerHTML = markup;
+  const svg = container.querySelector('svg');
+  if (!svg) throw new Error('Mermaid did not return an SVG');
+
+  // One viewBox unit must remain one CSS pixel. Mermaid's responsive width and
+  // inline max-width otherwise shrink labels along with wide LR flowcharts.
+  const { width, height } = svg.viewBox.baseVal;
+  if (width > 0 && height > 0) {
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.style.width = `${width}px`;
+    svg.style.height = `${height}px`;
+    svg.style.maxWidth = 'none';
+  }
+  container.dataset.state = 'ready';
 }
 
 function isMermaidBlock(pre: HTMLElement) {
@@ -150,8 +170,7 @@ async function renderTargets(targets: Target[], theme: ThemeName, isCancelled: (
     try {
       const { svg } = await mermaid.render(`ss-mermaid-${renderId++}`, target.source);
       if (isCancelled()) return;
-      target.container.innerHTML = svg;
-      target.container.dataset.state = 'ready';
+      mountDiagram(target.container, svg);
       target.figure.style.display = 'none';
       target.figure.setAttribute('data-mermaid-hidden', 'true');
     } catch {
@@ -268,8 +287,7 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
           mermaid.initialize(configFor(renderedTheme));
           const { svg } = await mermaid.render(`ss-mermaid-${renderId++}`, chart);
           if (cancelled || !containerRef.current) return;
-          containerRef.current.innerHTML = svg;
-          containerRef.current.dataset.state = 'ready';
+          mountDiagram(containerRef.current, svg);
           sourceRef.current?.setAttribute('hidden', '');
         })
         .catch(() => {
