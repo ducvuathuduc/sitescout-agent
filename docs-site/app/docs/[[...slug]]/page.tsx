@@ -11,7 +11,10 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { getPageMarkdownUrl, gitConfig } from '@/lib/shared';
+import { getPageMarkdownUrl } from '@/lib/shared';
+import { getPageSourceUrl } from '@/lib/page-source';
+import { SiteFooter } from '@/components/site-footer';
+import { PageNavigation } from '@/components/page-navigation';
 import { MermaidDiagrams } from '@/components/mermaid';
 import { MobileToc } from '@/components/mobile-toc';
 import { AgentPrompt } from '@/components/landing/agent-prompt';
@@ -23,12 +26,13 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 
   const MDX = page.data.body;
   const markdownUrl = getPageMarkdownUrl(page).url;
+  const sourceUrl = getPageSourceUrl(page.path);
   const actions = (
     <div className="ss-page-actions">
       <MarkdownCopyButton markdownUrl={markdownUrl}>Copy page</MarkdownCopyButton>
       <ViewOptionsPopover
         markdownUrl={markdownUrl}
-        githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
+        githubUrl={sourceUrl}
         aria-label="Page options"
       >
         <span className="sr-only">Page options</span>
@@ -42,6 +46,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
       full={page.data.full}
       breadcrumb={{ enabled: false }}
       tableOfContentPopover={{ enabled: false }}
+      footer={{ enabled: false }}
     >
       <div className="ss-mobile-page-bar">
         {actions}
@@ -64,6 +69,11 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
         />
         <MermaidDiagrams />
       </DocsBody>
+      <div className="ss-page-source">
+        <a href={sourceUrl}>Edit this page on GitHub</a>
+      </div>
+      <PageNavigation slug={page.slugs.join('/')} />
+      <SiteFooter />
     </DocsPage>
   );
 }
@@ -80,5 +90,10 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   return {
     title: page.data.title,
     description: page.data.description,
+    openGraph: {
+      title: `${page.data.title} · SiteScout Docs`,
+      description: page.data.description,
+      type: 'article',
+    },
   };
 }

@@ -1,44 +1,58 @@
-# Edge cases — failure modes and observed behavior
+# Edge cases: failures and fallbacks
 
-Every edge case names the failure mode AND what SiteScout actually does
-(error message / fallback), not just the risk. Key-gated observations are
-marked ⏳ PENDING (no key yet — 2026-10-20).
+SiteScout has separate REST and MCP pipelines. The behavior below comes from the linked source;
+it does not imply that every failure was reproduced against a live account. Recorded findings are in
+[Geoapify feedback](FEEDBACK.md).
 
-## Geocoding
+## The scout engine, web demo and SiteScout MCP server
 
-| Failure | Observed behavior |
+These use [the REST engine](../src/engine/scout.ts) and [Geoapify client](../src/engine/geoapify.ts).
+
+| Failure | Behavior |
 |---|---|
-| Empty geocode result (all fallback queries) | Candidate marked `unevaluable`; listed in the report's "Excluded from ranking" section with the trace refs of the failed queries. Never silently dropped, never scored. |
-| Ambiguous geocode (multiple `result_type`s) | Preference order `amenity/building > street > locality > city` (+ confidence); chosen type + alternative count recorded in the trace summary. |
-| Invalid API key (HTTP 401) | Client fails fast — no retry. CLI prints `BLOCKED: missing GEOAPIFY_API_KEY` (unset) or surfaces the 401 message. |
-| HTTP 429 / 5xx / timeout | Exponential backoff, 3 attempts, jitter (`src/mcp/client.ts`). Then the error is traced and the run continues/aborts per phase. |
+| Area cannot be resolved | The engine throws an error rather than inventing coordinates |
+| Boundaries fails or returns no ward | The report records a limitation and uses available geocoder information; candidate generation can fall back to a disk |
+| Candidate reverse geocoding fails | The candidate retains a synthetic label |
+| Walking isoline fails | Places are counted inside a 600 m circle instead; the report records the fallback and uses the circle's area |
+| Places returns no results | Counts remain zero; this engine has no insufficient-data exclusion rule, so inspect coverage before using the ranking |
+| Route Matrix fails or has no reachable cells for a candidate | Missing drive time is shown as unavailable and access receives the neutral score 0.5 |
+| HTTP 401 | The REST client records the error and throws without retrying; the calling engine phase determines whether the run stops or uses a fallback |
+| HTTP 429, server error or timeout | The REST client makes up to 3 attempts. A demo quota response marked `x-sitescout-fallback` is not retried |
+| Network failure other than timeout | The REST client records and throws it; the calling phase may stop or fall back |
+| Static Maps fails in the CLI | The CLI prints a warning and still writes the reports, result and trace; `map.jpg` may be absent |
 
-## Places & routing
+The CLI defaults to `--credit-cap 300`. The engine checks accumulated estimated credits before a request,
+so the final request can cross the threshold. Output is written after the analysis completes, rather than
+streamed to disk as each request finishes; an aborted `scout` run may have terminal evidence without an output trace.
+See [the CLI writer](../src/scout-cli.ts).
 
-| Failure | Observed behavior |
+The public demo offers a recorded run when its daily caps are reached. Caps are not atomic, and credits
+are estimates. Details: [demo proxy limits](demo-proxy.md#8-known-limits).
+
+## The older ask and smoke MCP pipeline
+
+This pipeline uses [the MCP client](../src/mcp/client.ts), [agent](../src/agent/run.ts) and
+[scoring model](../src/scoring/model.ts). Its circular catchments differ from the walking isolines above.
+
+| Failure | Behavior |
 |---|---|
-| `search_places` returns 0 POIs | Counts are 0 — the scoring model's data-density floor (`INSUFFICIENT_DATA_POI_FLOOR = 5`) then excludes the candidate from ranking instead of scoring "no competition" as good. |
-| Route matrix cell unreachable (NaN) | Cell dropped from the mean; if NO cell is finite, `meanAccessDurationS` stays unset → accessibility scores neutral 0.5, disclosed in the trace. |
-| `traffic: approximated` vs `free_flow` | Always `approximated` (traffic-aware); query timestamp is in the trace. Times are time-of-day dependent — disclosed in every report's limitations. |
+| Empty geocode results after fallbacks | The candidate is marked unevaluable and excluded from ranking |
+| Insufficient place data | The scoring model's data-density floor excludes candidates with fewer than 5 POIs |
+| Buffer, measure or spatial-relation call fails | The agent can use the analytic circle area and discloses the approximation |
+| Invalid tool arguments | Strict schemas reject the call before it reaches Geoapify |
+| Estimated budget would exceed `--budget` | The budget tracker rejects the planned call before sending it |
 
-## Geometry
+MCP traces are appended to `logs/<question-id>.jsonl`; cached results and the run manifest are in
+`logs/results/<question-id>/`. These paths are gitignored. See [trace paths and formats](tutorial.md#where-traces-and-logs-are-written).
 
-| Failure | Observed behavior |
+## Offline checks and output formats
+
+| Situation | Behavior |
 |---|---|
-| Buffer/measure/relation call fails | Catchment area falls back to the analytic circle area (πr²); the trace records the failed call. Report still discloses the buffer approximation. |
-| MCP `isError: true` on any call | Recorded in the trace with `isError`, never retried (validation failure). Downstream treats the evidence as missing, not zero. |
+| `report` is missing the local MCP trace or manifest | The CLI names the missing files and the `ask` command needed to produce them |
+| HTML re-render requested from an MCP manifest | The CLI reports that HTML re-render is unsupported; Markdown is supported for site selection |
+| Corrupted MCP JSONL trace | `trace validate` checks JSON, schema and consecutive sequence numbers and reports errors by line |
+| REST `scout` trace passed to `trace validate` | Validation fails because the validator expects the older MCP schema |
+| `scout --help` | No subcommand help is implemented; use [the options table](tutorial.md#3-install-and-run-it-yourself-5-min) |
 
-## Budget & quota
-
-| Failure | Observed behavior |
-|---|---|
-| `--budget` cap exceeded during planning | Planning aborts BEFORE the call is sent: `budget exceeded: planned X > cap Y`. No partial spend beyond the cap. |
-| Free-tier daily quota (3,000 credits/day) | ⏳ PENDING live observation. Estimated per-question cost ≈ 20–40 credits; the printed ledger lets the operator stay inside quota. |
-
-## Offline / reproducibility
-
-| Failure | Observed behavior |
-|---|---|
-| `sitescout report <qid>` without trace/manifest | Clear error naming the missing files and the `ask` command that produces them. |
-| Corrupted trace file | `trace validate` reports the exact line and failure (bad JSON / schema / seq order). |
-| No network at all | Every network call throws through `GeoapifyMcpClient`; nothing is mocked, nothing is faked — the run fails loudly. |
+Committed recordings in [examples/](../examples/) can be inspected without a network connection or API key.

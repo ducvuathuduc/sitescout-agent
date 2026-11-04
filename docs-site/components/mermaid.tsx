@@ -173,6 +173,8 @@ export function MermaidDiagrams() {
     const targets: Target[] = [];
 
     for (const pre of Array.from(article.querySelectorAll<HTMLElement>('pre'))) {
+      // Explicit Mermaid components own their fallback source and rendering.
+      if (pre.closest('.ss-mermaid-block')) continue;
       if (!isMermaidBlock(pre)) continue;
       const figure = pre.closest('figure') ?? pre;
       if (figure.getAttribute('data-mermaid-hidden') === 'true') continue;
@@ -183,6 +185,7 @@ export function MermaidDiagrams() {
       container.setAttribute('data-mermaid', '');
       container.setAttribute('role', 'img');
       container.setAttribute('aria-label', 'Diagram');
+      container.tabIndex = 0;
 
       figure.insertAdjacentElement('afterend', container);
       targets.push({
@@ -310,6 +313,7 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
         data-state="loading"
         role="img"
         aria-label="Diagram"
+        tabIndex={0}
         className="ss-mermaid"
       />
     </div>

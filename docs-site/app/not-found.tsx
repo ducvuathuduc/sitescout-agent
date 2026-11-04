@@ -1,6 +1,17 @@
 import Link from 'next/link';
 import { GitHubIcon } from '@/components/icons';
 import { repoUrl } from '@/lib/shared';
+import { SiteFooter } from '@/components/site-footer';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Page not found',
+  description: 'This SiteScout documentation page has moved or does not exist. Browse the documentation to find setup guides and reference pages.',
+  openGraph: {
+    title: 'Page not found · SiteScout Docs',
+    description: 'Browse the SiteScout documentation for setup guides and reference pages.',
+  },
+};
 
 export default function NotFound() {
   return (
@@ -55,6 +66,7 @@ export default function NotFound() {
           </Link>
         </div>
       </main>
+      <div className="mx-auto w-full max-w-3xl px-6"><SiteFooter /></div>
     </div>
   );
 }

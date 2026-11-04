@@ -239,6 +239,106 @@ article#nd-page {
   min-height: 184px;
 }
 
+.ss-home-hero a:is([class*='h-9']) {
+  height: 40px;
+}
+
+.ss-program-credit {
+  margin-top: 16px;
+  color: var(--ss-secondary);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.ss-program-credit a:hover {
+  color: var(--ss-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ss-page-source {
+  margin-top: 32px;
+  font-size: 13px;
+  color: var(--ss-secondary);
+}
+
+.ss-page-source a:hover {
+  color: var(--ss-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ss-page-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  margin-block: 24px 32px;
+}
+
+.ss-page-navigation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ss-border);
+  border-radius: 8px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.ss-page-navigation-card:hover {
+  background: var(--ss-surface);
+  border-color: var(--ss-border-strong);
+}
+
+.ss-page-navigation-card[data-direction='next'] {
+  text-align: right;
+}
+
+.ss-page-navigation-card span {
+  color: var(--ss-secondary);
+  font-size: 13px;
+}
+
+.ss-page-navigation-card strong {
+  color: var(--ss-text);
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ss-site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  border-top: 1px solid var(--ss-border);
+  padding-block: 24px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--ss-secondary);
+}
+
+.ss-footer-license,
+.ss-site-footer nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ss-footer-license {
+  gap: 8px;
+}
+
+.ss-footer-credit {
+  margin-left: auto;
+}
+
+.ss-site-footer a:hover {
+  color: var(--ss-text);
+}
+
 .ss-show-more {
   position: absolute;
   z-index: 1;
@@ -1232,7 +1332,7 @@ article#nd-page h1 {
 
 .ss-mermaid {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   overflow-x: auto;
   margin-block: 1.5rem;
   padding: 20px 12px;
@@ -1242,8 +1342,16 @@ article#nd-page h1 {
 }
 
 .ss-mermaid svg {
+  flex-shrink: 0;
+  min-width: 36rem;
   max-width: 100%;
   height: auto;
+  margin-inline: auto;
+}
+
+/* Mermaid measures its own labels; article paragraph margins clip them. */
+#nd-page .prose .ss-mermaid p {
+  margin: 0;
 }
 
 .ss-mermaid[data-state='loading'] {
@@ -1270,6 +1378,13 @@ article#nd-page h1 {
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
+  .ss-site-footer {
+    gap: 16px;
+  }
+
+  .ss-footer-credit {
+    margin-left: 0;
+  }
   #nd-page,
   article#nd-page {
     padding-inline: 24px;

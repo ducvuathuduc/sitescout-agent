@@ -10,6 +10,16 @@ import {
 } from 'lucide-react';
 import { TerminalCard } from '@/components/landing/terminal-card';
 import { AgentPrompt } from '@/components/landing/agent-prompt';
+import { SiteFooter } from '@/components/site-footer';
+import type { Metadata } from 'next';
+
+const description = 'Compare sites in Ho Chi Minh City by walking catchments, competitors, and drive times. Trace results to the Geoapify calls behind them.';
+
+export const metadata: Metadata = {
+  title: 'Overview',
+  description,
+  openGraph: { title: 'Overview · SiteScout Docs', description, type: 'website' },
+};
 
 type Card = {
   title: string;
@@ -21,7 +31,7 @@ type Card = {
 const CARDS: Card[] = [
   {
     title: 'MCP usage',
-    description: 'Five tools that run a whole analysis from your AI assistant.',
+    description: 'Run a site analysis from your AI assistant and inspect the evidence.',
     href: '/docs/mcp',
     icon: Plug,
   },
@@ -51,7 +61,7 @@ const CARDS: Card[] = [
   },
   {
     title: 'Benchmarks',
-    description: '55 HCMC address queries scored against Wikidata coordinates.',
+    description: 'HCMC address queries checked against Wikidata coordinates.',
     href: '/docs/benchmarks/hcmc-addresses',
     icon: ChartBar,
   },
@@ -80,7 +90,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 text-[18px] leading-7 text-[#666] dark:text-[#a1a1a1]">
               Compare sites in Ho Chi Minh City by walking catchments, competitors and drive times.
-              Trace every number.
+              Trace results to the Geoapify calls behind them.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/docs" className={primaryButton}>
@@ -97,6 +107,9 @@ export default function HomePage() {
                 MCP usage
               </Link>
             </div>
+            <p className="ss-program-credit">
+              Built for the <a href="https://www.geoapify.com">Geoapify Open Geospatial Program</a>
+            </p>
           </div>
 
           <div className="min-w-0 xl:pt-4">
@@ -147,6 +160,7 @@ export default function HomePage() {
             })}
           </div>
         </section>
+        <SiteFooter />
       </div>
     </main>
   );

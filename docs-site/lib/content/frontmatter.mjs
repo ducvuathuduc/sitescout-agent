@@ -2,6 +2,7 @@
 // The source files have no frontmatter: the first H1 becomes `title` and the
 // first plain paragraph becomes `description`.
 import { stripInlineMarkdown } from './slug.mjs';
+import { stripLeadingEmoji } from './headings.mjs';
 
 const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
 const HEADING = /^(#{1,6})\s+/;
@@ -80,7 +81,7 @@ export function extractTitleAndBody(markdown, { sourcePath = '<source>' } = {}) 
     const heading = /^#\s+(.*?)\s*#*\s*$/.exec(line);
     if (heading) {
       titleLine = index;
-      title = stripInlineMarkdown(heading[1]);
+      title = stripLeadingEmoji(stripInlineMarkdown(heading[1]));
       break;
     }
   }

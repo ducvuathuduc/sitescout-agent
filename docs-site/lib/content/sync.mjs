@@ -7,6 +7,7 @@ import { buildAssetPlan, collectImageReferences, copyAssets, rewriteMarkdownLink
 import { buildMetaFiles } from './meta.mjs';
 import { buildSessionsPage } from './sessions.mjs';
 import { CONTENT_SRC_PAGES, SYNC_SOURCES } from './sources.mjs';
+import { cleanMarkdownHeadings } from './headings.mjs';
 
 function ensureFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`Missing ${label}: ${filePath}`);
@@ -83,7 +84,7 @@ export function runSync({ repoRoot, docsSiteDir, log = () => {} }) {
       content: `${buildFrontmatter({
         title: document.slug.startsWith('clients/') ? navTitles.get(document.slug) ?? parsed.title : parsed.title,
         description: parsed.description,
-      })}${body}`,
+      })}${cleanMarkdownHeadings(body)}`,
     };
   });
 

@@ -2,7 +2,11 @@
 
 SiteScout is an open-source agent for choosing small-business locations in Ho Chi Minh City. Ask a question in English or Vietnamese and it uses Geoapify to resolve the area, draw walking catchments, count competitors and demand places, measure drive access, and rank candidate sites. Each reported figure has a `[Tn]` reference to the request that produced it. You can use the same engine in the web demo, from the CLI, or through an MCP host.
 
+The site-selection scope is one city, Ho Chi Minh City, with three recorded example questions: specialty coffee in Thảo Điền, a pharmacy in Bình Thạnh, and office lunch in District 1.
+
 **[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Docs](https://sitescout-docs.pages.dev/docs) · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude, Cursor, Codex, Kiro](agent/README.md) · [How we use the Geoapify MCP server](docs/mcp.md) · [Demo proxy: key, limits, cache](docs/demo-proxy.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
+
+[Documentation](https://sitescout-docs.pages.dev/docs)
 
 [![CI](https://github.com/ducvuathuduc/sitescout-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/ducvuathuduc/sitescout-agent/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ducvuathuduc/sitescout-agent?color=1785FB)](https://github.com/ducvuathuduc/sitescout-agent/releases)
@@ -49,15 +53,21 @@ The score is `0.35 × demand density + 0.25 × (1 − competition) + 0.25 × acc
 Install Node.js 20+ and get a free [Geoapify key](https://myprojects.geoapify.com). These are the [tutorial's CLI commands](docs/tutorial.md#3-install-and-run-it-yourself-5-min), with `YOUR_KEY` as the placeholder. Run them in Bash:
 
 ```sh
-git clone https://github.com/ducvuathuduc/sitescout-agent.git && cd sitescout-agent
-npm ci && npm run build
+git clone https://github.com/ducvuathuduc/sitescout-agent.git
+cd sitescout-agent
+npm ci
+npm run build
+node dist/cli.js --help
 export GEOAPIFY_API_KEY=YOUR_KEY
 node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Điền?" --id my-coffee
 ```
 
-In PowerShell, run `npm ci` and `npm run build` separately, and replace the `export` line with `$env:GEOAPIFY_API_KEY = "YOUR_KEY"`.
-Output goes to `examples/my-coffee/`: `report.md`, `report.html`, `map.jpg`, `result.json` and `trace.jsonl`.
-The tutorial estimates 85–140 credits per run; `--credit-cap 300` is the CLI default. The documented free plan has 3,000 credits per day ([tutorial](docs/tutorial.md), [dated pricing notes](docs/demo-proxy.md)).
+In PowerShell, replace the `export` line with `$env:GEOAPIFY_API_KEY = "YOUR_KEY"`. Replace `YOUR_KEY` with your own key in your shell, or set `GEOAPIFY_API_KEY` in a gitignored `.env.local` file using [.env.local.example](.env.local.example). The CLI loads that file from the working directory; an existing shell variable takes precedence. Keep the key out of source code.
+
+Build and help run offline. The final command makes live Geoapify requests and spends credits. It prints the plan, request lines and a ranked shortlist, then writes `report.md`, `report.html`, `result.json` and `trace.jsonl` to `examples/my-coffee/`; `map.jpg` is written if Static Maps succeeds. Use a new `--id` to keep an earlier run.
+The three recorded traces estimate about 91, 90 and 139 credits under the corrected rules; these are examples, not a bound for new questions. `--credit-cap 300` is the CLI default, but the engine checks the accumulated estimate before a request, so the last request can cross it. The documented free plan has 3,000 credits per day ([dated pricing notes](docs/demo-proxy.md#how-credits-are-counted)).
+
+`scout` options are `--id`, `--out`, `--planner heuristic|llm` and `--credit-cap` ([source](src/scout-cli.ts)). There is no `scout --help`; the top-level help lists the older MCP commands. See the [tutorial](docs/tutorial.md#3-install-and-run-it-yourself-5-min) for each step, expected output and troubleshooting.
 
 For planning options and environment variables, see the [tutorial](docs/tutorial.md). The CLI needs a key; the MCP server below can use the public demo proxy without one.
 

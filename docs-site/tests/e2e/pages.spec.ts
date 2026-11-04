@@ -12,6 +12,7 @@ const PAGES = [
   { key: 'credits', path: '/docs/credits' },
   { key: 'mcp', path: '/docs/mcp' },
   { key: 'demo-proxy', path: '/docs/demo-proxy' },
+  { key: 'sessions', path: '/docs/agent/sessions' },
 ] as const;
 
 const THEMES = ['light', 'dark'] as const;
@@ -52,6 +53,26 @@ for (const target of PAGES) {
           await page.evaluate(async () => {
             await document.fonts.ready;
           });
+          if (target.path === '/docs/demo-proxy') {
+            await expect(page.locator('[data-mermaid] svg').first()).toBeVisible({ timeout: 45_000 });
+            for (const block of await page.locator('.ss-mermaid-block').all()) {
+              await expect(block.locator('[data-mermaid]')).toHaveCount(1);
+            }
+            const clippedLabels = await page.locator('[data-mermaid] foreignObject p').evaluateAll((labels) => labels.filter((label) => {
+              const text = label.getBoundingClientRect();
+              const box = label.closest('foreignObject')!.getBoundingClientRect();
+              return text.top < box.top - 1 || text.bottom > box.bottom + 1;
+            }).map((label) => label.textContent));
+            expect(clippedLabels, 'diagram labels must fit their measured boxes').toEqual([]);
+            if (viewport.width === 375) {
+              const diagram = page.locator('[data-mermaid]').first();
+              expect(await diagram.evaluate((element) => {
+                element.scrollLeft = element.scrollWidth;
+                return element.scrollLeft;
+              }), 'mobile diagrams must scroll within their box').toBeGreaterThan(0);
+              await diagram.evaluate((element) => { element.scrollLeft = 0; });
+            }
+          }
 
           // Overflow clipping can hide a broken grid without page scroll.
           // Require a usable content column as well as a bounded document.

@@ -2,14 +2,23 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { Provider } from '@/components/provider';
 import './global.css';
+import type { Metadata } from 'next';
+import { siteUrl } from '@/lib/shared';
 
-export const metadata = {
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: 'SiteScout docs',
-    template: '%s · SiteScout docs',
+    default: 'SiteScout Docs',
+    template: '%s · SiteScout Docs',
   },
   description:
     'Evidence-traced site selection for Ho Chi Minh City, built on Geoapify.',
+  openGraph: {
+    title: 'SiteScout Docs',
+    description: 'Compare sites in Ho Chi Minh City using Geoapify data and trace each result to its source.',
+    siteName: 'SiteScout Docs',
+    type: 'website',
+  },
   icons: {
     icon: '/favicon.svg',
   },
