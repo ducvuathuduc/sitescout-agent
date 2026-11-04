@@ -40,7 +40,7 @@
     "docs:dev": "npm --prefix docs-site run dev",
     "docs:build": "npm --prefix docs-site run build",
     "docs:check": "npm --prefix docs-site run check",
-    "demo:dry-run": "node web/build.mjs && wrangler deploy --dry-run --outdir .dist -c web/wrangler.toml",
+    "demo:dry-run": "node web/build.mjs && cd web && wrangler deploy --dry-run --outdir .dist",
     "demo:deploy": "node web/build.mjs && wrangler deploy -c web/wrangler.toml",
     "demo:migrate": "wrangler d1 execute sitescout-demo --remote -c web/wrangler.toml --file web/worker/schema.sql",
     "demo:totals": "wrangler d1 execute sitescout-demo --remote -c web/wrangler.toml --command \"SELECT d.day, t.credits, t.tiles, s.hits, s.tile_hits, ROUND(s.saved, 2) AS saved FROM (SELECT day FROM totals UNION SELECT day FROM cache_stats) d LEFT JOIN totals t ON t.day = d.day LEFT JOIN cache_stats s ON s.day = d.day WHERE d.day BETWEEN '2026-10-22' AND '2026-11-04' ORDER BY d.day\""
