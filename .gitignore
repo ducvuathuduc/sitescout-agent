@@ -19,9 +19,19 @@ logs/results/
 Thumbs.db
 .vscode/
 .idea/
+.kiro/
 
 # Bench run outputs (regenerable via `sitescout bench run`)
 bench/vngeobench/results/
 node_modules
 web/worker/assets.gen.ts
 web/.dist/
+
+# Documentation site (generated content and build output)
+docs-site/node_modules/
+docs-site/.next/
+docs-site/out/
+docs-site/content/docs/
+docs-site/public/docs-assets/
+docs-site/.screenshots/
+docs-site/.source/

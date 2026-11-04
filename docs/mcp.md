@@ -39,7 +39,7 @@ has no isoline tool. See [FEEDBACK.md](FEEDBACK.md) item #1.
 
 **Tool count.** The pipeline uses all 11 tools that `tools/list` returned when we recorded it on 2026-10-22
 ([tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt](../tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt)).
-On 2026-10-31 Geoapify's machine-readable tool index
+On 2026-11-04 Geoapify's machine-readable tool index
 ([tools/index.json](https://apidocs.geoapify.com/assets/openapi/specs/mcp/tools/index.json)) lists a twelfth tool,
 `get_timezone`, while the docs page still says "eleven tools". SiteScout does not need time zones. There is still
 no isoline tool. `assertToolSurface` only fails when one of our 11 tools is missing, so a new tool does not break
@@ -48,7 +48,7 @@ no isoline tool. `assertToolSurface` only fails when one of our 11 tools is miss
 The meetup playbook (`runMeetup`, line 770) uses four tools: `search_places`, `calculate_route_matrix`,
 `calculate_route`, and `reverse_geocode_coordinates`.
 
-Credit rules from the Geoapify MCP docs (https://apidocs.geoapify.com/docs/mcp/, read 2026-10-31):
+Credit rules from the [Geoapify MCP docs](https://apidocs.geoapify.com/docs/mcp/), checked 2026-11-04:
 `initialize`, `tools/list`, and `notifications/*` cost 0 credits. A `tools/call` costs what its underlying API
 costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 
@@ -56,7 +56,7 @@ costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 
 | Need | Geoapify MCP | SiteScout uses | Reason |
 |---|---|---|---|
-| Free-text place name to a point | `geocode_address` | REST `/v1/geocode/autocomplete` and `/v1/geocode/search` in an autocomplete-first chain (`resolvePlace`, [src/engine/scout.ts](../src/engine/scout.ts) line 117) | In our benchmark, autocomplete got 42/55 (76%) top-1 matches on Vietnamese queries, and search got 37/55 (67%) ([bench/hcmc-addresses/RESULTS.md](../bench/hcmc-addresses/RESULTS.md), run 2026-10-22). That benchmark used REST endpoints. It did not test `geocode_address`. |
+| Free-text place name to a point | `geocode_address` | REST `/v1/geocode/autocomplete` and `/v1/geocode/search` in an autocomplete-first chain (`resolvePlace`, [src/engine/scout.ts](../src/engine/scout.ts) line 125) | In our benchmark, autocomplete got 42/55 (76%) top-1 matches on Vietnamese queries, and search got 37/55 (67%) ([bench/hcmc-addresses/RESULTS.md](../bench/hcmc-addresses/RESULTS.md), run 2026-10-22). That benchmark used REST endpoints. It did not test `geocode_address`. |
 | Point to address | `reverse_geocode_coordinates` | REST `/v1/geocode/reverse` (`reverse()` in [src/engine/geoapify.ts](../src/engine/geoapify.ts)) | The product path is REST end to end (section 1). |
 | Walk-time catchment (isoline) | None | REST `/v1/isoline` (`isoline()` in `geoapify.ts`) | No isoline tool in the 11-tool list ([tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt](../tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt)). See [FEEDBACK.md](FEEDBACK.md) item #1. |
 | Places inside a walk catchment | `search_places` takes one category and a circle | REST `/v2/places` with `filter=geometry:<isoline id>`, or a 600 m circle if the isoline fails (`scout.ts` line 301) | `search_places` accepts one `category`, one point, `radius_meters`, and `limit` up to 100 ([src/mcp/schemas.ts](../src/mcp/schemas.ts)). It has no geometry filter. |
@@ -64,7 +64,7 @@ costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 | Route to one point | `calculate_route` | REST `/v1/routing` (`routing()` in `geoapify.ts`) | The product path uses REST throughout (section 1). |
 | Buffer, area, union, contains | `transform_geometry`, `measure_geometry`, `combine_geometries`, `evaluate_spatial_relation` | Local code: `geometryAreaM2` and `pointInGeometry` in [src/geo/grid.ts](../src/geo/grid.ts) | The engine computes these locally, so they need no API call. |
 | Category check | `list_place_categories` | Bundled catalog, [src/engine/categories.ts](../src/engine/categories.ts), read by `plan_site_question` ([agent/README.md](../agent/README.md)) | The agent path also calls `list_place_categories` at phase 1b, against the live list. |
-| Browser demo | Not used | A Cloudflare Worker ([web/worker](../web/worker)); the demo proxy URL is in [src/mcp-server.ts](../src/mcp-server.ts) | The Geoapify MCP docs say browser clients should omit the `MCP-Protocol-Version` header, because the CORS preflight does not allow it (docs read 2026-10-31). |
+| Browser demo | Not used | A Cloudflare Worker ([web/worker](../web/worker)); the demo proxy URL is in [src/mcp-server.ts](../src/mcp-server.ts) | The Geoapify MCP docs say browser clients should omit the `MCP-Protocol-Version` header, because the CORS preflight does not allow it (docs checked 2026-11-04). |
 
 Why the product uses REST for isolines: the REST isoline returns an `id`, and `/v2/places` accepts that id as
 `filter=geometry:<id>`. That counts places inside the walk area, not inside a circle. A circle over-counts across
@@ -170,11 +170,11 @@ A bad category does not return an HTTP error. The server sends a text block with
 SiteScout's MCP server ([src/mcp-server.ts](../src/mcp-server.ts), `dist/mcp-server.js`, stdio) runs the analysis.
 It calls the Geoapify REST APIs itself. The model in the host only plans the question and explains the answer.
 The Geoapify MCP server exposes lower-level tools for geocoding, search, routing, and geometry (11 on 2026-10-22,
-plus `get_timezone` in the 2026-10-31 index).
+plus `get_timezone` in the index checked 2026-11-04).
 
 ```mermaid
 flowchart LR
-  Host["MCP host<br/>Claude Code, Cursor"] -->|stdio| SS["SiteScout MCP server<br/>dist/mcp-server.js"]
+  Host["MCP host<br/>Claude Code, Cursor, Codex, Kiro"] -->|stdio| SS["SiteScout MCP server<br/>dist/mcp-server.js"]
   Host -->|streamable HTTP| GM["Geoapify MCP server<br/>api.geoapify.com/v1/mcp"]
   SS -->|REST, GEOAPIFY_API_KEY| REST["Geoapify REST APIs"]
   SS -.->|no key| Demo["Demo proxy<br/>sitescout.huynhthanh.workers.dev/geo"]
@@ -250,19 +250,62 @@ The same result shows the city problem in [FEEDBACK.md](FEEDBACK.md) item #2. Th
 "…, Phường Sài Gòn, Thành phố Thủ Đức, 71006, Việt Nam". [FEEDBACK.md](FEEDBACK.md) item #2 says the Thủ Đức city
 was dissolved, so this city name is wrong for central HCMC.
 
-### Expected two-server session (not yet recorded)
+### Recorded two-server session (04b, Codex CLI)
 
-Expected, not yet recorded. The question below is the one in the Claude Code guide, with a follow-up added.
-The model may choose different calls.
+[agent/transcripts/04b-thaodien-coffee-codex-two-servers.jsonl](../agent/transcripts/04b-thaodien-coffee-codex-two-servers.jsonl).
 
-Question: "Where should I open a specialty coffee shop in Thảo Điền? Cite every number. Then list the nearest cafés
-to the top site from Geoapify."
+- **Host and model:** Codex CLI 0.166.0 (`codex exec --json`), model `gpt-6.1-sol` (the model set in the Codex
+  config; the JSON stream does not report it). It is not a Claude Code or Cursor session. The same two servers are
+  configured the same way in [Claude Code](../agent/clients/claude-code.md), [Cursor](../agent/clients/cursor.md)
+  and [Kiro](../agent/clients/kiro.md).
+- **Servers:** SiteScout MCP server 1.1.0 over stdio, and the Geoapify MCP server over streamable HTTP, configured
+  as in [codex.config.example.toml](../agent/clients/codex.config.example.toml). Web search was off, so every fact
+  in the answer came from one of the two servers.
+- **Recorded:** 2026-11-04, 96 seconds.
 
-Expected calls:
+Question: "Use the SiteScout MCP tools: where should I open a specialty coffee shop in Thảo Điền? Cite every number
+with its [Tn] reference. Then use the Geoapify MCP server to list the five nearest cafés to the top site."
 
-1. SiteScout `plan_site_question`
-2. SiteScout `scout_site`
-3. Geoapify `search_places` with `category: "catering.cafe"`, the top site's `lat` and `lon`, `radius_meters: 800`, and `limit: 5`
+| # | Server | Tool | Main arguments | Short result |
+|---|---|---|---|---|
+| 1 | SiteScout | `plan_site_question` | the question | `competitorCategory` `catering.cafe`; demand `office`, `sport.fitness`, `commercial.clothing`; area Xuân Thủy, Thảo Điền; 10 min walk; 7 candidates |
+| 2 | SiteScout | `scout_site` | the question | `areaCheck` ok; 54 calls; `creditsEstimated` 88; #1 Dookki, Đường Võ Nguyên Giáp: 5 competitors, 6 demand places, 0.464 km² walk area, 33 min mean drive |
+| 3 | Geoapify | `list_place_categories` | none | 833 categories; the model checked that `catering.cafe` exists |
+| 4 | Geoapify | `search_places` | `category: "catering.cafe"`, the #1 site's `lat` 10.802859 and `lon` 106.739853, `limit: 5` | Highlands Coffee 116 m, QUÁN BỤI 139 m, Wagwel Canine 209 m, Wagwel Feline 211 m, Starbucks 246 m |
+| 5–10 | SiteScout | `get_evidence` | refs 12 to 17 | the reverse geocode, isoline and four Places requests behind the #1 site |
+
+The Places request behind the #1 site's competitor count, from `get_evidence` ref 14:
+
+```json
+{
+  "ref": 14,
+  "api": "places",
+  "method": "GET",
+  "endpoint": "/v2/places?categories=catering.cafe&filter=geometry%3A6c2d4ee03fc0bbb1497282701968b343&limit=150&lang=vi",
+  "status": 200,
+  "summary": { "count": 5, "categories": "catering.cafe" },
+  "credits": 1
+}
+```
+
+What the session shows:
+
+- **The two servers did different jobs.** SiteScout counted cafés *inside the 10-minute walking isochrone*
+  (REST Places with `filter=geometry:<isoline id>`, 5 cafés). Geoapify MCP `search_places` listed the cafés
+  *nearest the point* by straight-line distance. The model kept the two apart and labelled the Geoapify list with
+  its own citation instead of a SiteScout `[Tn]` ref.
+- **`get_evidence` was used this time.** In the open-weight sessions the model either skipped it (03c) or wrote a
+  URL from memory (03b). Here the model fetched refs 12 to 17 before quoting numbers.
+- **Two things to improve.** SiteScout's planner read "specialty coffee shop" as the business `coffee shop`, so
+  the ranking is for cafés in general; the model said so in its answer. The model also called
+  `list_place_categories` (about 25,700 characters) to check one category name. The second point is [FEEDBACK.md](FEEDBACK.md) item #7, a
+  request for a smaller category lookup.
+
+A first run of the same question with web search on is kept as
+[04a](../agent/transcripts/04a-thaodien-coffee-codex-two-servers-web-search.jsonl). The model never called
+SiteScout. It used 8 web searches, three Geoapify MCP tools (`list_place_categories`, `geocode_address` twice,
+`search_places`), and based its pick on news articles and a rental listing. That is why the recorded question names
+the SiteScout tools and the run turns web search off.
 
 ## 6. What worked well and what we had to fix
 

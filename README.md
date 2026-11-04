@@ -1,8 +1,12 @@
-<div align="center">
-
 # 📍 SiteScout
 
-**Ask "where should I open my shop?" for Ho Chi Minh City. Get a ranked shortlist of real sites, where every number links to the Geoapify API call it came from.**
+SiteScout is an open-source agent for choosing small-business locations in Ho Chi Minh City. Ask a question in English or Vietnamese and it uses Geoapify to resolve the area, draw walking catchments, count competitors and demand places, measure drive access, and rank candidate sites. Each reported figure has a `[Tn]` reference to the request that produced it. You can use the same engine in the web demo, from the CLI, or through an MCP host.
+
+The site-selection scope is one city, Ho Chi Minh City, with three recorded example questions: specialty coffee in Thảo Điền, a pharmacy in Bình Thạnh, and office lunch in District 1.
+
+**[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Docs](https://sitescout-docs.pages.dev/docs) · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude, Cursor, Codex, Kiro](agent/README.md) · [How we use the Geoapify MCP server](docs/mcp.md) · [Demo proxy: key, limits, cache](docs/demo-proxy.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
+
+[Documentation](https://sitescout-docs.pages.dev/docs)
 
 [![CI](https://github.com/ducvuathuduc/sitescout-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/ducvuathuduc/sitescout-agent/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ducvuathuduc/sitescout-agent?color=1785FB)](https://github.com/ducvuathuduc/sitescout-agent/releases)
@@ -10,228 +14,183 @@
 [![Built with Geoapify](https://img.shields.io/badge/Built_with-Geoapify-1785FB.svg)](https://www.geoapify.com/)
 [![MCP server](https://img.shields.io/badge/MCP-5_tools-6b4fbb.svg)](agent/README.md)
 
-**[▶ Live demo](https://sitescout.huynhthanh.workers.dev)** · [Tutorial](docs/tutorial.md) · [Examples](examples/) · [Use it from Claude / Cursor](agent/README.md) · [How we use the Geoapify MCP server](docs/mcp.md) · [Demo proxy: key, limits, cache](docs/demo-proxy.md) · [Feedback for Geoapify](docs/FEEDBACK.md)
-
 <a href="https://sitescout.huynhthanh.workers.dev"><img src="docs/assets/demo.gif" alt="SiteScout demo: why this spot, reach explorer, compare and evidence" width="860"></a>
 
-🎬 Videos: [demo (80 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-16x9.mp4) · [full tutorial (3 min)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) · [vertical cut (47 s)](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-9x16.mp4)
+Videos: [demo](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-16x9.mp4) · [tutorial](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) · [vertical demo](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-demo-9x16.mp4).
 
-</div>
+## Features
 
-SiteScout is an open-source location-intelligence agent built for the
-[Geoapify Open Geospatial Program](https://www.geoapify.com/open-geospatial-program/) (Batch #2, *AI × Geospatial*).
-It turns a plain-language question — in English or Vietnamese — into a site-selection analysis on Geoapify:
-it draws a **10-minute walking isochrone** around each candidate, counts competitors and demand
-points **inside that polygon**, measures drive times from the places customers come from, and ranks the
-candidates with a published formula. The report cites every figure as `[Tn]`, and `[Tn]` is one line in a
-trace file holding the exact request (without the key), its status, latency and result.
+- Walking catchments from Geoapify Isoline, with Places counts inside each polygon using `filter=geometry:<isoline id>`.
+- Reports, maps and request traces; citations include the endpoint, status, latency and result summary without the key.
+- A score breakdown and comparison of up to 3 sites; 5 / 10 / 15-minute reach bands for walking, cycling or motorbike travel. One set of bands is estimated at 6 credits ([tutorial](docs/tutorial.md), [credit rules](docs/demo-proxy.md#how-credits-are-counted)).
+- Share links and PDF export ([sample report](docs/assets/sample-report.pdf)), competitor and demand layers, density hexagons and a mobile layout ([design notes](docs/design/DESIGN_SYSTEM.md)).
+- Rule-based planning with an optional validated LLM planner; Vietnamese place resolution tested against reference coordinates ([benchmark](bench/hcmc-addresses/RESULTS.md)).
 
-> **Scope, stated plainly.** One city (Ho Chi Minh City), three sample questions, deterministic scoring.
-> SiteScout does not know foot traffic, rents or revenue. It is decision support built on open map data
-> ([OpenStreetMap](https://www.openstreetmap.org/copyright) via Geoapify), and it says so in every report.
+## Real results
 
----
+These runs were recorded on 2026-10-22. Each row links to its report and API trace.
 
-## ✨ Features
+| Question | Resolved area | Top site | Score | Calls | Recorded credit estimate | Sources |
+|---|---|---|---|---|---|---|
+| Specialty coffee in Thảo Điền | Phường An Khánh | 159 Võ Nguyên Giáp | 0.66 | 57 | ~79 | [Report](examples/thaodien-coffee/report.md) · [trace](examples/thaodien-coffee/trace.jsonl) |
+| Pharmacy in Bình Thạnh | Phường Thạnh Mỹ Tây (Hàng Xanh) | 113 Nguyễn Hữu Cảnh | 0.58 | 59 | ~79 | [Report](examples/binhthanh-pharmacy/report.md) · [trace](examples/binhthanh-pharmacy/trace.jsonl) |
+| Office lunch in District 1 | Phường Sài Gòn | Nguyễn Thị Minh Khai, near the French Consulate | 0.82 | 59 | ~127 | [Report](examples/saigon-lunch/report.md) · [trace](examples/saigon-lunch/trace.jsonl) |
 
-**New in the web demo (v1.1):**
+Each example also includes `report.html`, `map.jpg` and `result.json`.
+Credit estimates in the recordings predate the 2026-10-31 corrections for isolines, boundary polygons and Place Details features. Applying the [corrected credit rules](docs/demo-proxy.md#how-credits-are-counted) to the linked traces gives ~91, ~90 and ~139 credits respectively.
+Scores are normalized within a question and compare its candidates only.
 
-- 🧭 **"Why this spot" plus Compare.** Every site gets a score breakdown with one evidence-linked sentence per factor
-  (*"4 direct competitors (cafe) in the same zone — #4 of 7 for low competition [T14]…"*). Compare puts up to 3 sites
-  side by side and explains why #1 beats #2.
-- 🛵 **Reach explorer.** 5 / 10 / 15-minute bands for **walk, bike or motorbike** around any site. It is one Geoapify
-  Isoline call with three ranges (counted as 6 credits), cached at the edge.
-- 🔗 **Share link and PDF report.** A link opens the exact analysis, including live runs. Export PDF gives an A4 report
-  with the map, ranking, reasons and the full call list ([sample](docs/assets/sample-report.pdf)).
-- 🔌 **One-click MCP setup.** The plug button opens copy-ready commands for Claude Code and Cursor / Claude Desktop.
-- Design system v2: Be Vietnam Pro, AA contrast, numbered score-coloured pins, competitor and demand layers, density
-  hexagons, agent-plan progress, quota and error states, and a mobile bottom sheet.
-  [Before/after](docs/design/DESIGN_SYSTEM.md).
+<img src="docs/assets/detail.jpg" alt="Candidate detail: score breakdown, evidence references and reach explorer" width="860">
 
-**Core:**
+## How it works
 
-- **Isoline-first catchments.** Real walking (or motorbike/drive) isochrones from the Geoapify Isoline API, not circles.
-  POIs are counted with `filter=geometry:<isoline id>`, so "inside a 10-minute walk" means exactly that.
-- **Evidence trace for every number.** `trace.jsonl` holds one line per API call; `[Tn]` in the report points at it.
-- **Vietnamese-address aware.** Handles diacritics, damaged diacritics and the July-2025 ward reform
-  (old *Phường 12, Quận 5* vs new ward names) — measured on a 55-query benchmark, not assumed.
-- **AI where it helps, engine where it matters.** An optional LLM turns free text into a plan; a validator and a
-  deterministic engine do the geography. *AI proposes, engine verifies.*
-- **Three ways to use it:** a [public web demo](https://sitescout.huynhthanh.workers.dev), a CLI, and an
-  **MCP server** (5 tools) for Claude Code, Cursor and Claude Desktop.
-- **Safe public demo.** The Geoapify key lives only in a Cloudflare Worker secret; one daily credit budget for
-  live calls and map tiles, per-visitor caps, edge caching, and recorded runs as a fallback when a cap is reached.
-  How it works and how to deploy your own: [docs/demo-proxy.md](docs/demo-proxy.md).
+A planner produces a validated business, area, category list and travel settings. The engine resolves the area with Autocomplete, Geocoding and Boundaries, samples candidate points, draws walking isolines, counts places inside them, and measures drive times with Route Matrix. It then scores the candidates and writes the report and trace.
 
-## 🧪 Real results (recorded 2026-10-22)
+The score is `0.35 × demand density + 0.25 × (1 − competition) + 0.25 × access + 0.15 × walk reach`, with each factor min-max normalized across the candidates. Weights are versioned as `1.0.0-isoline` in [src/engine/scout.ts](src/engine/scout.ts). The recorded examples use 7 candidates and 10-minute walks ([example plan](examples/thaodien-coffee/report.md)). Read the [engine walkthrough](docs/tutorial.md#4-how-the-engine-answers-10-min) and [MCP versus REST explanation](docs/mcp.md).
 
-| Question | Resolved area | #1 site | Score | Calls · credits | Report |
-|---|---|---|---|---|---|
-| Where should I open a specialty coffee shop in Thảo Điền? | Phường An Khánh | 159 Võ Nguyên Giáp | 0.66 | 57 · ~79 | [report](examples/thaodien-coffee/report.md) · [trace](examples/thaodien-coffee/trace.jsonl) |
-| Where should I open a pharmacy in Bình Thạnh? | Phường Thạnh Mỹ Tây (Hàng Xanh) | 113 Nguyễn Hữu Cảnh | 0.58 | 59 · ~79 | [report](examples/binhthanh-pharmacy/report.md) · [trace](examples/binhthanh-pharmacy/trace.jsonl) |
-| Where should I open an office-lunch restaurant in District 1? | Phường Sài Gòn | Nguyễn Thị Minh Khai (near the French Consulate) | 0.82 | 59 · ~127 | [report](examples/saigon-lunch/report.md) · [trace](examples/saigon-lunch/trace.jsonl) |
+## Quickstart
 
-Each folder also has `report.html` (interactive map), `map.jpg` (Geoapify Static Maps) and `result.json`.
-Credits are SiteScout's estimates at recording time. On 2026-10-31 we corrected three estimates (isolines, boundary
-polygons, Place Details features; see [docs/demo-proxy.md](docs/demo-proxy.md#how-credits-are-counted)); with the
-corrected rules these runs are ~91, ~90 and ~139 credits.
-Scores are min-max normalised within one question, so they compare candidates, not cities.
-
-<img src="docs/assets/detail.jpg" alt="Candidate detail: score breakdown, why this spot with evidence refs, reach explorer" width="860">
-
-## 🧭 How it works
-
-```mermaid
-flowchart LR
-    Q["Question<br/>EN or VI"] --> P["Planner<br/>rules or LLM + validator"]
-    P --> A["Area<br/>Autocomplete → Search → Boundaries"]
-    A --> C["7 candidates<br/>hex lattice + Places sample"]
-    C --> I["Isoline per candidate<br/>10-min walk"]
-    I --> N["Places inside isoline<br/>filter=geometry:id"]
-    C --> M["Route Matrix + Routing<br/>drive time from origins"]
-    N --> S["Deterministic score"]
-    M --> S
-    S --> R["Report + map<br/>every number → [Tn]"]
-    R --> T[("trace.jsonl")]
-```
-
-**Score** = 0.35·demand density + 0.25·(1 − competition) + 0.25·access + 0.15·walk reach,
-each min-max normalised across the candidates (weights `1.0.0-isoline`, in `src/engine/scout.ts`).
-
-```mermaid
-flowchart LR
-    B["Browser<br/>Leaflet UI"] -->|/geo/*, /tiles/*| W["Cloudflare Worker<br/>key in secret · caps · cache"]
-    B -->|/api/plan| W
-    W --> G["Geoapify APIs"]
-    W --> AI["Workers AI<br/>Llama 3.3 70B (plan only)"]
-    CLI["CLI / MCP server<br/>(Node ≥ 20)"] -->|own key or demo proxy| G
-```
-
-## ⚡ Quickstart
+Install Node.js 20+ and get a free [Geoapify key](https://myprojects.geoapify.com). These are the [tutorial's CLI commands](docs/tutorial.md#3-install-and-run-it-yourself-5-min), with `YOUR_KEY` as the placeholder. Run them in Bash:
 
 ```sh
-git clone https://github.com/ducvuathuduc/sitescout-agent.git && cd sitescout-agent
-npm ci && npm run build
-export GEOAPIFY_API_KEY=your_key        # free at https://myprojects.geoapify.com
-node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Điền?"
+git clone https://github.com/ducvuathuduc/sitescout-agent.git
+cd sitescout-agent
+npm ci
+npm run build
+node dist/cli.js --help
+export GEOAPIFY_API_KEY=YOUR_KEY
+node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Điền?" --id my-coffee
 ```
 
-Output lands in `examples/<id>/`: `report.md`, `report.html`, `map.jpg`, `result.json`, `trace.jsonl`.
-A run costs roughly 85–140 Geoapify credits; the free plan allows 3,000 per day.
+In PowerShell, replace the `export` line with `$env:GEOAPIFY_API_KEY = "YOUR_KEY"`. Replace `YOUR_KEY` with your own key in your shell, or set `GEOAPIFY_API_KEY` in a gitignored `.env.local` file using [.env.local.example](.env.local.example). The CLI loads that file from the working directory; an existing shell variable takes precedence. Keep the key out of source code.
 
-## ⚙️ Configuration
+Build and help run offline. The final command makes live Geoapify requests and spends credits. It prints the plan, request lines and a ranked shortlist, then writes `report.md`, `report.html`, `result.json` and `trace.jsonl` to `examples/my-coffee/`; `map.jpg` is written if Static Maps succeeds. Use a new `--id` to keep an earlier run.
+The three recorded traces estimate about 91, 90 and 139 credits under the corrected rules; these are examples, not a bound for new questions. `--credit-cap 300` is the CLI default, but the engine checks the accumulated estimate before a request, so the last request can cross it. The documented free plan has 3,000 credits per day ([dated pricing notes](docs/demo-proxy.md#how-credits-are-counted)).
 
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `GEOAPIFY_API_KEY` | yes (CLI) | — | Sent as the `x-api-key` header. Never written to any output file. |
-| `--credit-cap` (flag) | no | `300` | Stops a run before it exceeds this many estimated credits. |
-| `--planner` (flag) | no | `heuristic` | `llm` uses the OpenAI-compatible endpoint below, validated, with rule fallback. |
-| `SITESCOUT_LLM_BASE_URL` | no | — | Any OpenAI-compatible API (Groq, Gemini, OpenAI, Workers AI). |
-| `SITESCOUT_LLM_MODEL` | no | — | Model id for the planner. |
-| `SITESCOUT_LLM_API_KEY` | no | — | Key for that endpoint. |
+`scout` options are `--id`, `--out`, `--planner heuristic|llm` and `--credit-cap` ([source](src/scout-cli.ts)). There is no `scout --help`; the top-level help lists the older MCP commands. See the [tutorial](docs/tutorial.md#3-install-and-run-it-yourself-5-min) for each step, expected output and troubleshooting.
 
-The MCP server also runs **without** a key: it then uses the public demo proxy
-(`https://sitescout.huynhthanh.workers.dev/geo`, HCMC only, rate-limited).
+For planning options and environment variables, see the [tutorial](docs/tutorial.md). The CLI needs a key; the MCP server below can use the public demo proxy without one.
 
-## 🗺️ Geoapify APIs used
+## Use it from your AI tool
 
-| API | Where in SiteScout |
+SiteScout's stdio server runs as `node dist/mcp-server.js`. Its five tools are `plan_site_question`, `scout_site`, `resolve_place`, `walk_isochrone` and `get_evidence` ([source](src/mcp-server.ts)). Each guide includes the official Geoapify MCP server alongside it.
+
+| Host | Guide | Config file |
+|---|---|---|
+| Claude Code | [Setup](agent/clients/claude-code.md) | Project `.mcp.json` |
+| Cursor | [Setup](agent/clients/cursor.md) | `.cursor/mcp.json` or `~/.cursor/mcp.json` |
+| Codex CLI | [Setup](agent/clients/codex.md) · [example](agent/clients/codex.config.example.toml) | `~/.codex/config.toml` |
+| Kiro | [Setup](agent/clients/kiro.md) · [example](agent/clients/kiro.mcp.example.json) | `.kiro/settings/mcp.json` or `~/.kiro/settings/mcp.json` |
+| Claude Desktop | [Setup](agent/clients/claude-desktop.md) | Windows `%APPDATA%\Claude\claude_desktop_config.json`; macOS `~/Library/Application Support/Claude/claude_desktop_config.json` |
+
+Use SiteScout [next to the Geoapify MCP server](agent/clients/geoapify-mcp-side-by-side.md): SiteScout runs the analysis; Geoapify handles individual geocoding, places, routing and geometry follow-ups. SiteScout can use the HCMC proxy without a key; the direct Geoapify MCP connection requires an `x-api-key` header.
+
+There are [10 recorded agent sessions](agent/README.md):
+
+- **04b, Codex CLI with both MCP servers (2026-11-04).** The model called SiteScout `plan_site_question` and `scout_site`, then Geoapify MCP `search_places` for the cafés nearest the top site, then SiteScout `get_evidence` six times before citing numbers. Walk-through: [docs/mcp.md](docs/mcp.md#recorded-two-server-session-04b-codex-cli).
+- **04a, the same question with web search on.** The model skipped SiteScout and answered from web pages. It is kept to show why the question names the tools.
+- **01 to 03c, open-weight models on Workers AI** (Llama 3.3 70B, Llama 4 Scout, Mistral Small 3.1) through [agent/host.mjs](agent/host.mjs). Five of them failed, and each failure led to a server change, listed in the table.
+
+Use the [system prompt](agent/SYSTEM_PROMPT.md) to guide citation and area checks.
+
+## Geoapify APIs used
+
+The web demo, `scout` CLI command and SiteScout MCP server call REST. The `ask` and `smoke` commands use Geoapify MCP. See [docs/mcp.md](docs/mcp.md) for the tool-by-tool comparison and the dated MCP tool surface.
+
+| API | Use in SiteScout |
 |---|---|
-| [Address Autocomplete](https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/) | Resolve the study area and origins; most robust to messy Vietnamese |
-| [Geocoding (forward)](https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/) | Second opinion when autocomplete is weak |
-| [Reverse Geocoding](https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/) | Human-readable label for each candidate |
-| [Boundaries (part-of)](https://apidocs.geoapify.com/docs/boundaries/) | Name the post-2025 ward the analysis runs in |
-| [Isoline](https://apidocs.geoapify.com/docs/isolines/) | 10-minute walking catchment per candidate |
-| [Places](https://apidocs.geoapify.com/docs/places/) | Competitors and demand POIs inside each isoline (`filter=geometry:<id>`) |
-| [Place Details](https://apidocs.geoapify.com/docs/place-details/) | Details + 5-minute drive area for the top site |
-| [Route Matrix](https://apidocs.geoapify.com/docs/route-matrix/) | Drive time from 3 origins to every candidate |
-| [Routing](https://apidocs.geoapify.com/docs/routing/) | Route geometry for the top site |
-| [Static Maps](https://apidocs.geoapify.com/docs/maps/static/) | `map.jpg` in each report |
-| [Map Tiles](https://apidocs.geoapify.com/docs/maps/map-tiles/) | Basemap in the web demo (proxied, cached) |
-| [Batch Geocoding](https://apidocs.geoapify.com/docs/geocoding/batch/) | `batchGeocode()` client in `src/engine/geoapify.ts` for bulk lists (not used in the default run) |
-| [MCP server](https://apidocs.geoapify.com/docs/mcp/) | `sitescout ask` / `smoke` pipeline, all 11 tools; why the product path uses REST: [docs/mcp.md](docs/mcp.md) |
+| [Address Autocomplete](https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/) | Resolve study areas and origins |
+| [Forward Geocoding](https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/) | Cross-check place resolution |
+| [Reverse Geocoding](https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/) | Label candidate points |
+| [Boundaries](https://apidocs.geoapify.com/docs/boundaries/) | Identify the study area's ward |
+| [Isoline](https://apidocs.geoapify.com/docs/isolines/) | Walking catchments and reach bands |
+| [Places](https://apidocs.geoapify.com/docs/places/) | Competitors and demand places inside catchments |
+| [Place Details](https://apidocs.geoapify.com/docs/place-details/) | Top-site details and a 5-minute drive area ([engine](src/engine/scout.ts)) |
+| [Route Matrix](https://apidocs.geoapify.com/docs/route-matrix/) | Drive times from 3 origins to candidates ([example plan](examples/thaodien-coffee/report.md)) |
+| [Routing](https://apidocs.geoapify.com/docs/routing/) | Route to the top candidate |
+| [Static Maps](https://apidocs.geoapify.com/docs/maps/static/) | Report map image |
+| [Map Tiles](https://apidocs.geoapify.com/docs/maps/map-tiles/) | Web demo basemap through the proxy |
+| [Batch Geocoding](https://apidocs.geoapify.com/docs/geocoding/batch/) | Client helper for bulk lists; outside the default analysis |
+| [MCP server](https://apidocs.geoapify.com/docs/mcp/) | The `ask` / `smoke` pipeline uses the 11 tools recorded in the [fixture](tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt); later tool additions are documented in [docs/mcp.md](docs/mcp.md) |
 
-## 🤖 Use it from your AI tool
+## Demo proxy
 
-SiteScout ships its own MCP server (`dist/mcp-server.js`, stdio) with five tools:
-`plan_site_question`, `scout_site`, `resolve_place`, `walk_isochrone`, `get_evidence`.
+The Worker keeps the Geoapify key server-side and limits public requests to HCMC.
+API calls and tiles share a 2,400-credit daily budget, with 180 live calls per visitor; API responses are cached for 24 hours and tiles for 30 days.
+At a live quota limit, the web app offers a recorded run; see [docs/demo-proxy.md](docs/demo-proxy.md) for the source, dated measurements, credit estimates and known limits.
 
-```sh
-# Claude Code
-claude mcp add sitescout -e GEOAPIFY_API_KEY=YOUR_KEY -- node "$PWD/dist/mcp-server.js"
-```
+## Benchmark
 
-Setup for [Claude Code](agent/clients/claude-code.md), [Cursor](agent/clients/cursor.md) and
-[Claude Desktop](agent/clients/claude-desktop.md), plus a [system prompt](agent/SYSTEM_PROMPT.md).
-How this server relates to the official Geoapify MCP server, and how to use both together: [docs/mcp.md](docs/mcp.md).
-
-**About the transcripts:** the 8 sessions in [`agent/transcripts/`](agent/transcripts/) were recorded with a small
-MCP host ([`agent/host.mjs`](agent/host.mjs)) driving **open-weight models on Cloudflare Workers AI** (Llama 3.3 70B,
-Llama 4 Scout, Mistral Small 3.1). They are not Claude or Cursor recordings. Five of the eight are failures we kept
-on purpose, each with the server change it caused — see [agent/README.md](agent/README.md).
-
-## 📊 Benchmark: Vietnamese addresses after the 2025 reform
-
-55 HCMC queries, reference coordinates from Wikidata (independent of Geoapify), run 2026-10-22
-([full results](bench/hcmc-addresses/RESULTS.md)):
+The HCMC address benchmark ran on 2026-10-22 with 55 queries and independent Wikidata coordinates. The [full results](bench/hcmc-addresses/RESULTS.md) define tolerances and include every query:
 
 | Strategy | Within tolerance | Old-ward addresses |
 |---|---|---|
-| Geocoding search, top-1 | 37/55 (67%) | 4/8 |
-| Autocomplete, top-1 | 42/55 (76%) | 3/8 |
-| SiteScout `resolvePlace` v1.1 | **48/55 (87%)** | **6/8** |
+| Geocoding search, top result | 37/55 (67%) | 4/8 |
+| Autocomplete, top result | 42/55 (76%) | 3/8 |
+| SiteScout `resolvePlace` v1.1 | 48/55 (87%) | 6/8 |
 
-Findings that came out of this (city label, old-ward matching, search vs autocomplete, categories union,
-boundaries gap) are written up with reproductions in [docs/FEEDBACK.md](docs/FEEDBACK.md).
+This measures coordinate matching for the recorded dataset, not store performance. The [Geoapify feedback](docs/FEEDBACK.md) includes reproductions for address labels, old wards, category counts and boundaries. [VN-GeoBench](bench/vngeobench/EXPECTED.md) separately defines expected MCP tool behavior; it is not another measured accuracy result.
 
-## 🎨 Design
+## Docs index
 
-The web demo uses a small design system: a 4/8 px grid, one type scale, Be Vietnam Pro with full Vietnamese glyphs,
-semantic colours checked for WCAG AA, and progressive disclosure (summary → ranking → breakdown → evidence).
-The frame (rail, floating legend, right panel) is inspired by CARTO Builder public maps. It is not a pixel copy.
-Tokens, map encoding and before/after screenshots: [docs/design/DESIGN_SYSTEM.md](docs/design/DESIGN_SYSTEM.md).
-The original reference measurements: [docs/design/REFERENCE_RESEARCH.md](docs/design/REFERENCE_RESEARCH.md).
+| Page | Repository source | Published docs |
+|---|---|---|
+| MCP integration | [mcp.md](docs/mcp.md) | [mcp](https://sitescout-docs.pages.dev/docs/mcp) |
+| Demo proxy | [demo-proxy.md](docs/demo-proxy.md) | [demo-proxy](https://sitescout-docs.pages.dev/docs/demo-proxy) |
+| Tutorial | [tutorial.md](docs/tutorial.md) | [tutorial](https://sitescout-docs.pages.dev/docs/tutorial) |
+| MCP reference | [mcp-reference.md](docs/mcp-reference.md) | [mcp-reference](https://sitescout-docs.pages.dev/docs/mcp-reference) |
+| Credits | [Credit rules](docs/demo-proxy.md#how-credits-are-counted) | [credits](https://sitescout-docs.pages.dev/docs/credits) |
+| How it works | [Engine walkthrough](docs/tutorial.md#4-how-the-engine-answers-10-min) | [how-it-works](https://sitescout-docs.pages.dev/docs/how-it-works) |
+| Provenance | [provenance.md](docs/provenance.md) | [provenance](https://sitescout-docs.pages.dev/docs/provenance) |
+| Edge cases | [edge-cases.md](docs/edge-cases.md) | [edge-cases](https://sitescout-docs.pages.dev/docs/edge-cases) |
+| Geoapify feedback | [FEEDBACK.md](docs/FEEDBACK.md) | [geoapify-feedback](https://sitescout-docs.pages.dev/docs/geoapify-feedback) |
+| Agent | [agent/README.md](agent/README.md) | [agent](https://sitescout-docs.pages.dev/docs/agent) |
+| Agent sessions | [Transcripts](agent/transcripts/) | [agent/sessions](https://sitescout-docs.pages.dev/docs/agent/sessions) |
+| Claude Code | [Guide](agent/clients/claude-code.md) | [clients/claude-code](https://sitescout-docs.pages.dev/docs/clients/claude-code) |
+| Cursor | [Guide](agent/clients/cursor.md) | [clients/cursor](https://sitescout-docs.pages.dev/docs/clients/cursor) |
+| Codex CLI | [Guide](agent/clients/codex.md) | [clients/codex](https://sitescout-docs.pages.dev/docs/clients/codex) |
+| Kiro | [Guide](agent/clients/kiro.md) | [clients/kiro](https://sitescout-docs.pages.dev/docs/clients/kiro) |
+| Claude Desktop | [Guide](agent/clients/claude-desktop.md) | [clients/claude-desktop](https://sitescout-docs.pages.dev/docs/clients/claude-desktop) |
+| Both MCP servers | [Guide](agent/clients/geoapify-mcp-side-by-side.md) | [clients/two-servers](https://sitescout-docs.pages.dev/docs/clients/two-servers) |
+| Record a Claude Code session | [Guide](agent/clients/record-claude-code.md) | [clients/record-claude-code](https://sitescout-docs.pages.dev/docs/clients/record-claude-code) |
+| HCMC addresses | [Results](bench/hcmc-addresses/RESULTS.md) | [benchmarks/hcmc-addresses](https://sitescout-docs.pages.dev/docs/benchmarks/hcmc-addresses) |
+| VN-GeoBench | [Expected behavior](bench/vngeobench/EXPECTED.md) | [benchmarks/vngeobench](https://sitescout-docs.pages.dev/docs/benchmarks/vngeobench) |
 
-## ✅ Can and cannot
+## Development
 
-**Can:** rank candidate sites in HCMC by walking catchment, competition, demand POIs and drive access; explain
-every number; run from a browser, a terminal or an AI assistant; run free within Geoapify's free plan.
+Run from the repository root. Scripts are defined in [package.json](package.json).
 
-**Cannot:** see foot traffic, rents, revenue or opening hours reliably; guarantee a POI list is complete
-(OSM coverage varies by street); cover cities other than HCMC in this release.
+| Command | Purpose |
+|---|---|
+| `npm run typecheck` | Check engine and web TypeScript |
+| `npm run lint` | Lint source and tests |
+| `npm test` | Run the tests |
+| `npm run build` | Compile the CLI and MCP server |
+| `npm run docs:build` | Build the docs site |
+| `npm run docs:check` | Check the docs site |
+| `npm run demo:dry-run` | Build the demo and run Wrangler's dry-run bundle check without uploading |
 
-## 🛣️ Roadmap
-
-- [x] Isoline-first engine, 3 HCMC examples, evidence trace
-- [x] Public web demo with caps and recorded fallback
-- [x] MCP server with 5 tools + client guides
-- [x] HCMC address benchmark and Geoapify feedback
-- [ ] Hanoi and Đà Nẵng question packs
-- [ ] Rent and footfall layers from open sources where licences allow
-- [x] Compare candidates side by side, reach explorer (walk/bike/motorbike), share link and PDF export
-- [ ] Compare two shortlists (two questions) side by side
-
-## 🧑‍💻 Development
-
-```sh
-npm run typecheck && npm run lint && npm test && npm run build
-node web/build.mjs                    # build the web demo assets
-```
-
-CI runs the same four steps on every push ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
+The [CI workflow](.github/workflows/ci.yml) runs typecheck, lint, tests and build. Docs scripts operate on `docs-site/`. The demo dry run invokes Wrangler and requires Node.js 22 with the pinned tool version ([demo setup](docs/demo-proxy.md#7-deploy-your-own-copy)).
 See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md).
 
-## 🙏 Attribution
+## Limits
 
-- **[Powered by Geoapify](https://www.geoapify.com/)** — geocoding, places, isolines, routing, boundaries, maps and
-  the MCP server, through the Geoapify Open Geospatial Program.
-- Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL); basemap style ©
-  [OpenMapTiles](https://openmaptiles.org/).
-- [Leaflet](https://leafletjs.com/) (BSD-2-Clause), Open Sans (OFL). Third-party notes: [docs/provenance.md](docs/provenance.md).
-- UI layout modelled on CARTO Builder public maps (reference only; no CARTO code or assets used).
+- The current question packs and public proxy cover Ho Chi Minh City. POI coverage varies by street and can miss businesses in alleys.
+- SiteScout does not measure foot traffic, rent, revenue or reliable opening hours. Candidate points are places to investigate, not confirmed available premises.
+- Scoring weights are heuristic and have not been calibrated against store outcomes. Scores compare candidates within a run.
+- Geocoder labels can contain outdated administrative units. Models can damage Vietnamese text or cite the wrong request; check `areaCheck` and the evidence ([recorded failures](agent/README.md)).
+- Geoapify MCP does not provide the isoline and polygon-filter workflow used by the engine; that path uses REST ([comparison](docs/mcp.md)).
+- Proxy credit costs are estimates; caps are not atomic and caching is per data center ([proxy limits](docs/demo-proxy.md#8-known-limits)).
+
+## Attribution
+
+- [Powered by Geoapify](https://www.geoapify.com/): geocoding, places, isolines, routing, boundaries, maps and the MCP server, through the [Geoapify Open Geospatial Program](https://www.geoapify.com/open-geospatial-program/).
+- Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL); basemap style © [OpenMapTiles](https://openmaptiles.org/).
+- [Leaflet](https://leafletjs.com/) (BSD-2-Clause), Open Sans (OFL), and Be Vietnam Pro; third-party notes are in [docs/provenance.md](docs/provenance.md).
+- UI layout modeled on CARTO Builder public maps as a reference; no CARTO code or assets are used. [Design notes](docs/design/DESIGN_SYSTEM.md).
 
 SiteScout is an independent project; Geoapify and CARTO are trademarks of their owners.
 
-## 📄 License
+## License
 
 [MIT](LICENSE) © 2026 Thành Huỳnh Diệu ([@ducvuathuduc](https://github.com/ducvuathuduc))

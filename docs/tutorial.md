@@ -1,15 +1,24 @@
 # Tutorial: build an evidence-traced site-selection agent on Geoapify
 
-**Time:** ~40 minutes · **Level:** you know some TypeScript and a terminal · **Cost:** $0 (Geoapify free plan)
+Built on the [Geoapify APIs](https://www.geoapify.com/).
+
+**Time:** allow about 40 minutes · **Level:** you know some TypeScript and a terminal.
 
 By the end you will have asked SiteScout *"Where should I open a specialty coffee shop in Thảo Điền?"*,
 read the ranked shortlist, followed one number back to the exact Geoapify request that produced it,
 connected the same engine to an AI assistant through MCP, seen where SiteScout uses the Geoapify MCP server and
-where the REST APIs, and seen how the public demo keeps its Geoapify key secret.
+where it uses the REST APIs, and seen how the public demo keeps its Geoapify key secret.
 
-Everything shown here comes from real runs, recorded on 2026-10-22 and committed in [`examples/`](../examples/),
-plus one live web run recorded on 2026-10-23. The screenshots are of the current web demo (design v2, see
-[docs/design/DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md)).
+The scope is one city: Ho Chi Minh City. The three recorded example questions are specialty coffee in
+[Thảo Điền](../examples/thaodien-coffee/report.md), a pharmacy in
+[Bình Thạnh](../examples/binhthanh-pharmacy/report.md), and office lunch in
+[District 1](../examples/saigon-lunch/report.md). You will build and run the existing TypeScript agent locally,
+then inspect its reports and request traces. Reading the committed examples works without a key;
+running a new analysis spends Geoapify credits.
+
+The example analyses were recorded on 2026-10-22 and committed in [`examples/`](../examples/),
+alongside a live web recording from 2026-10-23 and the two-server MCP session from 2026-11-04 linked in step 8.
+Screenshots show the web layout described in the [design notes](design/DESIGN_SYSTEM.md).
 
 > Video version: [sitescout-tutorial.mp4](https://github.com/ducvuathuduc/sitescout-agent/raw/media/sitescout-tutorial.mp4) follows these same chapters.
 
@@ -106,7 +115,8 @@ with a live count of calls and credits. Each walk zone appears on the map as soo
 In our recorded live run (2026-10-23, 48 calls, roughly 40 s) the model picked `catering.cafe` as the competitor for a
 bakery and `Phường 6, Quận 3` as the area. The engine replaced both with the known-good values
 (`commercial.food_and_drink.bakery`, and the verified geocode text for District 3) and wrote the change into **Notes**
-under *How the agent planned this*. A live run uses about 85–140 credits. The quota bar under the examples shows how
+under *How the agent planned this*. Costs depend on the question and returned places; see the recorded estimates in
+[the local setup](#3-install-and-run-it-yourself-5-min). The quota bar under the examples shows how
 much of the demo's shared daily budget (2,400 credits, live calls and map tiles together) is left.
 
 ### 2.8 Share and export
@@ -128,17 +138,85 @@ instead, and says when live runs reset (07:00 UTC+7). Any other failure gets a r
 
 ## 3. Install and run it yourself (5 min)
 
-You need **Node.js 20+** and a free Geoapify key from <https://myprojects.geoapify.com> (3,000 credits/day,
-no card).
+### Prerequisites
+
+Install Git, **Node.js 20+** and npm. The local steps work in Bash or PowerShell; run commands from the
+repository root after cloning. To make live requests, get a Geoapify key from
+<https://myprojects.geoapify.com>. The free plan is documented as 3,000 credits/day in the
+[dated pricing notes](demo-proxy.md#how-credits-are-counted); check your account's allowance before running.
+An AI account is optional: the default planner uses rules.
+
+### Install, build and check help
+
+1. Download the public repository:
+
+   ```sh
+   git clone https://github.com/ducvuathuduc/sitescout-agent.git
+   ```
+
+   Expected: Git creates a `sitescout-agent` directory.
+
+2. Enter it:
+
+   ```sh
+   cd sitescout-agent
+   ```
+
+   Expected: your terminal's working directory is now the repository root; this command prints no output.
+
+3. Install the locked dependencies:
+
+   ```sh
+   npm ci
+   ```
+
+   Expected: npm completes installation and exits successfully. Its package and audit counts can vary.
+
+4. Compile the TypeScript agent:
+
+   ```sh
+   npm run build
+   ```
+
+   Expected: npm runs `tsc -p tsconfig.json` and creates `dist/cli.js` and `dist/mcp-server.js` without errors.
+
+5. Check the CLI without making API requests:
+
+   ```sh
+   node dist/cli.js --help
+   ```
+
+   Expected: usage for `ask`, `smoke`, `trace validate`, `report`, `bench run` and `static`, plus question IDs.
+   This older help text omits `scout`. There is no `scout --help`: it reports that a question is required.
+
+### Set the environment variable and run a live analysis
+
+In Bash:
 
 ```sh
-git clone https://github.com/ducvuathuduc/sitescout-agent.git && cd sitescout-agent
-npm ci && npm run build
-export GEOAPIFY_API_KEY=your_key
+export GEOAPIFY_API_KEY=YOUR_KEY
+```
+
+In PowerShell, use this instead:
+
+```powershell
+$env:GEOAPIFY_API_KEY = "YOUR_KEY"
+```
+
+Replace `YOUR_KEY` with your own key in your terminal. Expected: no output; the variable is set for that shell.
+Alternatively, use [.env.local.example](../.env.local.example) as the template for a local `.env.local`
+file containing `GEOAPIFY_API_KEY=YOUR_KEY`, then replace the placeholder locally. The CLI loads `.env.local`
+from its working directory. An existing shell variable takes precedence. The file is gitignored;
+keep the key out of source code and shared transcripts.
+
+The next command makes live requests and spends credits. Use a new ID for each run you want to keep:
+
+```sh
 node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Điền?" --id my-coffee
 ```
 
-The terminal prints the plan, then one line per API call:
+Expected: the terminal prints the plan, one line per API call, a ranked shortlist and the output directory.
+The following excerpt comes from the recorded coffee run; new results and timings can differ:
 
 ```
 [plan:heuristic] {"business":"coffee shop","competitors":["catering.cafe"],"demand":["office","sport.fitness","commercial.clothing"],...}
@@ -152,12 +230,28 @@ Output in `examples/my-coffee/`:
 
 | File | What it is |
 |---|---|
-| `report.md` / `report.html` | Ranked shortlist, reasons, evidence table (HTML has an interactive map) |
-| `map.jpg` | Shortlist map from the Geoapify Static Maps API |
+| `report.md` / `report.html` | Ranked shortlist, reasons and evidence table; HTML includes the static map image |
+| `map.jpg` | Shortlist map, if the Geoapify Static Maps request succeeds |
 | `result.json` | Everything, machine-readable |
 | `trace.jsonl` | One line per API call — the evidence |
 
-A run uses about 85–140 credits. `--credit-cap 300` (the default) stops a run before it goes over.
+The recorded traces estimate about 91, 90 and 139 credits under the
+[corrected credit rules](demo-proxy.md#how-credits-are-counted), rather than the older totals stored in their reports.
+New runs vary. The CLI defaults to `--credit-cap 300`. It checks the accumulated estimate before each request;
+the request that crosses the cap can still complete, so this is not a strict spending ceiling.
+
+These are the options implemented in [the scout command](../src/scout-cli.ts):
+
+| Option | Behavior |
+|---|---|
+| `--id my-coffee` | Names the output folder under `examples/`; defaults to a slug of the question |
+| `--out path` | Overrides the output directory; existing output files can be overwritten |
+| `--planner heuristic` | Default rules planner; `--planner llm` uses an optional model |
+| `--credit-cap 300` | Sets the run's estimated-credit threshold |
+
+For the optional LLM planner, set `SITESCOUT_LLM_BASE_URL`, `SITESCOUT_LLM_MODEL` and
+`SITESCOUT_LLM_API_KEY` in the environment. Use `YOUR_KEY` as the placeholder for that provider's key too.
+The plan is validated and can fall back to rules; see [the planner source](../src/engine/plan.ts).
 
 ## 4. How the engine answers (10 min)
 
@@ -225,15 +319,45 @@ Real result for the coffee question:
 
 ## 5. Follow a number back to its source (3 min)
 
-The report says candidate #1 has **4 competing cafés** and cites `[T12] … [T17]`. Open the trace:
+The [coffee report](../examples/thaodien-coffee/report.md) says candidate #1 has **4 competing cafés** and
+cites `[T12] … [T17]`. Open the [committed trace](../examples/thaodien-coffee/trace.jsonl).
+Here is a real line, shortened only by abbreviating the endpoint and omitting the timestamp:
 
-```sh
-grep '"seq":1[2-7],' examples/thaodien-coffee/trace.jsonl
+```json
+{"seq":0,"api":"autocomplete","method":"GET","endpoint":"/v1/geocode/autocomplete?text=…","status":200,"durationMs":1221,"summary":{"count":5,"top":"Phở Bùi Gia Thảo Điền, 56, Xuân Thủy, Phường An Khánh, Thành phố Hồ Chí Minh, 71108, Việt Nam"},"credits":1}
 ```
 
-Each line has `api`, `endpoint` (the request **without** the key), `status`, `durationMs`, a `summary`
-(`{"count":4,"categories":"catering.cafe"}`) and `credits`. If a number in a report has no matching line,
-it is a bug — please open an issue.
+Each `scout` trace line records the sequence (`[T0]` means `seq: 0`), API, method, endpoint without a key,
+HTTP status, duration in milliseconds, response summary, estimated credits and timestamp (`ts`). POST calls
+can also include a body; failed requests can include `error`. In this trace, `[T14]` is the café request:
+its summary is `{"count":4,"categories":"catering.cafe"}`.
+
+To inspect that evidence offline in Bash or PowerShell:
+
+```sh
+node -p "require('node:fs').readFileSync('examples/thaodien-coffee/trace.jsonl', 'utf8').trim().split(/\r?\n/).find(line => JSON.parse(line).seq === 14)"
+```
+
+Expected: the JSON line for `seq: 14`, `api: "places"`, `status: 200` and the four-café summary.
+This reads a committed file and makes no API requests.
+
+### Where traces and logs are written
+
+Paths are relative to the working directory:
+
+| Command | Trace and supporting files |
+|---|---|
+| `scout` | `examples/<id>/trace.jsonl`, alongside the reports and `result.json`; `--out` changes this folder |
+| `ask` / `smoke` | `logs/<question-id>.jsonl`; cached results and `run.json` are under `logs/results/<question-id>/` |
+
+The `logs/` trace files and result cache are gitignored by [.gitignore](../.gitignore).
+Committed sample traces live in [examples/](../examples/), so they remain available without an API key.
+The older MCP trace format records `tool`, `args`, `resultDigest` and `resultSummary` rather than the REST
+fields above; `trace validate` checks that older format, not the `scout` format. See
+[the trace implementation](../src/agent/trace.ts) and [scout output writer](../src/scout-cli.ts).
+
+The [Geoapify feedback](FEEDBACK.md) collects observations, reproductions and suggested changes. If a report
+figure has no matching trace evidence, please open an issue with the report and the relevant trace lines.
 
 ## 6. Vietnamese addresses: the hard part (3 min)
 
@@ -256,30 +380,32 @@ SiteScout includes an MCP server with five tools: `plan_site_question`, `scout_s
 `walk_isochrone`, `get_evidence`. In the web demo, the plug icon at the top of the panel (or **Use from Claude / Cursor**
 in the rail) opens these setup commands, with copy buttons.
 
-```sh
-# Claude Code
-claude mcp add sitescout -e GEOAPIFY_API_KEY=YOUR_KEY -- node "$PWD/dist/mcp-server.js"
-```
-
-Guides: [Claude Code](../agent/clients/claude-code.md) · [Cursor](../agent/clients/cursor.md) ·
-[Claude Desktop](../agent/clients/claude-desktop.md). Put [`agent/SYSTEM_PROMPT.md`](../agent/SYSTEM_PROMPT.md) in
+Follow the host-specific setup: [Claude Code](../agent/clients/claude-code.md) ·
+[Cursor](../agent/clients/cursor.md) · [Codex CLI](../agent/clients/codex.md) ·
+[Claude Desktop](../agent/clients/claude-desktop.md). The server entry point is `node dist/mcp-server.js`;
+it reads the host's `GEOAPIFY_API_KEY` environment variable, or uses the public HCMC proxy when no key is set.
+Expected after setup: the host lists the five SiteScout tools. Put [`agent/SYSTEM_PROMPT.md`](../agent/SYSTEM_PROMPT.md) in
 your project instructions, then ask: *"Where should I open a specialty coffee shop in Thảo Điền? Cite every number."*
 
-The recorded sessions in [`agent/transcripts/`](../agent/transcripts/) use open-weight models on Cloudflare
-Workers AI through a small host script, not Claude or Cursor. The failures are kept: a model that garbled
+The [recorded sessions](../agent/README.md) include open-weight models on Cloudflare Workers AI and Codex CLI.
+The [two-server session 04b](mcp.md#recorded-two-server-session-04b-codex-cli) shows a model using SiteScout
+and Geoapify MCP in the same conversation. The failures are kept: a model that garbled
 "Bình Thạnh" sent the analysis to the wrong ward, so `scout_site` now returns an `areaCheck`; a model that
 invented a Places URL led us to return the real requests (`topCandidateCalls`) in every result.
 
 ## 8. How SiteScout uses the Geoapify MCP server (5 min)
 
-Full write-up, with the tool-by-tool table, a real call and the agent sessions: **[docs/mcp.md](mcp.md)**.
+Full write-up, with the tool-by-tool table, a real call and the agent sessions: **[MCP integration](mcp.md)**
+([published page](https://sitescout-docs.pages.dev/docs/mcp)). The
+[recorded two-server session 04b](mcp.md#recorded-two-server-session-04b-codex-cli) includes SiteScout planning
+and analysis, a Geoapify `search_places` follow-up, and evidence lookups before the final answer.
 
 SiteScout talks to Geoapify in two ways:
 
 | Command / surface | Talks to Geoapify through | Code |
 |---|---|---|
-| `sitescout ask`, `sitescout smoke` | the **Geoapify MCP server** (`https://api.geoapify.com/v1/mcp`), all 11 tools | `src/mcp/client.ts` → `src/agent/run.ts` |
-| `sitescout scout`, the web demo, SiteScout's own MCP server | the **Geoapify REST APIs** | `src/engine/geoapify.ts` → `src/engine/scout.ts` |
+| `node dist/cli.js ask`, `node dist/cli.js smoke` | the **Geoapify MCP server** (`https://api.geoapify.com/v1/mcp`), the 11 tools in the recorded fixture | [MCP client](../src/mcp/client.ts), [agent](../src/agent/run.ts) |
+| `node dist/cli.js scout`, the web demo, SiteScout's own MCP server | the **Geoapify REST APIs** | [REST client](../src/engine/geoapify.ts), [engine](../src/engine/scout.ts) |
 
 The `ask` pipeline was the first version. It geocodes the seeds (`geocode_address`), checks the categories against
 `list_place_categories`, labels candidates with `reverse_geocode_coordinates`, draws an 800 m catchment with
@@ -300,7 +426,10 @@ route or a nearby search. [docs/mcp.md](mcp.md) shows the configuration and walk
 
 ## 9. Put it online safely: the demo proxy (5 min)
 
-Full write-up, with code and deploy steps: **[docs/demo-proxy.md](demo-proxy.md)**.
+Full write-up, with code and complete deployment steps: **[Demo proxy](demo-proxy.md)**
+([published page](https://sitescout-docs.pages.dev/docs/demo-proxy)). The
+[public demo](https://sitescout.huynhthanh.workers.dev) has a server-side live key: visitors can run real
+analyses within the daily caps, without supplying their own key.
 
 ```mermaid
 flowchart LR
@@ -320,17 +449,37 @@ flowchart LR
 - **Caching.** API answers are cached at the edge for 24 h, tiles for 30 days. Measured on 2026-10-31 with the
   pharmacy question asked twice: the first run sent 53 of its 56 calls to Geoapify (84 credits, 54 s); the second
   run got all 56 from the cache (0 credits, 4 s).
-- **Your own copy:** `wrangler d1 create`, `wrangler secret put GEOAPIFY_KEY`, `node build.mjs`, `wrangler deploy`.
+- **Your own copy:** follow the [complete deployment guide](demo-proxy.md#7-deploy-your-own-copy), including
+  the account, database and secret setup. The local CLI build above does not publish a website.
 
 ## 10. Make it yours (2 min)
 
 - **New business type:** add a rule to `BUSINESS_RULES` in `src/engine/plan.ts` (keywords, competitor category,
   demand categories). Use only categories from the Geoapify Places list.
-- **Different walk time:** the plan's `walkMinutes` (the MCP `scout_site` tool accepts it as an override).
+- **Different walk time:** edit `walkMinutes` in the `plan` passed to the MCP `scout_site` tool.
 - **Different weights:** edit the weights in `src/engine/scout.ts` and bump the weights version so old reports stay
   comparable.
 
-Then run `npm test` — the tests run offline on recorded fixtures.
+Then run the offline tests:
+
+```sh
+npm test
+```
+
+Expected: Vitest reports the passing tests and exits successfully. No Geoapify key is needed.
+
+### Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| `dist/cli.js` cannot be found | Run `npm run build` from the repository root before invoking the CLI |
+| `BLOCKED: missing GEOAPIFY_API_KEY` | Set the variable in the shell running the CLI, or check `.env.local` in that working directory |
+| HTTP 401 | Check the key in your Geoapify account and update the local environment; keep it out of issue reports |
+| `scout --help` says a question is required | Use the options table in step 3; only top-level `--help` is implemented |
+| Credit-cap error or HTTP 429 | Check the run estimate and account quota; the public demo offers a recorded run when its daily caps are reached |
+| Wrong ward or outdated district label | Inspect the resolved area, report limitations and trace before trusting the ranking; see [Geoapify feedback](FEEDBACK.md) |
+| `map.jpg` is missing | The Static Maps request failed; inspect the terminal warning and trace. The CLI can still write the other output files |
+| `trace validate` rejects a `scout` trace | The validator accepts the older MCP trace format; inspect `scout` JSON lines as shown in step 5 |
 
 ## 11. Limits and lessons
 

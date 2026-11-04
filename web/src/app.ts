@@ -147,12 +147,18 @@ document.querySelector("#app")!.innerHTML = `
   <div class="panel-scroll" id="panelScroll">
     <header class="panel-head">
       <div class="brand">${I.pin("#1570EF", "#fff")}<span>SiteScout</span><span class="tag">HCMC</span></div>
-      <div class="head-actions"><button class="icon-btn" data-open-mcp aria-label="Use from Claude or Cursor (MCP)" title="Use from Claude / Cursor (MCP)">${I.plug}</button><a class="icon-btn" href="${REPO}" target="_blank" rel="noopener" aria-label="GitHub">${I.github}</a></div>
+      <div class="head-actions">
+        <a class="head-docs" href="https://sitescout-docs.pages.dev/docs" target="_blank" rel="noopener" aria-label="Documentation">Docs</a>
+        <button class="icon-btn" data-open-mcp aria-label="Use from Claude, Cursor, Codex or Kiro (MCP)" title="Use from Claude, Cursor, Codex or Kiro (MCP)">${I.plug}</button>
+        <a class="icon-btn" href="${REPO}" target="_blank" rel="noopener" aria-label="GitHub">${I.github}</a>
+      </div>
     </header>
     <section id="ask" class="block"></section>
     <section id="state" class="block" aria-live="polite"></section>
     <section id="result"></section>
   </div>
+  <footer class="panel-foot"><span>Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a></span>
+    <span>Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span></footer>
 </aside>
 <div id="print" class="print-only"></div>
 <dialog id="mcp" aria-labelledby="mcpTitle"></dialog>
@@ -354,7 +360,7 @@ function renderAsk(): void {
     <div class="examples"><span class="muted xs">Recorded examples · instant, no credits</span>
       <div class="chips">${EXAMPLES.map((e) => `<button class="chip ${S.source?.kind === "example" && S.source.id === e.id ? "on" : ""}" data-ex="${e.id}" ${S.running ? "disabled" : ""}>${esc(e.short)}</button>`).join("")}</div>
     </div>
-    ${st ? `<div class="quota" title="Shared daily Geoapify budget for this demo: live API calls plus map tiles (4 tiles = 1 credit)"><div class="quota-bar"><i style="width:${pct(used / st.creditCap)}%"></i></div><span>${left} of ${st.creditCap} live credits left today · a live run uses ~85–140</span></div>` : ""}`;
+    ${st ? `<div class="quota" title="Shared daily Geoapify budget for this demo: live API calls plus map tiles (4 tiles = 1 credit)"><div class="quota-bar"><i style="width:${pct(used / st.creditCap)}%"></i></div><span>${left} of ${st.creditCap} live credits left today <a href="https://sitescout-docs.pages.dev/docs/demo-proxy#3-limits-and-daily-counters" target="_blank" rel="noopener">Why?</a> · a live run uses ~85–140</span></div>` : ""}`;
   document.querySelectorAll<HTMLButtonElement>("[data-planner]").forEach((b) => (b.onclick = () => { S.planner = b.dataset.planner as State["planner"]; renderAsk(); }));
   const q = $<HTMLTextAreaElement>("#q");
   q.oninput = () => { S.question = q.value; };
@@ -550,7 +556,7 @@ function evidenceHtml(): string {
   const calls = S.calls;
   const credits = calls.reduce((a, c) => a + c.credits, 0);
   const max = Math.max(...calls.map((c) => c.durationMs), 1);
-  return `<p class="muted xs pane-hint">${calls.length} Geoapify calls · ~${credits} credits. Every [Tn] in the analysis points here. Keys are never shown — requests go through the demo proxy.</p>
+  return `<p class="muted xs pane-hint">${calls.length} Geoapify calls · ~${credits} credits. Every [Tn] in the analysis points here. Keys are never shown — requests go through the demo proxy. <a href="https://sitescout-docs.pages.dev/docs/how-it-works" target="_blank" rel="noopener">How the evidence works</a></p>
   <ul class="calls">${calls.map((c) => `<li id="call-${c.seq}" class="call ${S.openCall === c.seq ? "open" : ""}">
     <button class="call-btn" data-open-call="${c.seq}" aria-expanded="${S.openCall === c.seq}">
       <span class="call-id mono">T${c.seq}</span><span class="call-api">${esc(c.api)}</span><span class="call-sum">${esc(summ(c))}</span><span class="call-ms mono">${c.durationMs} ms</span>
@@ -729,6 +735,8 @@ function openMcp(): void {
   const cursor = JSON.stringify({ mcpServers: { sitescout: { command: "node", args: ["/ABSOLUTE/PATH/sitescout-agent/dist/mcp-server.js"], env: { GEOAPIFY_API_KEY: "YOUR_KEY" } } } }, null, 2);
   d.innerHTML = `<div class="dlg-head"><h2 id="mcpTitle" class="h2">Use SiteScout from your AI assistant</h2><button class="icon-btn" id="mcpClose" aria-label="Close">${I.close}</button></div>
     <p class="muted">The same engine ships as an MCP server with five tools (<code>plan_site_question</code>, <code>scout_site</code>, <code>resolve_place</code>, <code>walk_isochrone</code>, <code>get_evidence</code>). Bring your own free Geoapify key.</p>
+    <p class="xs"><a href="https://sitescout-docs.pages.dev/docs/clients/claude-code" target="_blank" rel="noopener">Setup guides for Claude Code, Cursor, Codex, Kiro</a></p>
+    <p class="xs"><a href="https://sitescout-docs.pages.dev/docs/mcp" target="_blank" rel="noopener">How SiteScout uses the Geoapify MCP server</a></p>
     <div class="h4">Claude Code</div><div class="code"><pre>${esc(claude)}</pre><button class="btn btn-sm" data-copy="claude">Copy</button></div>
     <div class="h4">Cursor / Claude Desktop (<code>mcp.json</code>)</div><div class="code"><pre>${esc(cursor)}</pre><button class="btn btn-sm" data-copy="cursor">Copy</button></div>
     <p class="muted xs">Then ask: “Where should I open a pharmacy in Bình Thạnh?” — the assistant calls <code>scout_site</code> and cites the Geoapify calls. <a href="${REPO}#-use-it-from-your-ai-tool" target="_blank" rel="noopener">Full guide</a></p>`;

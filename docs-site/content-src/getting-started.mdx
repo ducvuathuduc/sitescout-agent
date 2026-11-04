@@ -1,0 +1,106 @@
+---
+title: Getting started
+description: Install SiteScout, add a Geoapify key, and run your first site-selection analysis.
+---
+
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+
+SiteScout turns a plain-language question into a ranked shortlist of real sites, and every number in the report links back to the Geoapify API call that produced it.
+
+<Steps>
+<Step>
+### Requirements
+
+Node.js 20+ and a free Geoapify key from [myprojects.geoapify.com](https://myprojects.geoapify.com). The free plan gives 3,000 credits a day and needs no card.
+</Step>
+
+<Step>
+### Install
+
+```sh
+git clone https://github.com/ducvuathuduc/sitescout-agent.git
+cd sitescout-agent
+```
+
+<CodeBlockTabs defaultValue="npm">
+<CodeBlockTabsList>
+  <CodeBlockTabsTrigger value="pnpm">pnpm</CodeBlockTabsTrigger>
+  <CodeBlockTabsTrigger value="yarn">yarn</CodeBlockTabsTrigger>
+  <CodeBlockTabsTrigger value="npm">npm</CodeBlockTabsTrigger>
+  <CodeBlockTabsTrigger value="bun">bun</CodeBlockTabsTrigger>
+</CodeBlockTabsList>
+<CodeBlockTab value="pnpm">
+```sh
+pnpm install --no-frozen-lockfile
+pnpm run build
+```
+</CodeBlockTab>
+<CodeBlockTab value="yarn">
+```sh
+yarn install
+yarn run build
+```
+</CodeBlockTab>
+<CodeBlockTab value="npm">
+```sh
+npm ci
+npm run build
+```
+</CodeBlockTab>
+<CodeBlockTab value="bun">
+```sh
+bun install
+bun run build
+```
+</CodeBlockTab>
+</CodeBlockTabs>
+
+`npm run build` compiles the TypeScript sources to `dist/`, including the CLI and the MCP server.
+</Step>
+
+<Step>
+### Add your key
+
+Copy `.env.local.example` to `.env.local` and put your key in it. The CLI loads that file with `dotenv` (see `src/cli.ts`), so you do not need to export anything.
+
+```ini title=".env.local"
+GEOAPIFY_API_KEY=YOUR_KEY
+```
+</Step>
+
+<Step>
+### Run your first analysis
+
+```sh
+node dist/cli.js scout "Where should I open a specialty coffee shop in Thảo Điền?" --id my-coffee
+```
+
+The run writes `report.md`, `report.html`, `result.json` and `trace.jsonl` to `examples/my-coffee/`. Each line of `trace.jsonl` is one API call: its endpoint without the key, status, latency, summary and credits.
+</Step>
+
+<Step>
+### Use it from Claude Code or Cursor
+
+SiteScout ships a stdio MCP server with five tools. Register it in your editor and ask the same questions in natural language.
+
+- [Claude Code](/docs/clients/claude-code)
+- [Cursor](/docs/clients/cursor)
+</Step>
+</Steps>
+
+## Next steps
+
+<Cards>
+  <Card title="MCP usage" href="/docs/mcp">
+    How SiteScout uses the Geoapify MCP server, and how to use SiteScout's own five tools.
+  </Card>
+  <Card title="Demo proxy" href="/docs/demo-proxy">
+    How the public demo keeps the key secret and shares one daily budget.
+  </Card>
+  <Card title="Credits and limits" href="/docs/credits">
+    How each Geoapify call is priced, and the caps the demo enforces.
+  </Card>
+  <Card title="How it works" href="/docs/how-it-works">
+    Plan, geocode, isolines, scoring — and where each step lives in the code.
+  </Card>
+</Cards>

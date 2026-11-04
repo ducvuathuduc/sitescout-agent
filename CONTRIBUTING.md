@@ -17,7 +17,10 @@ npm run typecheck && npm run lint && npm test && npm run build
 ```
 
 Tests run offline against recorded fixtures in `tests/fixtures/` — no key needed.
-To run a live analysis, export `GEOAPIFY_API_KEY` and use `node dist/cli.js scout "<question>"`.
+To run a live analysis, set `GEOAPIFY_API_KEY` in your shell or gitignored `.env.local` using
+[.env.local.example](.env.local.example); use `YOUR_KEY` as the placeholder. Follow the
+[tutorial](docs/tutorial.md#3-install-and-run-it-yourself-5-min) for the command and expected output.
+Live analyses spend credits; use a new output ID to preserve recorded examples.
 
 ## Pull requests
 
@@ -28,5 +31,5 @@ To run a live analysis, export `GEOAPIFY_API_KEY` and use `node dist/cli.js scou
 
 ## Reporting Geoapify findings
 
-Product observations go to `docs/FEEDBACK.md` in the format
+Product observations go to [docs/FEEDBACK.md](docs/FEEDBACK.md) in the format
 **observation → impact → reproduction → suggestion**, with the raw data committed.

@@ -1,11 +1,13 @@
 # Record a real Claude Code session with both MCP servers
 
 This records one non-interactive Claude Code run that uses SiteScout's MCP server and the Geoapify MCP server.
-The output is a stream-json transcript you can commit as `agent/transcripts/04-claude-code-two-servers.jsonl`.
+The output is a stream-json transcript you can commit as `agent/transcripts/05-claude-code-two-servers.jsonl`.
 
-Nothing here has been run on the maintainer's machine yet. `claude auth status` reports `"loggedIn": false`
-(`claude` 2.1.316), and no Geoapify key is set. Every flag below is listed in `claude --help` for 2.1.316.
-Check your own version with `claude --version`.
+A two-server session has been recorded with Codex CLI
+([04b](../transcripts/04b-thaodien-coffee-codex-two-servers.jsonl)); this guide is for recording the same kind
+of session in Claude Code. It has not been run with Claude Code on the maintainer's machine: `claude auth status`
+reported `"loggedIn": false` (`claude` 2.1.316) on 2026-11-04. Every flag below is listed in `claude --help` for
+2.1.316. Check your own version with `claude --version`.
 
 ## 1. Sign in and check the key
 
@@ -69,7 +71,7 @@ Flags, all from `claude --help` (2.1.316):
 Redirect the output with `cmd`. In Windows PowerShell 5.1, the `>` operator writes UTF-16, not UTF-8:
 
 ```powershell
-cmd /c "claude -p ""<question>"" --mcp-config ""$env:TEMP\mcp.two-servers.json"" --strict-mcp-config --model <model> --allowedTools ""<tools>"" --max-budget-usd <cap> --output-format stream-json --verbose > agent\transcripts\04-claude-code-two-servers.jsonl"
+cmd /c "claude -p ""<question>"" --mcp-config ""$env:TEMP\mcp.two-servers.json"" --strict-mcp-config --model <model> --allowedTools ""<tools>"" --max-budget-usd <cap> --output-format stream-json --verbose > agent\transcripts\05-claude-code-two-servers.jsonl"
 ```
 
 Run the same command with a short question first, so a failed run does not cost your whole budget.
@@ -80,7 +82,7 @@ The stream can contain the config path, which includes your home directory. In J
 doubled, so replace both forms:
 
 ```powershell
-$f = "agent\transcripts\04-claude-code-two-servers.jsonl"
+$f = "agent\transcripts\05-claude-code-two-servers.jsonl"
 $t = Get-Content $f -Raw -Encoding utf8
 $home1 = $env:USERPROFILE
 $home2 = $env:USERPROFILE.Replace('\', '\\')
@@ -102,5 +104,5 @@ Then check the file against the transcript rules in [docs/mcp.md](../../docs/mcp
 
 ## 6. After recording
 
-The current docs describe the two-server session as "expected, not yet recorded". Once the file exists, update
-the walk-through in [docs/mcp.md](../../docs/mcp.md) and the transcript table in [agent/README.md](../README.md).
+Add the file to the transcript table in [agent/README.md](../README.md), labelled as a Claude Code run, next to
+the Codex sessions 04a and 04b. The walk-through in [docs/mcp.md](../../docs/mcp.md) uses 04b.

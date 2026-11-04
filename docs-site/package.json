@@ -1,0 +1,44 @@
+{
+  "name": "sitescout-docs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/sync-content.mjs && next dev",
+    "build": "node scripts/sync-content.mjs && next build && node scripts/fix-rsc-paths.mjs",
+    "start": "serve out",
+    "types:check": "next typegen && tsc --noEmit",
+    "check": "node scripts/check.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "deploy": "wrangler pages deploy out --project-name sitescout-docs --branch main"
+  },
+  "dependencies": {
+    "cn": "0.5.2",
+    "fumadocs-core": "16.17.10",
+    "fumadocs-mdx": "15.4.10",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@16.17.10",
+    "geist": "1.9.0",
+    "github-slugger": "2.0.0",
+    "lucide-react": "1.68.0",
+    "mermaid": "12.3.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/postcss": "4.3.4",
+    "@types/mdx": "2.0.14",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fast-check": "4.10.2",
+    "postcss": "8.5.32",
+    "serve": "14.2.6",
+    "tailwindcss": "4.3.4",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0",
+    "wrangler": "4.157.0"
+  }
+}

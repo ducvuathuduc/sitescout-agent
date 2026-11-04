@@ -1,0 +1,33 @@
+---
+title: How it works
+description: The engine's steps, from question to a report where every number carries a trace reference.
+---
+
+The engine in `src/engine/scout.ts` runs the same sequence for every question. Each step either costs Geoapify credits or is local bookkeeping, and every number it produces keeps the trace references (`[Tn]`) of the calls behind it.
+
+```mermaid
+flowchart LR
+  Q["Question"] --> P["Plan"]
+  P --> G["Geocode"]
+  G --> C["Candidates"]
+  C --> I["Isoline"]
+  I --> PL["Places"]
+  PL --> R["Route matrix"]
+  R --> S["Score"]
+  S --> REP["Report with evidence [Tn]"]
+```
+
+## Where the code lives
+
+| Concern | File | What it does |
+| --- | --- | --- |
+| Engine | [`src/engine/scout.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/engine/scout.ts) | Runs the isoline-first pipeline — geocode, boundaries, candidates, walk isolines, places inside them, route matrix, score — and attaches trace references to every number. |
+| Planning | [`src/engine/plan.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/engine/plan.ts) | Turns a question into a zod-validated plan with `heuristicPlan()` keyword rules in English and Vietnamese, or an LLM planner whose output falls back to the rules when it is invalid. |
+| Geoapify REST client | [`src/engine/geoapify.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/engine/geoapify.ts) | Typed client for the Geoapify REST APIs with a per-call credit estimate, a run credit cap, and a call record for the trace. |
+| SiteScout MCP server | [`src/mcp-server.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/mcp-server.ts) | Stdio MCP server exposing `plan_site_question`, `scout_site`, `resolve_place`, `walk_isochrone` and `get_evidence`. |
+| Geoapify MCP client | [`src/mcp/client.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/mcp/client.ts) | JSON-RPC client for the Geoapify MCP server over Streamable HTTP, with per-tool argument validation and backoff on 429/5xx. |
+| Agent runtime | [`src/agent/run.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/src/agent/run.ts) | Plan → act through the 11 Geoapify MCP tools → trace → score → render, with no claim that lacks a trace entry. |
+| Demo Worker | [`web/worker/index.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/web/worker/index.ts) | Proxies an allow-listed set of Geoapify endpoints and map tiles, keeps the key as a Worker secret, and enforces the daily and per-visitor caps. |
+| Credit budget | [`web/worker/budget.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/web/worker/budget.ts) | Pure functions that price each proxied call and decide whether a daily or per-visitor cap has been reached. |
+| D1 schema | [`web/worker/schema.sql`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/web/worker/schema.sql) | Tables for daily totals, per-IP usage, cache statistics and shared runs. |
+| Browser app | [`web/src/app.ts`](https://github.com/ducvuathuduc/sitescout-agent/blob/main/web/src/app.ts) | The demo UI, running the same engine as the CLI with every Geoapify request routed through the Worker proxy. |

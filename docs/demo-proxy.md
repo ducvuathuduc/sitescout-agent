@@ -9,6 +9,10 @@ and no key in the page. One Cloudflare Worker on the free plan does this. It is 
 This page covers the architecture, why the key stays secret, the limits, what a visitor sees when a limit is
 reached, the cache and what it saves, the code, and how to deploy your own copy.
 
+**Production check, 2026-11-04:** after the deploy that day, [the status endpoint](https://sitescout.huynhthanh.workers.dev/api/status)
+reports `creditCap: 2400` and `tileCap: 2500`, matching the source below. Section 5 has the dated response
+and the daily totals.
+
 ---
 
 ## 1. Architecture
@@ -39,7 +43,7 @@ Every Geoapify request goes to the Worker on the same origin, so no CORS setup i
 
 ## 2. Why the key never reaches the browser
 
-1. **The key is a Worker secret.** It is set once with `wrangler secret put GEOAPIFY_KEY`. It is not in the
+1. **The key is a Worker secret.** It is set once during the setup in section 7. It is not in the
    repository, in `wrangler.toml`, or in the static files.
 2. **Only the Worker adds it.** `proxyGeo()` and `proxyTile()` put it in an `x-api-key` request header on the call to
    `api.geoapify.com`. The browser only ever talks to `/geo/*` and `/tiles/*`.
@@ -68,7 +72,7 @@ putting any key in the page.
 | Map tiles inside that budget | 2,500 tiles a day (`TILE_CAP`) = 625 credits | `proxyTile()` |
 | Live calls per visitor | 180 a day (`PER_IP_CALL_CAP`); cache hits do not count | `checkCaps()` |
 | AI planner | 300 plans a day for the whole demo | `plan()` |
-| Share links | 20 per visitor a day, 1.5 MB per run | `share()` |
+| Share links | 20 per visitor a day; run text limited to 1,500,000 JavaScript string code units | `share()` |
 | One live run in the browser | stops at 250 credits | `creditCap: 250` in `web/src/app.ts` |
 
 **Why 2,400.** The Geoapify free plan gives 3,000 credits a day ([pricing](https://www.geoapify.com/pricing/)).
@@ -77,7 +81,7 @@ uses the same credits. 2,400 is 80 %. The other 600 credits are headroom for tha
 can pass the cap check at the same moment (see §8).
 
 **Why tiles are in the same budget.** Geoapify counts a map tile request as 0.25 credit (4 tiles = 1 credit,
-[pricing details](https://www.geoapify.com/pricing-details/)). Before this change the demo had a 1,500-credit API
+[pricing details](https://www.geoapify.com/pricing-details/), checked 2026-11-04). Until 2026-11-04 production had a 1,500-credit API
 cap and a separate 2,500-tile cap: 1,500 + 2,500 × 0.25 = 2,125 credits on paper, but two numbers that nobody could
 read as one budget. Now one number covers both: `spent = credits + tiles × 0.25`.
 
@@ -85,7 +89,7 @@ read as one budget. Now one number covers both: `spent = credits + tiles × 0.25
 
 The Worker estimates the cost of each successful call with Geoapify's published rules
 ([pricing details](https://www.geoapify.com/pricing-details/), [MCP pricing](https://apidocs.geoapify.com/docs/mcp/),
-read 2026-10-31). The browser engine uses the same rules (`estimateCredits()` in
+checked 2026-11-04). The browser engine shares these rules except for routing (see table; `estimateCredits()` in
 [`src/engine/geoapify.ts`](../src/engine/geoapify.ts)), and a test checks that both agree.
 
 | Request | Credits |
@@ -95,7 +99,7 @@ read 2026-10-31). The browser engine uses the same rules (`estimateCredits()` in
 | Isoline (time) | 1 for each 5 minutes; several ranges are added up (5/10/15 min = 1 + 2 + 3 = 6) |
 | Boundaries (part-of) | max(1, ⌈results ÷ 20⌉), plus 1 per result when polygons are returned (SiteScout asks for them) |
 | Map tile | 0.25 |
-| Geocoding, autocomplete, reverse, routing | 1 |
+| Geocoding, autocomplete, reverse; routing (Worker estimate) | 1; engine routing uses max(1, waypoints - 1), so the demo's 2-waypoint route costs 1 |
 | Place Details | 1, plus 1 for each 5 minutes of an isochrone feature such as `drive_5` |
 
 Three rules were corrected on 2026-10-31: isolines, boundaries with polygons, and Place Details features. Before,
@@ -135,12 +139,12 @@ x-sitescout-fallback: quota
 ```
 
 The per-visitor limit gives `"error":"per-visitor daily limit reached"` with `used`/`cap` of 180. The engine does
-not retry a 429 that carries `x-sitescout-fallback` (it retries ordinary 429s from Geoapify up to 3 times).
+not retry a 429 that carries `x-sitescout-fallback` (ordinary Geoapify 429s get up to 2 retries, 3 attempts total).
 
 In the app ([`web/src/app.ts`](../web/src/app.ts)):
 
-- **Before a run**, the quota bar under the examples shows *"N of 2400 live credits left today · a live run uses
-  ~85–140"*. N comes from `/api/status`.
+- **Before a run**, the quota bar under the examples shows *"N of C live credits left today · a live run uses
+  ~85–140"*. Both N and C are derived from `/api/status`; C is 2400.
 - **When a cap stops a live question**, an amber banner explains which limit was hit, and the closest of the three
   recorded runs opens instead, so the visitor still gets a full analysis:
   - daily budget: *"Today's shared live budget is used up, so this question could not run live. Showing the closest
@@ -158,7 +162,7 @@ In the app ([`web/src/app.ts`](../web/src/app.ts)):
 
 | What | Cache key | Kept for | Why |
 |---|---|---|---|
-| API answers (`/geo/*`, status 200 only) | the upstream URL without the key; for the one POST (Route Matrix) the URL + `#` + SHA-256 of the body | 24 h (`cache-control: public, max-age=86400`) | POIs and addresses change slowly; the same question within a day costs nothing |
+| API answers (`/geo/*`, status 200 only) | the upstream URL without the key; for the one POST (Route Matrix) the URL + `#` + SHA-256 of the body truncated to 24 hex characters | 24 h (`cache-control: public, max-age=86400`) | POIs and addresses change slowly; the same question within a day costs nothing |
 | Map tiles | the upstream tile URL | 30 days (`max-age=2592000`) | Basemap tiles barely change |
 | Static app files | — | 5 min; fonts, icons and examples 1 day | Normal web caching |
 
@@ -171,7 +175,7 @@ call cost>`. A miss carries `x-sitescout-cache: MISS` and its estimated credits.
 
 ### What it saves: measured
 
-We ran the same live question twice through the public proxy on 2026-10-31 with
+This is a **single controlled test**, not production history. We ran the same live question twice through the public proxy on 2026-10-31 with
 [`scripts/measure-cache.mjs`](../scripts/measure-cache.mjs). Raw per-call results:
 [`docs/demo-proxy/cache-test-2026-10-31.json`](demo-proxy/cache-test-2026-10-31.json).
 
@@ -183,8 +187,8 @@ We ran the same live question twice through the public proxy on 2026-10-31 with
 | Credits spent (SiteScout estimate) | 84 | **0** |
 | Time | 54 s | **4 s** |
 
-- A repeated question within 24 hours, served by the same data center, costs no credits and runs about 13 times
-  faster.
+- In this test the repeated question used no additional credits in the same data center and ran about 15 times
+  faster (54.210 s / 3.735 s). The API cache lifetime is 24 hours.
 - Different questions share work too. The 3 hits in run 1 are the geocodes of the drive-time origins (Chợ Bến Thành,
   Bến xe Miền Đông, Crescent Mall), which an earlier coffee-shop run that day had already fetched. That saved
   3 credits on a question nobody had asked before.
@@ -198,13 +202,40 @@ For tiles, Geoapify's own estimate is about 14 tiles per map view and 50 per ses
 ([pricing details](https://www.geoapify.com/pricing-details/)). That is about 12.5 credits for a session that misses
 the cache. A tile already in the cache costs nothing for 30 days.
 
-**Ongoing numbers.** `/api/status` now returns `cache: {hits, tileHits, savedCredits}` for the current day. For
-history:
+**Production status and totals.** GET [the status endpoint](https://sitescout.huynhthanh.workers.dev/api/status),
+checked at **2026-11-04T11:40:12Z** (UTC), right after the deploy that day, returned the JSON below with the
+per-visitor usage field omitted. Only aggregate usage and configuration are shown:
 
-```sh
-npx wrangler d1 execute sitescout-demo --remote \
-  --command "SELECT t.day, t.credits, t.tiles, s.hits, s.tile_hits, s.saved FROM totals t LEFT JOIN cache_stats s USING (day) ORDER BY t.day DESC LIMIT 14"
+```json
+{"day":"2026-11-04","spent":0,"creditCap":2400,"credits":0,"tiles":0,"tileCap":2500,"yourCap":180,"cache":{"hits":0,"tileHits":0,"savedCredits":0},"liveKey":true}
 ```
+
+`npm run demo:migrate` created the `cache_stats` table on 2026-11-04 (all statements are `CREATE TABLE IF NOT EXISTS`;
+no data was changed). `npm run demo:totals` was then run at **11:40:13 UTC**, using Wrangler **4.157.0**.
+It selects only daily aggregates, for the inclusive date range **2026-10-22 through 2026-11-04**.
+The exact query in [package.json](../package.json) is:
+
+```sql
+SELECT d.day, t.credits, t.tiles, s.hits, s.tile_hits, ROUND(s.saved, 2) AS saved FROM (SELECT day FROM totals UNION SELECT day FROM cache_stats) d LEFT JOIN totals t ON t.day = d.day LEFT JOIN cache_stats s ON s.day = d.day WHERE d.day BETWEEN '2026-10-22' AND '2026-11-04' ORDER BY d.day
+```
+
+The command returned 5 rows. Days without a row had no recorded live usage. Cache statistics start on
+2026-11-04, when the `cache_stats` table was created, so `hits`, `tile_hits` and `saved` are empty for every
+earlier day ("not recorded", not zero). The current UTC day is partial and had no row at the time of the query.
+Credits and saved credits are SiteScout estimates, not Geoapify billing.
+
+| day | credits | tiles | hits | tile_hits | saved |
+|---|---|---|---|---|---|
+| 2026-10-22 | 370 | 298 | not recorded | not recorded | not recorded |
+| 2026-10-23 | 68 | 83 | not recorded | not recorded | not recorded |
+| 2026-10-24 | 0 | 44 | not recorded | not recorded | not recorded |
+| 2026-10-26 | 68 | 180 | not recorded | not recorded | not recorded |
+| 2026-10-31 | 150 | 1 | not recorded | not recorded | not recorded |
+| Sum, 2026-10-22 through 2026-11-03 | 656 | 606 | not recorded | not recorded | not recorded |
+
+The 606 tiles are 151.5 credits, so the shared budget would have counted 807.5 credits over those 13 days.
+The busiest day, 2026-10-22, is 370 + 298 × 0.25 = 444.5 credits, about 19 % of the 2,400 budget.
+The 2026-10-31 figure includes the cache test above, counted with the old estimate.
 
 ## 6. The code
 
@@ -318,21 +349,22 @@ In the browser, the tile layer is a plain Leaflet layer on the Worker route:
 ## 7. Deploy your own copy
 
 You need a free [Cloudflare](https://dash.cloudflare.com/sign-up) account, a free
-[Geoapify key](https://myprojects.geoapify.com) and Node.js 20+.
+[Geoapify key](https://myprojects.geoapify.com) and Node.js 22 (the pinned Wrangler's runtime requirement).
+Root devDependencies pin Wrangler **4.157.0** exactly. Run all commands from the repository root.
 
 ```sh
 git clone https://github.com/ducvuathuduc/sitescout-agent.git && cd sitescout-agent
 npm ci
-cd web
 npx wrangler login
-npx wrangler d1 create sitescout-demo        # prints a database_id: put it in wrangler.toml
-npx wrangler d1 execute sitescout-demo --remote --file worker/schema.sql
-npx wrangler secret put GEOAPIFY_KEY         # paste your key; it is stored encrypted, never in a file
-node build.mjs                               # bundles the app and embeds it into worker/assets.gen.ts
-npx wrangler deploy                          # prints https://sitescout.<your-subdomain>.workers.dev
+npx wrangler d1 create sitescout-demo        # put the returned database_id in web/wrangler.toml
+npx wrangler secret put GEOAPIFY_KEY -c web/wrangler.toml
+npm run demo:migrate                        # creates tables in your own remote database
+npm run demo:dry-run                        # builds and checks the bundle without uploading
+npm run demo:deploy                         # builds and publishes your own Worker
+npm run demo:totals                         # reads daily aggregates; update the date range as needed
 ```
 
-Then edit [`web/wrangler.toml`](../web/wrangler.toml) to make it yours:
+Before the secret, migration, or deploy steps, edit [`web/wrangler.toml`](../web/wrangler.toml) to make it yours:
 
 - `name`: the Worker name, which is part of the URL.
 - `database_id`: the id from `d1 create`.
@@ -343,24 +375,24 @@ Then edit [`web/wrangler.toml`](../web/wrangler.toml) to make it yours:
 To serve another city, change `BBOX` in `web/worker/index.ts` (and the map's start view in `web/src/app.ts`).
 To allow another Geoapify API, add its path to `ALLOW` and a rule to `scopeError()`.
 
-`npx wrangler deploy --dry-run --outdir .dist/dry` builds everything without uploading; we checked it with wrangler
-4.156.0 on 2026-10-31. [`web/deploy.sh`](../web/deploy.sh) is an alternative that uploads through the Cloudflare
+`npm run demo:dry-run`, `demo:migrate` and `demo:deploy` ran with Wrangler 4.157.0 on 2026-11-04. No lifecycle hook calls these demo scripts.
+[`web/deploy.sh`](../web/deploy.sh) is an alternative that uploads through the Cloudflare
 API without wrangler (for CI); it keeps the `GEOAPIFY_KEY` secret from the previous deployment.
 
 **Free-plan limits that matter here** (Cloudflare [Workers limits](https://developers.cloudflare.com/workers/platform/limits/),
-[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), read 2026-10-31):
+[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), checked 2026-11-04):
 
 | Resource | Free limit | Demo use |
 |---|---|---|
 | Worker requests | 100,000 a day | 1 per API call, tile, static file |
-| D1 rows written | 100,000 a day | 2 per cache miss (`totals` + `ip_usage`), 1 per cache hit (`cache_stats`) |
-| D1 rows read | 5 million a day | 2 per cache miss |
-| Geoapify (free) | 3,000 credits a day, 5 requests a second | capped at 2,400 credits |
+| D1 rows written | 100,000 a day | 2 logical counter upserts per forwarded call (`totals` + `ip_usage`), 1 statistics upsert per cache hit; billed rows can include index work |
+| D1 rows read | 5 million a day | 2 counter SELECTs per cache miss; not a measured billed-row count |
+| Geoapify (free) | 3,000 credits a day, 5 requests a second | shared 2,400-credit budget (80 %) |
 
 ## 8. Known limits
 
 - **The cap check is not atomic.** Counters are read before a call and written after it. When several calls run at
-  the same moment near the cap, a few can pass. The 600-credit headroom covers this.
+  the same moment near the cap, a few can pass. The 600-credit headroom is a cushion, not a bound on overshoot.
 - **The cache is per data center** (see §5).
 - **Credits are estimates** from the published rules. Check real usage in the Geoapify dashboard.
 - **The proxy does not enforce Geoapify's 5 requests a second.** One live run sends its calls one after another
