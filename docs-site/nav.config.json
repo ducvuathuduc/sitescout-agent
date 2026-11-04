@@ -23,8 +23,11 @@
       "items": [
         { "slug": "clients/claude-code", "title": "Claude Code" },
         { "slug": "clients/cursor", "title": "Cursor" },
+        { "slug": "clients/codex", "title": "Codex" },
+        { "slug": "clients/kiro", "title": "Kiro" },
         { "slug": "clients/claude-desktop", "title": "Claude Desktop" },
-        { "slug": "clients/two-servers", "title": "Two servers side by side" }
+        { "slug": "clients/two-servers", "title": "Two servers side by side" },
+        { "slug": "clients/record-claude-code", "title": "Record a session" }
       ]
     },
     {

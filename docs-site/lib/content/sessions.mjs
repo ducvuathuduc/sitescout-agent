@@ -5,10 +5,10 @@ import { buildFrontmatter } from './frontmatter.mjs';
 
 export const TRANSCRIPTS_REPO_DIR = 'agent/transcripts';
 export const TRANSCRIPTS_GITHUB_URL = `https://github.com/ducvuathuduc/sitescout-agent/blob/main/${TRANSCRIPTS_REPO_DIR}`;
-export const HOST_LABEL = 'open-weight model via agent/host.mjs';
+export const HOST_LABEL = 'agent/host.mjs (open-weight)';
 export const SESSIONS_TITLE = 'Recorded sessions';
 export const SESSIONS_DESCRIPTION =
-  'Recorded SiteScout MCP sessions with open-weight models, with the outcome of each run and a link to the transcript.';
+  'Recorded MCP sessions with their hosts, models, servers, outcomes and transcript links.';
 
 /** Session id is the transcript filename prefix before the first hyphen. */
 export function sessionId(fileName) {
@@ -38,10 +38,15 @@ export function parseSessionRecord(text, fileName = '<transcript>') {
   const date = new Date(record.ts);
   if (Number.isNaN(date.getTime())) throw new Error(`${fileName}: invalid ts ${record.ts}`);
 
+  const host = record.host ? String(record.host).replace(/ \(codex exec --json\)$/, '') : HOST_LABEL;
+  const hasGeoapify = record.servers?.some((server) => server.name === 'geoapify');
+
   return {
     id: sessionId(fileName),
     date: date.toISOString().slice(0, 10),
     model: String(record.model),
+    host: `${host}${hasGeoapify ? ' + Geoapify MCP' : ''}`,
+    servers: `${record.server.name} ${record.server.version}${hasGeoapify ? ' + geoapify MCP' : ''}`,
     serverName: String(record.server.name),
     serverVersion: String(record.server.version),
   };
@@ -92,19 +97,18 @@ export function buildSessionsPage({ transcripts, readme }) {
         ...record,
         file,
         outcome,
-        server: `${record.serverName} ${record.serverVersion}`,
         url: transcriptUrl(file),
       };
     });
 
   const body = [
-    `Host for every session: ${HOST_LABEL}. The outcome column comes from the recorded-transcripts table in [agent/README.md](/docs/agent).`,
+    'Each row links a recorded MCP transcript with its host, servers and outcome from [agent/README.md](/docs/agent); see the [04b Codex CLI walk-through](/docs/mcp#recorded-two-server-session-04b-codex-cli).',
     '',
-    '| Session | Date | Model | Server | Outcome | Transcript |',
+    '| Session | Date | Host | Model | Outcome | Transcript |',
     '|---|---|---|---|---|---|',
     ...rows.map(
       (row) =>
-        `| \`${cell(row.id)}\` | ${cell(row.date)} | \`${cell(row.model)}\` | ${cell(row.server)} | ${cell(row.outcome)} | [${cell(row.file)}](${row.url}) |`,
+        `| \`${cell(row.id)}\` | ${row.date.replace(/-/g, '\u2011')} | ${cell(row.host)} | \`${cell(row.model)}\` | ${cell(row.outcome)} | [View](${row.url} "${cell(row.file)}") |`,
     ),
     '',
   ].join('\n');

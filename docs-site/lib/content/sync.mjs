@@ -26,11 +26,15 @@ function readText(filePath) {
 /**
  * Generate content/docs/** from the repository Markdown.
  * Returns { pages, meta, assets } for logging and tests.
+ * @param {{ repoRoot: string, docsSiteDir: string, log?: (message: string) => void }} options
  */
 export function runSync({ repoRoot, docsSiteDir, log = () => {} }) {
   const contentDir = path.join(docsSiteDir, 'content', 'docs');
   const publicAssetsDir = path.join(docsSiteDir, 'public', 'docs-assets');
   const navConfig = JSON.parse(fs.readFileSync(path.join(docsSiteDir, 'nav.config.json'), 'utf8'));
+  const sources = SYNC_SOURCES;
+  const navTitles = new Map(navConfig.groups.flatMap((group) => group.items)
+    .map((item) => [item.slug, item.title]));
 
   // Validate every input before touching generated output.
   for (const page of CONTENT_SRC_PAGES) {
@@ -39,11 +43,11 @@ export function runSync({ repoRoot, docsSiteDir, log = () => {} }) {
       `hand-written page ${page.from}`,
     );
   }
-  for (const source of SYNC_SOURCES) {
+  for (const source of sources) {
     ensureFile(path.join(repoRoot, source.from), `source document ${source.from}`);
   }
 
-  const documents = SYNC_SOURCES.map((source) => ({
+  const documents = sources.map((source) => ({
     ...source,
     absolutePath: path.join(repoRoot, source.from),
     text: readText(path.join(repoRoot, source.from)),
@@ -70,13 +74,16 @@ export function runSync({ repoRoot, docsSiteDir, log = () => {} }) {
       repoRoot,
       sourcePath: document.absolutePath,
       sourceRelPath: document.from,
-      sources: SYNC_SOURCES,
+      sources,
       assets: assetPlan,
     });
 
     return {
       out: document.out,
-      content: `${buildFrontmatter({ title: parsed.title, description: parsed.description })}${body}`,
+      content: `${buildFrontmatter({
+        title: document.slug.startsWith('clients/') ? navTitles.get(document.slug) ?? parsed.title : parsed.title,
+        description: parsed.description,
+      })}${body}`,
     };
   });
 

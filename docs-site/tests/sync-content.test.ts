@@ -14,6 +14,8 @@ import {
 } from '../lib/content/links.mjs';
 import { buildMetaFiles } from '../lib/content/meta.mjs';
 import { buildSessionsPage, parseOutcomeTable } from '../lib/content/sessions.mjs';
+import { runSync } from '../lib/content/sync.mjs';
+import { CONTENT_SRC_PAGES, SYNC_SOURCES } from '../lib/content/sources.mjs';
 
 const fixtureDir = new URL('../.cache/', import.meta.url);
 fs.mkdirSync(fixtureDir, { recursive: true });
@@ -38,7 +40,7 @@ write('agent/README.md', '# Agent\n\n## Setup\n');
 const sources = [
   { from: 'docs/a.md', slug: 'a' },
   { from: 'docs/b.md', slug: 'b' },
-  { from: 'agent/README.md', slug: 'agent' },
+  { from: 'agent/README.md', slug: 'agent', fragmentAliases: { 'old-setup': 'setup' } },
 ];
 
 const navConfig = JSON.parse(
@@ -278,6 +280,11 @@ describe('link rewriting', () => {
     expect(rewrite('# A\n\n[x](./b.md#intro)\n')).toContain('[x](/docs/b#intro)');
   });
 
+  it('maps explicitly renamed source fragments and still validates the destination', () => {
+    expect(rewrite('# A\n\n[setup](../agent/README.md#old-setup)\n')).toContain('[setup](/docs/agent#setup)');
+    expect(() => rewrite('# A\n\n[missing](../agent/README.md#unknown-heading)\n')).toThrow(/unknown-heading/);
+  });
+
   it('copies referenced docs images and hashes colliding basenames', () => {
     const markdown = [
       '# A',
@@ -350,7 +357,85 @@ describe('meta.json', () => {
   });
 });
 
+describe('required client sources', () => {
+  function fixture(name: string) {
+    const relative = `clients-${name}`;
+    const repoRoot = path.join(root, relative);
+    const docsSiteDir = path.join(repoRoot, 'docs-site');
+    write(`${relative}/docs-site/nav.config.json`, JSON.stringify(navConfig));
+    for (const page of CONTENT_SRC_PAGES) write(`${relative}/docs-site/${page.from}`, '# Local page\n');
+    for (const source of SYNC_SOURCES) {
+      write(`${relative}/${source.from}`, '# Fixture\n\nDescription.\n');
+    }
+    fs.mkdirSync(path.join(repoRoot, 'agent', 'transcripts'), { recursive: true });
+    return { relative, repoRoot, docsSiteDir };
+  }
+
+  it.each(['codex', 'kiro', 'record-claude-code'])('fails before writing output when %s is absent', (client) => {
+    const input = fixture(`missing-${client}`);
+    fs.unlinkSync(path.join(input.repoRoot, `agent/clients/${client}.md`));
+    expect(() => runSync(input)).toThrow(`Missing source document agent/clients/${client}.md`);
+    expect(fs.existsSync(path.join(input.docsSiteDir, 'content/docs'))).toBe(false);
+  });
+
+  it('includes available client pages in the requested order with their nav titles', () => {
+    const input = fixture('available');
+    for (const client of ['codex', 'kiro']) write(`${input.relative}/agent/clients/${client}.md`, '# Longer source title\n\nClient instructions.\n');
+    const result = runSync(input);
+    expect(result.pages).toContain('clients/codex.md');
+    expect(result.pages).toContain('clients/kiro.md');
+    expect(result.pages).toContain('clients/record-claude-code.md');
+    const meta = JSON.parse(fs.readFileSync(path.join(input.docsSiteDir, 'content/docs/clients/meta.json'), 'utf8'));
+    expect(meta.pages).toEqual(['claude-code', 'cursor', 'codex', 'kiro', 'claude-desktop', 'two-servers', 'record-claude-code']);
+    expect(fs.readFileSync(path.join(input.docsSiteDir, 'content/docs/clients/codex.md'), 'utf8')).toContain('title: "Codex"');
+    expect(fs.readFileSync(path.join(input.docsSiteDir, 'content/docs/clients/kiro.md'), 'utf8')).toContain('title: "Kiro"');
+    expect(fs.readFileSync(path.join(input.docsSiteDir, 'content/docs/clients/record-claude-code.md'), 'utf8')).toContain('title: "Record a session"');
+  });
+});
+
 describe('recorded sessions', () => {
+  it('shows mixed hosts and servers and retains the README outcomes for 04a and 04b', () => {
+    const page = buildSessionsPage({
+      readme: [
+        '| `04a-search.jsonl` | Codex CLI | Web search skipped SiteScout | Follow-up |',
+        '| `04b-two-servers.jsonl` | Codex CLI | Both servers, every number cited | Follow-up |',
+      ].join('\n'),
+      transcripts: [
+        { file: '04b-two-servers.jsonl', text: JSON.stringify({
+          ts: '2026-11-04T12:58:50.486Z', model: 'gpt-6.1-sol',
+          host: 'Codex CLI 0.166.0 (codex exec --json)',
+          server: { name: 'sitescout', version: '1.1.0' },
+          servers: [{ name: 'sitescout', version: '1.1.0' }, { name: 'geoapify' }],
+        }) },
+        { file: '04a-search.jsonl', text: JSON.stringify({
+          ts: '2026-11-04T12:55:41.648Z', model: 'gpt-6.1-sol',
+          host: 'Codex CLI 0.166.0 (codex exec --json)',
+          server: { name: 'sitescout', version: '1.1.0' },
+          servers: [{ name: 'geoapify' }, { name: 'sitescout', version: '1.1.0' }],
+        }) },
+        { file: '01-legacy.jsonl', text: JSON.stringify({
+          ts: '2026-10-22T13:17:54.195Z', model: '@cf/model-a',
+          server: { name: 'sitescout', version: '1.0.0' },
+        }) },
+      ],
+    });
+    expect(page.rows.map(({ id, host, servers, outcome }: { id: string; host: string; servers: string; outcome: string }) => ({ id, host, servers, outcome }))).toEqual([
+      { id: '01', host: 'agent/host.mjs (open-weight)', servers: 'sitescout 1.0.0', outcome: 'not recorded' },
+      { id: '04a', host: 'Codex CLI 0.166.0 + Geoapify MCP', servers: 'sitescout 1.1.0 + geoapify MCP', outcome: 'Web search skipped SiteScout' },
+      { id: '04b', host: 'Codex CLI 0.166.0 + Geoapify MCP', servers: 'sitescout 1.1.0 + geoapify MCP', outcome: 'Both servers, every number cited' },
+    ]);
+    expect(page.content).toContain('| Session | Date | Host | Model | Outcome | Transcript |');
+    expect(page.content).not.toContain('| Servers |');
+    for (const row of page.rows) {
+      expect(page.content).toContain(`| ${row.date.replace(/-/g, '\u2011')} |`);
+      expect(page.content).toContain(`[View](${row.url} "${row.file}")`);
+      expect(page.content).not.toContain(`[${row.file}]`);
+    }
+    expect(page.content).toContain('/docs/mcp#recorded-two-server-session-04b-codex-cli');
+    expect(page.content).not.toContain('Host for every session:');
+    expect(page.description).not.toContain('open-weight');
+  });
+
   it('matches outcomes by transcript id prefix and uses "not recorded" when absent', () => {
     const readme = [
       '| File | Model | Outcome | What |',
@@ -377,8 +462,8 @@ describe('recorded sessions', () => {
       ],
     });
 
-    expect(page.content).toContain('open-weight model via agent/host.mjs');
-    expect(page.content).toContain('2026-10-22');
+    expect(page.content).toContain('agent/host.mjs (open-weight)');
+    expect(page.content).toContain('2026\u201110\u201122');
     expect(page.content).toContain('✅ correct');
     expect(page.content).toContain('not recorded');
     expect(page.content).toContain(

@@ -112,6 +112,17 @@ What worked very well is listed first, because it shaped the product.
 - **Note:** this may be an OpenStreetMap data gap rather than a Geoapify issue; reporting it so the boundary
   import can be checked.
 
+## #7 — MCP: checking one category name costs the whole category list
+
+- **Observation:** in the recorded two-server Codex session
+  ([`agent/transcripts/04b-…`](../agent/transcripts/04b-thaodien-coffee-codex-two-servers.jsonl), 2026-11-04) the
+  model called `list_place_categories` with no arguments to confirm that `catering.cafe` exists before calling
+  `search_places`. The result was 833 categories, about 25,700 characters of text.
+- **Impact:** an agent spends a large part of its context on a lookup that needs one line. The model did it even
+  though the 400 error on an unknown category already tells it what to do (see "What worked well").
+- **Suggestion:** an optional `prefix` or `query` argument on `list_place_categories` (for example
+  `prefix: "catering.cafe"`), so an agent can check one branch of the tree.
+
 ---
 
 ### Reproducing everything

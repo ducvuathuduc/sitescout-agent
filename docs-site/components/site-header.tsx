@@ -96,17 +96,17 @@ export function SiteHeader() {
 
   return (
     <header className="ss-header sticky top-0 z-30 border-b [grid-column:1/-1] [grid-row:1]">
-      <div className="mx-auto flex h-16 w-full max-w-[84rem] items-center gap-3 px-4 md:px-6">
+      <div className="ss-header-inner flex h-16 w-full items-center gap-3 px-6">
         <Link href="/" className="ss-brand" aria-label="SiteScout home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/favicon.svg" alt="" width={18} height={18} aria-hidden />
+          <img src="/favicon.svg" alt="" width={20} height={20} aria-hidden />
           <span className="ss-brand-sep" aria-hidden>
             /
           </span>
           <span className="tracking-tight">Docs</span>
         </Link>
 
-        <nav aria-label="Main" className="ms-3 hidden items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
           {navMenus.map((menu) => (
             <MenuTrigger key={menu.text} menu={menu} />
           ))}

@@ -18,7 +18,7 @@ const THEMES = ['light', 'dark'] as const;
 
 const VIEWPORTS = [
   { name: '375', width: 375, height: 812 },
-  { name: '1280', width: 1280, height: 900 },
+  { name: '1440', width: 1440, height: 900 },
 ] as const;
 
 async function prepare(page: Page, theme: (typeof THEMES)[number], viewport: (typeof VIEWPORTS)[number]) {

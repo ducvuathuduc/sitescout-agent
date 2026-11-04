@@ -1,0 +1,11 @@
+# Merge these tables into ~/.codex/config.toml; replace the absolute path.
+[mcp_servers.sitescout]
+command = "node"
+args = ["/absolute/path/to/sitescout-agent/dist/mcp-server.js"]
+env = {}
+env_vars = ["GEOAPIFY_API_KEY"]
+tool_timeout_sec = 180
+
+[mcp_servers.geoapify]
+url = "https://api.geoapify.com/v1/mcp"
+env_http_headers = { "x-api-key" = "GEOAPIFY_API_KEY" }

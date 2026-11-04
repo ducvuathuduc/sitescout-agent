@@ -36,6 +36,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rscAliases } from './fix-rsc-paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -275,6 +276,13 @@ function resolveInternalLink(pageRel, rawPath) {
 function checkHtml(file, state) {
   const rel = pageRelOf(file);
   const raw = fs.readFileSync(file, 'utf8');
+  // Check literal RSC references too, including those in inline flight data.
+  const decodedRaw = decodeEntities(raw.replace(/\\u002f/gi, '/').replace(/\\\//g, '/'));
+  for (const match of decodedRaw.matchAll(/(?:\/[A-Za-z0-9_.$!%()+~-]+)*\/?__next\.[^\s"'<>\\?]+?\.txt/g)) {
+    if (!resolveInternalLink(rel, match[0])) {
+      report('RSC paths', `${match[0]} -> no such file in out/`, rel);
+    }
+  }
   const markup = stripNonMarkup(raw);
   const ids = collectIds(raw);
   state.pages.set(rel, { ids });
@@ -505,6 +513,19 @@ function main() {
   }
 
   const allFiles = listFiles(OUT_DIR);
+  // Segment URLs are also assembled at runtime from the flight router tree.
+  // Every nested exported segment must therefore have its flat URL available.
+  for (const file of allFiles) {
+    for (const alias of rscAliases(path.relative(OUT_DIR, file))) {
+      if (!alias.endsWith('.txt')) continue;
+      const target = path.join(OUT_DIR, alias);
+      if (!fs.existsSync(target)) {
+        report('RSC paths', `/${toPosix(alias)} -> no such file in out/`, pageRelOf(file));
+      } else if (!fs.readFileSync(file).equals(fs.readFileSync(target))) {
+        report('RSC paths', `/${toPosix(alias)} differs from its nested export`, pageRelOf(file));
+      }
+    }
+  }
   const htmlFiles = allFiles.filter((file) => file.endsWith('.html'));
 
   if (htmlFiles.length === 0) {

@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, List } from 'lucide-react';
 import type { TOCItemType } from 'fumadocs-core/toc';
 
 export function MobileToc({ items }: { items: TOCItemType[] }) {
@@ -8,7 +8,8 @@ export function MobileToc({ items }: { items: TOCItemType[] }) {
     <details className="ss-mobile-toc not-prose xl:hidden">
       <summary>
         <span>On this page</span>
-        <ChevronDown aria-hidden />
+        <ChevronDown className="ss-toc-chevron" aria-hidden />
+        <List className="ss-toc-list" aria-hidden />
       </summary>
       <nav aria-label="On this page">
         <ul>

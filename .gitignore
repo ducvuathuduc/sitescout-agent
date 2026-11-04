@@ -19,6 +19,7 @@ logs/results/
 Thumbs.db
 .vscode/
 .idea/
+.kiro/
 
 # Bench run outputs (regenerable via `sitescout bench run`)
 bench/vngeobench/results/

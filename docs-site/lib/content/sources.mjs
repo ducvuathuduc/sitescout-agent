@@ -8,9 +8,15 @@ export const SYNC_SOURCES = [
   { from: 'docs/provenance.md', slug: 'provenance', out: 'provenance.md' },
   { from: 'docs/edge-cases.md', slug: 'edge-cases', out: 'edge-cases.md' },
   { from: 'docs/FEEDBACK.md', slug: 'geoapify-feedback', out: 'geoapify-feedback.md' },
-  { from: 'agent/README.md', slug: 'agent', out: 'agent/index.md' },
+  {
+    from: 'agent/README.md', slug: 'agent', out: 'agent/index.md',
+    // Older client guides still link to the heading before its date was removed.
+    fragmentAliases: { 'recorded-transcripts-real-runs-2026-10-22': 'recorded-transcripts-real-runs' },
+  },
   { from: 'agent/clients/claude-code.md', slug: 'clients/claude-code', out: 'clients/claude-code.md' },
   { from: 'agent/clients/cursor.md', slug: 'clients/cursor', out: 'clients/cursor.md' },
+  { from: 'agent/clients/codex.md', slug: 'clients/codex', out: 'clients/codex.md' },
+  { from: 'agent/clients/kiro.md', slug: 'clients/kiro', out: 'clients/kiro.md' },
   {
     from: 'agent/clients/claude-desktop.md',
     slug: 'clients/claude-desktop',
@@ -20,6 +26,11 @@ export const SYNC_SOURCES = [
     from: 'agent/clients/geoapify-mcp-side-by-side.md',
     slug: 'clients/two-servers',
     out: 'clients/two-servers.md',
+  },
+  {
+    from: 'agent/clients/record-claude-code.md',
+    slug: 'clients/record-claude-code',
+    out: 'clients/record-claude-code.md',
   },
   {
     from: 'bench/hcmc-addresses/RESULTS.md',

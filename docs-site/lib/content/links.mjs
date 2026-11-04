@@ -297,12 +297,13 @@ function rewriteDestination(dest, context, line) {
   const real = realpath(absolute);
   const stat = fs.statSync(real);
   const { fragment } = splitTarget(target);
-  const slug = context.sourceMap.get(real);
+  const source = context.sourceMap.get(real);
 
-  if (slug !== undefined) {
-    if (fragment) validateFragment(real, fragment, context, true, line, target);
-    const base = slug ? `/docs/${slug}` : '/docs';
-    return fragment ? `${base}#${fragment}` : base;
+  if (source !== undefined) {
+    const resolvedFragment = source.fragmentAliases?.[decode(fragment)] ?? fragment;
+    if (resolvedFragment) validateFragment(real, resolvedFragment, context, true, line, target);
+    const base = source.slug ? `/docs/${source.slug}` : '/docs';
+    return resolvedFragment ? `${base}#${resolvedFragment}` : base;
   }
 
   if (stat.isFile() && isImagePath(real) && isInside(context.docsDir, real)) {
@@ -329,7 +330,7 @@ function rewriteDestination(dest, context, line) {
  *   repoRoot      absolute repository root
  *   sourcePath    absolute path of the source document
  *   sourceRelPath repo-relative path used in error messages (e.g. docs/mcp.md)
- *   sources       [{ from: 'docs/mcp.md', slug: 'mcp' }, ...]
+ *   sources       [{ from: 'docs/mcp.md', slug: 'mcp', fragmentAliases?: { old: current } }, ...]
  *   assets        Map<absolute real path, asset file name>
  */
 export function rewriteMarkdownLinks(markdown, options) {
@@ -344,7 +345,7 @@ export function rewriteMarkdownLinks(markdown, options) {
 
   const sourceMap = new Map();
   for (const source of sources) {
-    sourceMap.set(realpath(path.join(repoRoot, source.from)), source.slug);
+    sourceMap.set(realpath(path.join(repoRoot, source.from)), source);
   }
 
   const context = { repoRoot, sourcePath, sourceRelPath, sourceMap, assets, docsDir };

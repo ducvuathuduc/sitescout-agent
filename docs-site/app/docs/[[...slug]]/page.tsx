@@ -14,6 +14,7 @@ import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { getPageMarkdownUrl, gitConfig } from '@/lib/shared';
 import { MermaidDiagrams } from '@/components/mermaid';
 import { MobileToc } from '@/components/mobile-toc';
+import { AgentPrompt } from '@/components/landing/agent-prompt';
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   const params = await props.params;
@@ -22,6 +23,18 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 
   const MDX = page.data.body;
   const markdownUrl = getPageMarkdownUrl(page).url;
+  const actions = (
+    <div className="ss-page-actions">
+      <MarkdownCopyButton markdownUrl={markdownUrl}>Copy page</MarkdownCopyButton>
+      <ViewOptionsPopover
+        markdownUrl={markdownUrl}
+        githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
+        aria-label="Page options"
+      >
+        <span className="sr-only">Page options</span>
+      </ViewOptionsPopover>
+    </div>
+  );
 
   return (
     <DocsPage
@@ -30,22 +43,18 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
       breadcrumb={{ enabled: false }}
       tableOfContentPopover={{ enabled: false }}
     >
-      <DocsTitle className="text-[2rem] font-semibold leading-[1.15] tracking-[-0.022em] md:text-[2.5rem]">
-        {page.data.title}
-      </DocsTitle>
+      <div className="ss-mobile-page-bar">
+        {actions}
+        <MobileToc items={page.data.toc} />
+      </div>
+      <div className="ss-page-heading">
+        <DocsTitle>{page.data.title}</DocsTitle>
+        {actions}
+      </div>
       <DocsDescription className="mb-0 text-base leading-7 text-fd-foreground">
         {page.data.description}
       </DocsDescription>
-      <div className="flex flex-row flex-wrap items-center gap-2 border-b pb-6">
-        <MarkdownCopyButton markdownUrl={markdownUrl}>Copy page</MarkdownCopyButton>
-        <ViewOptionsPopover
-          markdownUrl={markdownUrl}
-          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
-        >
-          Open in ChatGPT
-        </ViewOptionsPopover>
-      </div>
-      <MobileToc items={page.data.toc} />
+      {!params.slug?.length && <AgentPrompt />}
       <DocsBody>
         <MDX
           components={getMDXComponents({
