@@ -1,0 +1,27 @@
+---
+title: Credits and limits
+description: How SiteScout prices a Geoapify call, and the budget the public demo enforces.
+---
+
+Every Geoapify request has a price. SiteScout estimates it **before** the call, records it in the trace, and stops a run at a credit cap instead of overspending. The official rules per tool are in [the MCP reference](/docs/mcp-reference#credit-rules).
+
+Two functions do the work. The engine uses `estimateCredits` for the CLI and the browser; the Worker proxy uses `credits` for the public demo. Both follow the published Geoapify pricing: places cost `max(1, ceil(features / 20))`, a route matrix costs `max(sources, targets) × min(sources, targets, 10)`, and a time isoline costs 1 credit per 5 minutes of range.
+
+`estimateCredits` from `src/engine/geoapify.ts`:
+
+<include-symbol file="src/engine/geoapify.ts" name="estimateCredits" lang="ts" />
+
+The Worker keeps one daily budget for API calls **and** map tiles together: `spent = credits + tiles × 0.25`. This is the file that enforces it.
+
+<include cwd lang="ts" meta='title="web/worker/budget.ts"'>../web/worker/budget.ts</include>
+
+## Limits
+
+| Limit | Value | Where |
+| --- | --- | --- |
+| Daily credit cap, API calls and tiles together | 2,400 credits | `DAILY_CREDIT_CAP` in `web/wrangler.toml` |
+| Live calls per visitor per day | 180 | `PER_IP_CALL_CAP` in `web/wrangler.toml` |
+| Tile ceiling inside the daily budget | 2,500 tiles (625 credits) | `TILE_CAP` in `web/wrangler.toml` |
+| Cost of one map tile | 0.25 credit | `TILE_CREDITS` in `web/worker/budget.ts` |
+
+The daily cap is 80 % of the Geoapify free plan (3,000 credits/day); the rest is headroom for the account owner and for calls that pass the check at the same moment. When a cap is reached the Worker answers `429` with `fallback: true`. [The demo proxy](/docs/demo-proxy) explains what a visitor sees next.

@@ -1,0 +1,50 @@
+{
+  "groups": [
+    {
+      "label": "Start",
+      "items": [
+        { "slug": "", "title": "Getting started" },
+        { "slug": "how-it-works", "title": "How it works" },
+        { "slug": "tutorial", "title": "Tutorial" }
+      ]
+    },
+    {
+      "label": "Geoapify MCP",
+      "items": [
+        { "slug": "mcp", "title": "MCP usage" },
+        { "slug": "mcp-reference", "title": "MCP reference" },
+        { "slug": "credits", "title": "Credits and limits" },
+        { "slug": "agent/sessions", "title": "Recorded sessions" },
+        { "slug": "agent", "title": "Agent setup" }
+      ]
+    },
+    {
+      "label": "Use from your AI tool",
+      "items": [
+        { "slug": "clients/claude-code", "title": "Claude Code" },
+        { "slug": "clients/cursor", "title": "Cursor" },
+        { "slug": "clients/claude-desktop", "title": "Claude Desktop" },
+        { "slug": "clients/two-servers", "title": "Two servers side by side" }
+      ]
+    },
+    {
+      "label": "Demo proxy",
+      "items": [{ "slug": "demo-proxy", "title": "Demo proxy" }]
+    },
+    {
+      "label": "Reference",
+      "items": [
+        { "slug": "provenance", "title": "Provenance" },
+        { "slug": "edge-cases", "title": "Edge cases" },
+        { "slug": "geoapify-feedback", "title": "Geoapify feedback" }
+      ]
+    },
+    {
+      "label": "Benchmarks",
+      "items": [
+        { "slug": "benchmarks/hcmc-addresses", "title": "HCMC addresses" },
+        { "slug": "benchmarks/vngeobench", "title": "VNGeoBench" }
+      ]
+    }
+  ]
+}

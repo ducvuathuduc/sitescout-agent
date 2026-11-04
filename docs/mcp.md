@@ -39,7 +39,7 @@ has no isoline tool. See [FEEDBACK.md](FEEDBACK.md) item #1.
 
 **Tool count.** The pipeline uses all 11 tools that `tools/list` returned when we recorded it on 2026-10-22
 ([tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt](../tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt)).
-On 2026-10-31 Geoapify's machine-readable tool index
+On 2026-11-04 Geoapify's machine-readable tool index
 ([tools/index.json](https://apidocs.geoapify.com/assets/openapi/specs/mcp/tools/index.json)) lists a twelfth tool,
 `get_timezone`, while the docs page still says "eleven tools". SiteScout does not need time zones. There is still
 no isoline tool. `assertToolSurface` only fails when one of our 11 tools is missing, so a new tool does not break
@@ -48,7 +48,7 @@ no isoline tool. `assertToolSurface` only fails when one of our 11 tools is miss
 The meetup playbook (`runMeetup`, line 770) uses four tools: `search_places`, `calculate_route_matrix`,
 `calculate_route`, and `reverse_geocode_coordinates`.
 
-Credit rules from the Geoapify MCP docs (https://apidocs.geoapify.com/docs/mcp/, read 2026-10-31):
+Credit rules from the [Geoapify MCP docs](https://apidocs.geoapify.com/docs/mcp/), checked 2026-11-04:
 `initialize`, `tools/list`, and `notifications/*` cost 0 credits. A `tools/call` costs what its underlying API
 costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 
@@ -56,7 +56,7 @@ costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 
 | Need | Geoapify MCP | SiteScout uses | Reason |
 |---|---|---|---|
-| Free-text place name to a point | `geocode_address` | REST `/v1/geocode/autocomplete` and `/v1/geocode/search` in an autocomplete-first chain (`resolvePlace`, [src/engine/scout.ts](../src/engine/scout.ts) line 117) | In our benchmark, autocomplete got 42/55 (76%) top-1 matches on Vietnamese queries, and search got 37/55 (67%) ([bench/hcmc-addresses/RESULTS.md](../bench/hcmc-addresses/RESULTS.md), run 2026-10-22). That benchmark used REST endpoints. It did not test `geocode_address`. |
+| Free-text place name to a point | `geocode_address` | REST `/v1/geocode/autocomplete` and `/v1/geocode/search` in an autocomplete-first chain (`resolvePlace`, [src/engine/scout.ts](../src/engine/scout.ts) line 125) | In our benchmark, autocomplete got 42/55 (76%) top-1 matches on Vietnamese queries, and search got 37/55 (67%) ([bench/hcmc-addresses/RESULTS.md](../bench/hcmc-addresses/RESULTS.md), run 2026-10-22). That benchmark used REST endpoints. It did not test `geocode_address`. |
 | Point to address | `reverse_geocode_coordinates` | REST `/v1/geocode/reverse` (`reverse()` in [src/engine/geoapify.ts](../src/engine/geoapify.ts)) | The product path is REST end to end (section 1). |
 | Walk-time catchment (isoline) | None | REST `/v1/isoline` (`isoline()` in `geoapify.ts`) | No isoline tool in the 11-tool list ([tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt](../tests/fixtures/live/mcp_tools_list_2026-10-22.sse.txt)). See [FEEDBACK.md](FEEDBACK.md) item #1. |
 | Places inside a walk catchment | `search_places` takes one category and a circle | REST `/v2/places` with `filter=geometry:<isoline id>`, or a 600 m circle if the isoline fails (`scout.ts` line 301) | `search_places` accepts one `category`, one point, `radius_meters`, and `limit` up to 100 ([src/mcp/schemas.ts](../src/mcp/schemas.ts)). It has no geometry filter. |
@@ -64,7 +64,7 @@ costs. Geocoding and places calls cost `max(1, ceil(features / 20))` credits.
 | Route to one point | `calculate_route` | REST `/v1/routing` (`routing()` in `geoapify.ts`) | The product path uses REST throughout (section 1). |
 | Buffer, area, union, contains | `transform_geometry`, `measure_geometry`, `combine_geometries`, `evaluate_spatial_relation` | Local code: `geometryAreaM2` and `pointInGeometry` in [src/geo/grid.ts](../src/geo/grid.ts) | The engine computes these locally, so they need no API call. |
 | Category check | `list_place_categories` | Bundled catalog, [src/engine/categories.ts](../src/engine/categories.ts), read by `plan_site_question` ([agent/README.md](../agent/README.md)) | The agent path also calls `list_place_categories` at phase 1b, against the live list. |
-| Browser demo | Not used | A Cloudflare Worker ([web/worker](../web/worker)); the demo proxy URL is in [src/mcp-server.ts](../src/mcp-server.ts) | The Geoapify MCP docs say browser clients should omit the `MCP-Protocol-Version` header, because the CORS preflight does not allow it (docs read 2026-10-31). |
+| Browser demo | Not used | A Cloudflare Worker ([web/worker](../web/worker)); the demo proxy URL is in [src/mcp-server.ts](../src/mcp-server.ts) | The Geoapify MCP docs say browser clients should omit the `MCP-Protocol-Version` header, because the CORS preflight does not allow it (docs checked 2026-11-04). |
 
 Why the product uses REST for isolines: the REST isoline returns an `id`, and `/v2/places` accepts that id as
 `filter=geometry:<id>`. That counts places inside the walk area, not inside a circle. A circle over-counts across
@@ -170,7 +170,7 @@ A bad category does not return an HTTP error. The server sends a text block with
 SiteScout's MCP server ([src/mcp-server.ts](../src/mcp-server.ts), `dist/mcp-server.js`, stdio) runs the analysis.
 It calls the Geoapify REST APIs itself. The model in the host only plans the question and explains the answer.
 The Geoapify MCP server exposes lower-level tools for geocoding, search, routing, and geometry (11 on 2026-10-22,
-plus `get_timezone` in the 2026-10-31 index).
+plus `get_timezone` in the index checked 2026-11-04).
 
 ```mermaid
 flowchart LR
