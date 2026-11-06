@@ -224,7 +224,7 @@ The same two servers in a side-by-side setup are described in [geoapify-mcp-side
 - **Host and model:** `agent/host.mjs`, with `@cf/mistralai/mistral-small-3.1-24b-instruct` on Cloudflare Workers AI.
   This is an open-weight model. It is not a Claude Code or Cursor session.
 - **Server:** SiteScout MCP server, version 1.0.0 (from the session line in the transcript). The current
-  `src/mcp-server.ts` reports 1.1.0.
+  `src/mcp-server.ts` reports 1.2.0.
 - **Recorded:** 2026-10-22.
 
 Question: "I run an office-lunch restaurant and want a second branch in Phường Sài Gòn (old District 1). Office
@@ -258,7 +258,7 @@ was dissolved, so this city name is wrong for central HCMC.
   config; the JSON stream does not report it). It is not a Claude Code or Cursor session. The same two servers are
   configured the same way in [Claude Code](../agent/clients/claude-code.md), [Cursor](../agent/clients/cursor.md)
   and [Kiro](../agent/clients/kiro.md).
-- **Servers:** SiteScout MCP server 1.1.0 over stdio, and the Geoapify MCP server over streamable HTTP, configured
+- **Servers:** SiteScout MCP server 1.1.0 (the version at recording time) over stdio, and the Geoapify MCP server over streamable HTTP, configured
   as in [codex.config.example.toml](../agent/clients/codex.config.example.toml). Web search was off, so every fact
   in the answer came from one of the two servers.
 - **Recorded:** 2026-11-04, 96 seconds.

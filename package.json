@@ -46,5 +46,5 @@
     "demo:totals": "wrangler d1 execute sitescout-demo --remote -c web/wrangler.toml --command \"SELECT d.day, t.credits, t.tiles, s.hits, s.tile_hits, ROUND(s.saved, 2) AS saved FROM (SELECT day FROM totals UNION SELECT day FROM cache_stats) d LEFT JOIN totals t ON t.day = d.day LEFT JOIN cache_stats s ON s.day = d.day WHERE d.day BETWEEN '2026-10-22' AND '2026-11-04' ORDER BY d.day\""
   },
   "type": "module",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
