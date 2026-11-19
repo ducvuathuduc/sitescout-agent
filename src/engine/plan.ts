@@ -63,7 +63,7 @@ function areaPhrase(q: string, profile: CountryProfile): string | undefined {
 export function heuristicPlan(question: string, profile: CountryProfile = VN_HCMC_PROFILE): PlanOutcome {
   const notes: string[] = [];
   const rule = profile.businessRules.find((r) => r.match.test(question)) ?? profile.businessRules[0];
-  if (!profile.businessRules.some((r) => r.match.test(question))) notes.push("no business keyword recognised — defaulted to coffee shop");
+  if (!profile.businessRules.some((r) => r.match.test(question))) notes.push(`no business keyword recognised — defaulted to ${rule.business}`);
   const alias = profile.areaAliases.find((a) => a.match.test(question));
   let area = alias?.area;
   if (!area) {
