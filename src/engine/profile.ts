@@ -25,6 +25,10 @@ export interface CountryProfile {
   id: string;
   /** Human label, e.g. "Ho Chi Minh City, Vietnam". */
   label: string;
+  /** ISO 3166-1 alpha-2 country code, lowercase, e.g. "vn". Used as the Geoapify geocoder country filter. */
+  isoCountry: string;
+  /** BCP 47 response language, e.g. "vi". Passed to Geoapify as `lang`. */
+  lang: string;
   /** [lon, lat] used to bias geocoder results toward the market. */
   biasPoint: [number, number];
   /** True when a geocoder hit (lat, lon) lies inside the market's study territory. */
@@ -99,6 +103,8 @@ If the question is outside Ho Chi Minh City, still answer with the closest HCMC 
 export const VN_HCMC_PROFILE: CountryProfile = {
   id: "vn-hcmc",
   label: "Ho Chi Minh City, Vietnam",
+  isoCountry: "vn",
+  lang: "vi",
   biasPoint: VN_HCMC_BIAS,
   boundaryCheck: (lat, lon) => haversineM({ lat, lon }, { lat: VN_HCMC_BIAS[1], lon: VN_HCMC_BIAS[0] }) < 40_000,
   areaSuffix: "Hồ Chí Minh",
