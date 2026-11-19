@@ -4,7 +4,8 @@
  * is a new profile object, not an edit to plan.ts or scout.ts.
  *
  * VN_HCMC_PROFILE reproduces the constants that used to live in plan.ts and
- * scout.ts, so the default path is unchanged.
+ * scout.ts, so the default path is unchanged. TH_BANGKOK_PROFILE is the second
+ * market; it is opt-in and does not change the default path.
  */
 import { haversineM } from "../geo/grid.js";
 
@@ -117,4 +118,69 @@ export const VN_HCMC_PROFILE: CountryProfile = {
   ignoredPartPattern: /^(ho chi minh|tp\.? ?hcm|thanh pho ho chi minh|viet ?nam)$/,
   partPrefixPattern: /^(quan|phuong|duong) /,
   areaPhrasePattern: /(?:\bở|\btại|\bgần|\bkhu|\bin|\bnear|\baround)\s+([^?.!]+)/i,
+};
+
+/* ------------------------------------------------------------------ */
+/* Bangkok, Thailand                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Thailand national extent [west, south, east, north] (GeoBoundaries ADM0, as supplied by the user; not independently verified in this run). */
+export const TH_BBOX: [number, number, number, number] = [97.344, 5.613, 105.637, 20.465];
+
+const TH_BANGKOK_BIAS: [number, number] = [100.5018, 13.7563]; // from resolve_location, Bangkok, Thailand
+
+function inBbox(lat: number, lon: number, b: [number, number, number, number]): boolean {
+  return lon >= b[0] && lat >= b[1] && lon <= b[2] && lat <= b[3];
+}
+
+/** Keyword → categories. Thai and English keywords. */
+const TH_BUSINESS_RULES: BusinessRule[] = [
+  { match: /coffee|caf[eé]|กาแฟ|คาเฟ่/i, business: "coffee shop", competitor: "catering.cafe", demand: ["office", "sport.fitness", "commercial.clothing", "education.university"] },
+  { match: /bakery|bread|ขนมปัง|เบเกอรี่/i, business: "bakery", competitor: "commercial.food_and_drink.bakery", demand: ["office", "education.school", "commercial.supermarket"] },
+  { match: /pharmac|drugstore|ร้านขายยา/i, business: "pharmacy", competitor: "healthcare.pharmacy", demand: ["healthcare.hospital", "healthcare.clinic_or_praxis", "commercial.supermarket"] },
+  { match: /restaurant|food|ร้านอาหาร/i, business: "restaurant", competitor: "catering.restaurant", demand: ["office", "education.university", "commercial.shopping_mall"] },
+  { match: /gym|fitness|yoga|ฟิตเนส/i, business: "gym", competitor: "sport.fitness", demand: ["office", "building.residential", "education.university"] },
+  { match: /coworking/i, business: "coworking space", competitor: "office.coworking", demand: ["catering.cafe", "office.company", "education.university"] },
+];
+
+/** Known Bangkok areas → geocode text. Initial set; extend as benchmarks need. */
+const TH_AREA_ALIASES: AreaAlias[] = [
+  { match: /thong ?lo|thonglor|ทองหล่อ/i, area: "Thonglor, Watthana, Bangkok, Thailand" },
+  { match: /sukhumvit|สุขุมวิท/i, area: "Sukhumvit Road, Watthana, Bangkok, Thailand" },
+  { match: /silom|สีลม/i, area: "Silom Road, Bang Rak, Bangkok, Thailand" },
+  { match: /siam|สยาม/i, area: "Siam Square, Pathum Wan, Bangkok, Thailand" },
+];
+
+const TH_DEFAULT_ORIGINS = ["Siam Square, Pathum Wan, Bangkok, Thailand", "Silom Road, Bang Rak, Bangkok, Thailand", "Sukhumvit Road, Watthana, Bangkok, Thailand"];
+
+const TH_PLANNER_PROMPT = `You plan retail site-selection analyses in Bangkok, Thailand, for the SiteScout agent.
+Return ONLY a JSON object with these keys:
+- business: short English name of the business type
+- competitorCategory: ONE Geoapify place category for direct competitors
+- demandCategories: 1-4 Geoapify place categories that bring customers (not the competitor category)
+- area: the neighbourhood to analyse, as a geocodable English address ending with "Bangkok, Thailand"
+- walkMinutes: integer 5-15 (walking catchment)
+- candidates: integer 5-8
+- origins: 1-3 well-known Bangkok places customers travel from
+Use only real Geoapify categories, e.g. catering.cafe, catering.restaurant, healthcare.pharmacy, healthcare.hospital, office, office.company, office.coworking, sport.fitness, education.school, education.university, commercial.supermarket, commercial.clothing, commercial.shopping_mall, building.residential.
+If the question is outside Bangkok, still answer with the closest Bangkok interpretation. Never invent numbers.`;
+
+/** Bangkok, Thailand. Initial profile: boundary check uses the Thailand bbox above plus a 40 km radius around the city centre. */
+export const TH_BANGKOK_PROFILE: CountryProfile = {
+  id: "th-bangkok",
+  label: "Bangkok, Thailand",
+  isoCountry: "th",
+  lang: "en",
+  biasPoint: TH_BANGKOK_BIAS,
+  boundaryCheck: (lat, lon) => inBbox(lat, lon, TH_BBOX) && haversineM({ lat, lon }, { lat: TH_BANGKOK_BIAS[1], lon: TH_BANGKOK_BIAS[0] }) < 40_000,
+  areaSuffix: "Bangkok, Thailand",
+  areaAliases: TH_AREA_ALIASES,
+  defaultAreaLabel: "Thonglor",
+  defaultOrigins: TH_DEFAULT_ORIGINS,
+  businessRules: TH_BUSINESS_RULES,
+  plannerPrompt: TH_PLANNER_PROMPT,
+  legacyPartPatterns: [],
+  ignoredPartPattern: /^(bangkok|thailand|krung thep|krung thep maha nakhon)$/,
+  partPrefixPattern: /^(khwaeng|khet|district) /,
+  areaPhrasePattern: /(?:\bin|\bnear|\baround|\bat)\s+([^?.!]+)/i,
 };
