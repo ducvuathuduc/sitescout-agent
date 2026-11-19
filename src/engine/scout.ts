@@ -17,11 +17,14 @@
  *
  * Runtime-agnostic: used by the CLI (Node) and the Cloudflare Worker demo.
  * Every number in the result carries `refs` = trace seqs of the calls that
- * produced it.
+ * produced it. Market-specific geocoding config comes from a CountryProfile
+ * (default VN_HCMC_PROFILE).
  */
 import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
+import { VN_HCMC_PROFILE, type CountryProfile } from "./profile.js";
 import { geometryAreaM2, haversineM, hexGrid, pointInGeometry, round6, type LatLon } from "../geo/grid.js";
+import { foldKey } from "../geo/text.js";
 
 export const ENGINE_VERSION = "1.0.0";
 export const WEIGHTS = { demand: 0.35, competition: 0.25, access: 0.25, reach: 0.15 } as const;
@@ -61,6 +64,8 @@ export interface ScoutResult {
   planner: PlanOutcome["planner"];
   plannerModel?: string;
   planNotes: string[];
+  /** Market the run was planned for (additive; absent in results produced before profiles). */
+  profile?: { id: string; label: string };
   area: {
     query: string;
     anchor: { lat: number; lon: number; label: string; resultType?: string; confidence?: number; via?: string };
@@ -94,9 +99,9 @@ export interface ScoutOptions {
   gridSpacingM?: number;
   /** Study radius around the anchor (m). */
   studyRadiusM?: number;
+  /** Market profile: geocoder bias, boundary check, stopwords. Default VN_HCMC_PROFILE. */
+  profile?: CountryProfile;
 }
-
-const HCMC: [number, number] = [106.7009, 10.7769];
 
 function minMax(xs: number[]): (x: number) => number {
   const lo = Math.min(...xs);
@@ -104,40 +109,39 @@ function minMax(xs: number[]): (x: number) => number {
   return (x) => (hi - lo < 1e-9 ? 0.5 : (x - lo) / (hi - lo));
 }
 
-function pickAnchor(results: GeocodeResult[]): GeocodeResult | undefined {
+function pickAnchor(results: GeocodeResult[], profile: CountryProfile = VN_HCMC_PROFILE): GeocodeResult | undefined {
   const pref = ["amenity", "building", "street", "suburb", "district", "postcode"];
   return [...results]
-    .filter((r) => haversineM({ lat: r.lat, lon: r.lon }, { lat: HCMC[1], lon: HCMC[0] }) < 40_000)
-    // a city/state-level hit means the geocoder fell back to "Hồ Chí Minh" — useless as an anchor
+    .filter((r) => profile.boundaryCheck(r.lat, r.lon))
+    // a city/state-level hit means the geocoder fell back to the city name — useless as an anchor
     .filter((r) => !["city", "state", "country", "county"].includes(r.result_type ?? ""))
     .sort((a, b) => (pref.indexOf(a.result_type ?? "") - pref.indexOf(b.result_type ?? "")) || ((b.rank?.confidence ?? 0) - (a.rank?.confidence ?? 0)))[0];
 }
 
 /**
- * Resolve an HCMC place name. Measured on 2026-10-22: free-text /geocode/search
+ * Resolve a place name inside the profile's market. Measured on 2026-10-22: free-text /geocode/search
  * mis-resolves many HCMC landmarks (e.g. "Chợ Bà Chiểu" → Chợ Bến Thành,
  * "Crescent Mall, Quận 7" → a Tân Bình address) while /geocode/autocomplete
  * often gets them right; but autocomplete on a bare street name ("Xuân Thủy")
  * picks a same-named street elsewhere. So: try autocomplete (name + area),
  * search, autocomplete (bare name); keep the hit whose address contains the
- * most query tokens; reject city-level fallbacks. See docs/FEEDBACK.md.
+ * most query tokens; reject hits outside the profile's boundary. See docs/FEEDBACK.md.
  */
-export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hit?: GeocodeResult; refs: number[]; via?: "autocomplete" | "search" }> {
+export async function resolvePlace(api: GeoapifyApi, text: string, profile: CountryProfile = VN_HCMC_PROFILE): Promise<{ hit?: GeocodeResult; refs: number[]; via?: "autocomplete" | "search" }> {
   const refs: number[] = [];
-  const fold = (x: string): string => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
-  // Pre-2025 admin units ("Phường 12", "Quận 5", "TP Thủ Đức") no longer exist. Measured on
+  // Pre-reform admin units (profile.legacyPartPatterns) no longer exist. Measured on
   // 2026-10-22 (bench/hcmc-addresses): sending them makes the geocoder match alley numbers
   // ("Phường 12" → "175/12 Nguyễn Tri Phương"), so they are dropped from the query and the score.
-  const legacy = (p: string): boolean => /^(phuong|p\.?)\s*\d+$/.test(p) || /^quan\s/.test(p) || /^(tp\.?|thanh pho)\s*thu duc$/.test(p);
+  const legacy = (p: string): boolean => profile.legacyPartPatterns.some((re) => re.test(p));
   const rawParts = text.split(",").map((x) => x.trim()).filter(Boolean);
-  const keep = rawParts.filter((x) => !legacy(fold(x)));
+  const keep = rawParts.filter((x) => !legacy(foldKey(x)));
   // tokens that should appear in a correct answer (drop generic words)
-  const parts = keep.map(fold).filter((x) => x && !/^(ho chi minh|tp\.? ?hcm|thanh pho ho chi minh|viet ?nam)$/.test(x));
+  const parts = keep.map(foldKey).filter((x) => x && !profile.ignoredPartPattern.test(x));
   const words = (x: string): Set<string> => new Set(x.split(/[^a-z0-9]+/).filter(Boolean));
   const score = (r: GeocodeResult): number => {
-    const f = words(fold(r.formatted ?? ""));
+    const f = words(foldKey(r.formatted ?? ""));
     return parts.reduce((n, p, k) => {
-      const ws = [...words(p.replace(/^(quan|phuong|duong) /, ""))];
+      const ws = [...words(p.replace(profile.partPrefixPattern, ""))];
       const ok = ws.length > 0 && ws.every((w) => f.has(w));
       return n + (ok ? (k === 0 ? 2 : 1) : 0);
     }, 0);
@@ -145,7 +149,7 @@ export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hi
   const tried: Array<{ hit: GeocodeResult; via: "autocomplete" | "search"; s: number }> = [];
   const consider = (rs: GeocodeResult[], via: "autocomplete" | "search"): boolean => {
     for (const r of rs) {
-      if (!pickAnchor([r])) continue;
+      if (!pickAnchor([r], profile)) continue;
       tried.push({ hit: r, via, s: score(r) });
     }
     return tried.some((t) => t.s >= Math.min(parts.length, 2) + 1);
@@ -153,9 +157,9 @@ export async function resolvePlace(api: GeoapifyApi, text: string): Promise<{ hi
   const short = (keep[0] ?? text).trim();
   const cleaned = keep.join(", ");
   const attempts: Array<() => Promise<{ results: GeocodeResult[]; seq: number }>> = [
-    () => api.autocomplete(keep.length > 1 ? keep.slice(0, 2).join(", ") : short, { limit: 5, biasLonLat: HCMC }),
-    () => api.geocode(cleaned || text, { limit: 5, biasLonLat: HCMC }),
-    () => api.autocomplete(short, { limit: 5, biasLonLat: HCMC }),
+    () => api.autocomplete(keep.length > 1 ? keep.slice(0, 2).join(", ") : short, { limit: 5, biasLonLat: profile.biasPoint }),
+    () => api.geocode(cleaned || text, { limit: 5, biasLonLat: profile.biasPoint }),
+    () => api.autocomplete(short, { limit: 5, biasLonLat: profile.biasPoint }),
   ];
   let lastError: unknown;
   for (const [k, attempt] of attempts.entries()) {
@@ -202,6 +206,7 @@ export async function placesMulti(api: GeoapifyApi, categories: string[], filter
 export async function runScout(question: string, planned: PlanOutcome, opts: ScoutOptions): Promise<ScoutResult> {
   const t0 = Date.now();
   const { api } = opts;
+  const profile = opts.profile ?? VN_HCMC_PROFILE;
   const emit = (e: ScoutEvent): void => opts.onEvent?.(e);
   const plan = planned.plan;
   emit({ type: "plan", plan, planner: planned.planner, notes: planned.notes });
@@ -211,9 +216,9 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
 
   // 1 — anchor
   emit({ type: "stage", stage: "geocode", detail: plan.area });
-  const rp = await resolvePlace(api, plan.area);
+  const rp = await resolvePlace(api, plan.area, profile);
   const anchorRes = rp.hit;
-  if (!anchorRes) throw new Error(`Could not resolve "${plan.area}" to a place inside Ho Chi Minh City (see trace ${rp.refs.map((x) => "T" + x).join(", ")}).`);
+  if (!anchorRes) throw new Error(`Could not resolve "${plan.area}" to a place inside ${profile.label} (see trace ${rp.refs.map((x) => "T" + x).join(", ")}).`);
   const anchor = { lat: anchorRes.lat, lon: anchorRes.lon, label: anchorRes.formatted ?? plan.area, resultType: anchorRes.result_type, confidence: anchorRes.rank?.confidence, via: rp.via };
   const areaRefs = [...rp.refs];
 
@@ -340,7 +345,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   const origins: ScoutResult["origins"] = [];
   for (const q of plan.origins) {
     try {
-      const o = await resolvePlace(api, q);
+      const o = await resolvePlace(api, q, profile);
       origins.push({ query: q, label: o.hit?.formatted, lat: o.hit?.lat, lon: o.hit?.lon, ref: o.refs[o.refs.length - 1] });
     } catch {
       origins.push({ query: q });
@@ -420,7 +425,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   }
 
   limitations.push(
-    "POI counts come from Geoapify Places (OpenStreetMap-based); coverage of small Vietnamese shops is incomplete, so counts are relative signals, not market sizes.",
+    "POI counts come from Geoapify Places (OpenStreetMap-based); coverage of small shops is incomplete, so counts are relative signals, not market sizes.",
     "Drive times use Geoapify's approximated traffic at query time, not a specific hour.",
     `Weights (${WEIGHTS_VERSION}) are heuristic and not calibrated against real store outcomes.`,
     "Decision support only — visit the site before signing a lease.",
@@ -434,6 +439,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     planner: planned.planner,
     plannerModel: planned.model,
     planNotes: planned.notes,
+    profile: { id: profile.id, label: profile.label },
     area: { query: plan.area, anchor, ward, studyRadiusM: studyR, refs: areaRefs },
     origins,
     candidates: scored,
