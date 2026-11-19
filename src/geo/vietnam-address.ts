@@ -4,8 +4,8 @@
  * Zero dependencies. Usable outside SiteScout (import from anywhere).
  *
  * What it does:
- *  - `normalize()`  — canonical display form: trim, collapse whitespace, keep diacritics.
- *  - `fold()`       — ASCII-folded form for fallback geocoding (NFD strip + đ/Đ mapping).
+ *  - `normalize()`  — canonical display form (re-exported from ./text.ts).
+ *  - `fold()`       — ASCII-folded form (re-exported from ./text.ts).
  *  - `resolveWardAlias()` — maps legacy pre-2025-reform admin names to current ward names.
  *  - `candidateQueries()` — ordered query list for the geocode fallback chain:
  *                           canonical → folded → alias-expanded.
@@ -16,6 +16,10 @@
  * sample regions. Unknown mappings are NOT invented — resolveWardAlias() returns
  * `{ status: "unmapped" }` explicitly.
  */
+import { fold, foldKey, normalize } from "./text.js";
+
+export { fold, normalize };
+
 export const ALIASES_VERSION = "2025-07";
 
 export interface WardAlias {
@@ -25,10 +29,6 @@ export interface WardAlias {
   current: string[];
   /** Normalized (folded, lowercased) legacy key for lookup. */
   key: string;
-}
-
-function foldKey(s: string): string {
-  return fold(s).toLowerCase().trim();
 }
 
 /** v0 alias table — sample regions only. Extend with sourced data, never by guessing. */
@@ -81,23 +81,6 @@ const ALIASES: WardAlias[] = [
 ];
 
 const ALIAS_INDEX = new Map<string, WardAlias>(ALIASES.map((a) => [a.key, a]));
-
-/** Canonical display form: trimmed, single-spaced, diacritics preserved. */
-export function normalize(input: string): string {
-  return input.replace(/\s+/g, " ").trim();
-}
-
-/**
- * ASCII-folded form for fallback geocoding: NFD decompose, strip combining
- * marks, map đ/Đ → d/D. E.g. "Nguyễn Huệ" → "Nguyen Hue".
- */
-export function fold(input: string): string {
-  return normalize(input)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D");
-}
 
 export type WardAliasResult =
   | { status: "mapped"; legacy: string; current: string[]; aliasesVersion: string }
