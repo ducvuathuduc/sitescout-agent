@@ -12,6 +12,9 @@
  *     we do not silently substitute REST.
  *  3. Weights are v0 heuristics, documented below, to be calibrated against
  *     smoke-test evidence once a Geoapify API key is available.
+ *  4. Market-specific tuning lives in a MarketProfile (weights + per-market
+ *     normalizer scales). The default profile reproduces the 0.1.0 behaviour
+ *     exactly, so callers that pass no profile get identical scores.
  *
  * All sub-scores are normalised to [0, 1], higher = better site.
  */
@@ -30,6 +33,12 @@ export const EvidenceBundleSchema = z.object({
   catchmentAreaM2: z.number().positive(),
   /** Mean travel duration (seconds) from demand origins, from calculate_route_matrix. */
   meanAccessDurationS: z.number().nonnegative().optional(),
+  /**
+   * Relative cost of operating at this site, in [0, 1] (0 = cheapest, 1 = most
+   * expensive). Absent means neutral (0.5). Only contributes to the score when a
+   * MarketProfile gives the `cost` sub-score a non-zero weight.
+   */
+  marketCostIndex: z.number().min(0).max(1).optional(),
 });
 
 export type EvidenceBundle = z.infer<typeof EvidenceBundleSchema>;
@@ -43,6 +52,8 @@ export interface SubScores {
   catchment: number;
   /** 1 − normalised mean access duration. Closer to demand = better. */
   accessibility: number;
+  /** 1 − marketCostIndex. Cheaper sites = better. Weight 0 in the default profile. */
+  cost: number;
 }
 
 export interface ScoredCandidate {
@@ -60,7 +71,7 @@ export interface ScoredCandidate {
  * Weight-vector version. Bumped on every calibration change — never silently.
  * Format: "<major>.<minor>.<patch>-<basis>".
  */
-export const WEIGHTS_VERSION = "0.1.0-heuristic";
+export const WEIGHTS_VERSION = "0.2.0-market-aware";
 
 /** v0 weights — heuristic, pending calibration against smoke-test evidence. */
 export const DEFAULT_WEIGHTS: Record<keyof SubScores, number> = {
@@ -68,6 +79,39 @@ export const DEFAULT_WEIGHTS: Record<keyof SubScores, number> = {
   complementarity: 0.25,
   catchment: 0.25,
   accessibility: 0.2,
+  cost: 0,
+};
+
+/**
+ * Per-market configuration: the sub-score weights and the reference scales that
+ * set where each normaliser reaches 0.5. Pure data; no network.
+ */
+export interface MarketProfile {
+  /** Stable identifier, e.g. "default" or "vn-hcmc". */
+  id: string;
+  weights: Record<keyof SubScores, number>;
+  scales: {
+    /** Competitor count that yields competition 0.5. */
+    competitorK: number;
+    /** Complementary POI count that yields complementarity 0.5. */
+    complementaryK: number;
+    /** POIs-per-km² that yields catchment 0.5. */
+    catchmentDensityK: number;
+    /** Mean access duration (s) that yields accessibility 0.5. */
+    accessHalfS: number;
+  };
+}
+
+/** Reproduces the 0.1.0 model exactly (cost weight 0). */
+export const DEFAULT_MARKET_PROFILE: MarketProfile = {
+  id: "default",
+  weights: DEFAULT_WEIGHTS,
+  scales: {
+    competitorK: 8,
+    complementaryK: 25,
+    catchmentDensityK: 60,
+    accessHalfS: 900,
+  },
 };
 
 /**
@@ -88,27 +132,42 @@ function diminishing(count: number, k: number): number {
   return clamp01(count / (count + k));
 }
 
+function isProfile(x: MarketProfile | Record<keyof SubScores, number>): x is MarketProfile {
+  return "weights" in x && "scales" in x;
+}
+
+/**
+ * Score one candidate. The second argument is either a MarketProfile or, for
+ * backward compatibility with 0.1.0 callers, a bare weight vector (in which
+ * case the default scales are used).
+ */
 export function scoreCandidate(
   ev: EvidenceBundle,
-  weights: Record<keyof SubScores, number> = DEFAULT_WEIGHTS,
+  profileOrWeights: MarketProfile | Record<keyof SubScores, number> = DEFAULT_MARKET_PROFILE,
   evidenceRefs: number[] = [],
 ): ScoredCandidate {
+  const profile: MarketProfile = isProfile(profileOrWeights)
+    ? profileOrWeights
+    : { ...DEFAULT_MARKET_PROFILE, weights: profileOrWeights };
+  const { weights, scales } = profile;
   const areaKm2 = ev.catchmentAreaM2 / 1_000_000;
 
-  const competition = 1 - diminishing(ev.competitorCount, 8);
-  const complementarity = diminishing(ev.complementaryPoiCount, 25);
-  const catchment = diminishing((ev.complementaryPoiCount + ev.competitorCount) / Math.max(areaKm2, 1e-6), 60);
+  const competition = 1 - diminishing(ev.competitorCount, scales.competitorK);
+  const complementarity = diminishing(ev.complementaryPoiCount, scales.complementaryK);
+  const catchment = diminishing((ev.complementaryPoiCount + ev.competitorCount) / Math.max(areaKm2, 1e-6), scales.catchmentDensityK);
   const accessibility =
     ev.meanAccessDurationS === undefined
       ? 0.5 // neutral when no route-matrix evidence exists yet
-      : 1 - diminishing(ev.meanAccessDurationS, 900); // 15 min ≈ 0.5
+      : 1 - diminishing(ev.meanAccessDurationS, scales.accessHalfS);
+  const cost = 1 - clamp01(ev.marketCostIndex ?? 0.5); // absent = neutral
 
-  const scores: SubScores = { competition, complementarity, catchment, accessibility };
+  const scores: SubScores = { competition, complementarity, catchment, accessibility, cost };
   const total =
     scores.competition * weights.competition +
     scores.complementarity * weights.complementarity +
     scores.catchment * weights.catchment +
-    scores.accessibility * weights.accessibility;
+    scores.accessibility * weights.accessibility +
+    scores.cost * weights.cost;
 
   return {
     candidateId: ev.candidateId,
