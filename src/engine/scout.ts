@@ -18,7 +18,8 @@
  * Runtime-agnostic: used by the CLI (Node) and the Cloudflare Worker demo.
  * Every number in the result carries `refs` = trace seqs of the calls that
  * produced it. Market-specific geocoding config comes from a CountryProfile
- * (default VN_HCMC_PROFILE).
+ * (default VN_HCMC_PROFILE); its isoCountry and lang are passed to every
+ * Geoapify call that accepts them.
  */
 import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
@@ -156,10 +157,11 @@ export async function resolvePlace(api: GeoapifyApi, text: string, profile: Coun
   };
   const short = (keep[0] ?? text).trim();
   const cleaned = keep.join(", ");
+  const geo = { biasLonLat: profile.biasPoint, country: profile.isoCountry, lang: profile.lang };
   const attempts: Array<() => Promise<{ results: GeocodeResult[]; seq: number }>> = [
-    () => api.autocomplete(keep.length > 1 ? keep.slice(0, 2).join(", ") : short, { limit: 5, biasLonLat: profile.biasPoint }),
-    () => api.geocode(cleaned || text, { limit: 5, biasLonLat: profile.biasPoint }),
-    () => api.autocomplete(short, { limit: 5, biasLonLat: profile.biasPoint }),
+    () => api.autocomplete(keep.length > 1 ? keep.slice(0, 2).join(", ") : short, { limit: 5, ...geo }),
+    () => api.geocode(cleaned || text, { limit: 5, ...geo }),
+    () => api.autocomplete(short, { limit: 5, ...geo }),
   ];
   let lastError: unknown;
   for (const [k, attempt] of attempts.entries()) {
@@ -185,12 +187,12 @@ export async function resolvePlace(api: GeoapifyApi, text: string, profile: Coun
  * office.coworking` returned 0 while `office.company` alone returned 8.
  * Reported in docs/FEEDBACK.md; until clarified we query categories singly.
  */
-export async function placesMulti(api: GeoapifyApi, categories: string[], filter: string, limit: number): Promise<{ features: Array<Feature<PlaceProps>>; refs: number[] }> {
+export async function placesMulti(api: GeoapifyApi, categories: string[], filter: string, limit: number, lang?: string): Promise<{ features: Array<Feature<PlaceProps>>; refs: number[] }> {
   const seen = new Set<string>();
   const features: Array<Feature<PlaceProps>> = [];
   const refs: number[] = [];
   for (const c of categories) {
-    const r = await api.places({ categories: [c], filter, limit });
+    const r = await api.places({ categories: [c], filter, limit, lang });
     refs.push(r.seq);
     for (const f of r.features) {
       const id = f.properties.place_id ?? `${f.properties.lat},${f.properties.lon}`;
@@ -207,6 +209,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   const t0 = Date.now();
   const { api } = opts;
   const profile = opts.profile ?? VN_HCMC_PROFILE;
+  const lang = profile.lang;
   const emit = (e: ScoutEvent): void => opts.onEvent?.(e);
   const plan = planned.plan;
   emit({ type: "plan", plan, planner: planned.planner, notes: planned.notes });
@@ -226,7 +229,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   emit({ type: "stage", stage: "boundaries" });
   let ward: ScoutResult["area"]["ward"];
   try {
-    const b = await api.boundariesPartOf(anchor.lat, anchor.lon);
+    const b = await api.boundariesPartOf(anchor.lat, anchor.lon, { lang });
     areaRefs.push(b.seq);
     const county = b.features.find((f) => (f.properties.categories as string[] | undefined)?.includes("administrative.county_level"));
     const fromLabel = anchor.label.split(",").map((x) => x.trim()).find((x) => /^Phường |^Xã /.test(x));
@@ -246,7 +249,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   const dLon = studyR / (111_320 * Math.cos((anchor.lat * Math.PI) / 180));
   const rect = `rect:${round6(anchor.lon - dLon)},${round6(anchor.lat + dLat)},${round6(anchor.lon + dLon)},${round6(anchor.lat - dLat)}`;
   const cats = [plan.competitorCategory, ...plan.demandCategories];
-  const area = await placesMulti(api, cats, rect, 200);
+  const area = await placesMulti(api, cats, rect, 200, lang);
   areaRefs.push(...area.refs);
   const sample = area.features.map((f) => f.properties);
 
@@ -284,7 +287,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     let label = `Candidate ${i + 1}`;
     let placeId: string | undefined;
     try {
-      const r = await api.reverse(p.lat, p.lon);
+      const r = await api.reverse(p.lat, p.lon, { lang });
       refs.push(r.seq);
       placeId = r.result?.place_id;
       const street = typeof r.result?.street === "string" ? r.result.street : undefined;
@@ -304,7 +307,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
       limitations.push(`Isoline failed for candidate ${i + 1}; a 600 m disk was used instead.`);
     }
     const filter = isoId ? `geometry:${isoId}` : `circle:${p.lon},${p.lat},600`;
-    const inside = await placesMulti(api, cats, filter, 150);
+    const inside = await placesMulti(api, cats, filter, 150, lang);
     refs.push(...inside.refs);
     const demand: Record<string, number> = Object.fromEntries(plan.demandCategories.map((c) => [c, 0]));
     let competitors = 0;
@@ -415,7 +418,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   }
   if (w) {
     try {
-      const d = await api.placeDetails(w.placeId ? { id: w.placeId, features: ["details", "drive_5"] } : { lat: w.lat, lon: w.lon, features: ["details", "drive_5"] });
+      const d = await api.placeDetails(w.placeId ? { id: w.placeId, features: ["details", "drive_5"], lang } : { lat: w.lat, lon: w.lon, features: ["details", "drive_5"], lang });
       const f = d.features.find((x: Feature) => x.properties.feature_type === "drive_5");
       if (f) winnerDrive5 = { geometry: f.geometry, ref: d.seq };
       w.refs.push(d.seq);
