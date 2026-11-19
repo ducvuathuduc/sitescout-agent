@@ -1,16 +1,23 @@
 /**
  * Country profile registry for ASEAN markets: SG, VN, TH, MY, ID, PH.
  *
- * Data notes:
- *  - bbox values are rounded approximate national extents. They are for bias
- *    and detection only. Malaysia and Indonesia boxes include Borneo, and the
- *    Indonesia box contains Singapore and parts of Malaysia; point detection
- *    therefore prefers the smallest containing box.
+ * Data source:
+ *  - bbox values are the extents of GeoBoundaries gbOpen ADM0 geometry
+ *    (wmgeolab/geoBoundaries release 9469f09, ADM0 simplified), rounded to
+ *    0.001 degrees. They are for bias and detection only, not legal borders.
  *  - primaryCity values are the largest city of each country by population.
  *  - adminLevels are descriptive labels, not verified unit lists.
- *  - bbox and adminLevels have NOT yet been checked against authoritative
- *    sources; treat them as provisional.
  *  - lang is the default geocoder language for each country.
+ *
+ * Known limitation (bbox detection, not yet polygon-based):
+ *  - The MY and ID boxes overlap. The MY box covers all of Borneo, and the ID
+ *    box covers Kalimantan, Sumatra, and the Riau Islands.
+ *  - The ID box contains Singapore and parts of Malaysia.
+ *  - detectCountryFromPoint picks the smallest containing box. This is correct
+ *    for Singapore, but not for some border points. Known misclassifications
+ *    include Tarakan, Batam, and Bintan (resolve to MY, should be ID) and
+ *    Johor Bahru (resolves to SG, should be MY).
+ *  - Fixing this needs polygon point-in-country tests, not tighter boxes.
  */
 import { fold } from "../text.js";
 import type { BBox, CountryCode, CountryProfile } from "./types.js";
@@ -22,7 +29,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "Singapore",
     isoCountry: "sg",
     lang: "en",
-    bbox: { minLon: 103.6, minLat: 1.16, maxLon: 104.1, maxLat: 1.48 },
+    bbox: { minLon: 103.605, minLat: 1.189, maxLon: 104.089, maxLat: 1.471 },
     primaryCity: "Singapore",
     adminLevels: ["country", "planning area"],
     // Bare "sg" removed (matches unrelated abbreviations). Postal-code context
@@ -35,7 +42,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "Việt Nam",
     isoCountry: "vn",
     lang: "vi",
-    bbox: { minLon: 102.14, minLat: 8.15, maxLon: 109.47, maxLat: 23.39 },
+    bbox: { minLon: 102.144, minLat: 8.403, maxLon: 109.463, maxLat: 23.394 },
     primaryCity: "Ho Chi Minh City",
     adminLevels: ["province / city", "commune / ward"],
     textPatterns: [/\bvietnam\b/, /\bviet nam\b/, /\bho chi minh\b/, /\bsai gon\b/, /\bhanoi\b/, /\bha noi\b/, /\bda nang\b/],
@@ -46,7 +53,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "ประเทศไทย",
     isoCountry: "th",
     lang: "th",
-    bbox: { minLon: 97.34, minLat: 5.61, maxLon: 105.64, maxLat: 20.46 },
+    bbox: { minLon: 97.344, minLat: 5.613, maxLon: 105.637, maxLat: 20.465 },
     primaryCity: "Bangkok",
     adminLevels: ["province", "district", "sub-district"],
     textPatterns: [/\bthailand\b/, /\bthai lan\b/, /\bbangkok\b/, /\bchiang mai\b/],
@@ -57,7 +64,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "Malaysia",
     isoCountry: "my",
     lang: "en",
-    bbox: { minLon: 99.64, minLat: 0.85, maxLon: 119.27, maxLat: 7.36 },
+    bbox: { minLon: 99.641, minLat: 0.854, maxLon: 119.269, maxLat: 7.363 },
     primaryCity: "Kuala Lumpur",
     adminLevels: ["state / federal territory", "district", "locality"],
     textPatterns: [/\bmalaysia\b/, /\bkuala lumpur\b/, /\bpenang\b/, /\bjohor\b/],
@@ -68,7 +75,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "Indonesia",
     isoCountry: "id",
     lang: "id",
-    bbox: { minLon: 95.01, minLat: -11.01, maxLon: 141.02, maxLat: 6.08 },
+    bbox: { minLon: 95.011, minLat: -11.008, maxLon: 141.019, maxLat: 5.907 },
     primaryCity: "Jakarta",
     adminLevels: ["province", "regency / city", "district", "village"],
     textPatterns: [/\bindonesia\b/, /\bjakarta\b/, /\bbandung\b/, /\bsurabaya\b/, /\bbali\b/],
@@ -79,7 +86,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     localName: "Pilipinas",
     isoCountry: "ph",
     lang: "en",
-    bbox: { minLon: 116.93, minLat: 4.59, maxLon: 126.6, maxLat: 21.12 },
+    bbox: { minLon: 114.278, minLat: 4.587, maxLon: 126.605, maxLat: 21.122 },
     primaryCity: "Manila",
     adminLevels: ["region", "province", "city / municipality", "barangay"],
     textPatterns: [/\bphilippines\b/, /\bpilipinas\b/, /\bmanila\b/, /\bmakati\b/, /\bcebu\b/],
@@ -124,6 +131,8 @@ function containsPoint(b: BBox, lat: number, lon: number): boolean {
 /**
  * Detect the country containing a point. Where boxes overlap, the smallest
  * containing box wins, so Singapore is not classed as Indonesia.
+ * Known limitation: some border points in the MY/ID/SG overlap regions are
+ * misclassified. See the module note above.
  */
 export function detectCountryFromPoint(lat: number, lon: number): CountryProfile | undefined {
   let best: CountryProfile | undefined;
