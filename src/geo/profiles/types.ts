@@ -25,6 +25,11 @@ export interface CountryProfile {
   localName: string;
   /** ISO 3166-1 alpha-2 in lowercase, for geocoder country filters. */
   isoCountry: string;
+  /**
+   * Default BCP 47 language tag for geocoder and place responses
+   * (e.g. "vi", "en", "th", "id"). Passed as the `lang` parameter.
+   */
+  lang: string;
   /** Approximate national bounding box (see module note). */
   bbox: BBox;
   /** Largest city, used as a neutral geocoding suffix when the user gives none. */

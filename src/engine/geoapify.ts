@@ -14,9 +14,20 @@
  * Every request is recorded through `onCall` (seq, API, endpoint, params,
  * status, duration, summary, estimated credits) — this is the evidence trace
  * the reports cite as [Tn].
+ *
+ * Country and language: geocoding methods accept `country` (ISO 3166-1
+ * alpha-2, lowercase; default DEFAULT_COUNTRY = "vn") and `lang` (default
+ * DEFAULT_LANG = "vi"). Callers working in another market pass the
+ * CountryProfile's `isoCountry` and `lang`. Omitting them keeps the original
+ * Vietnam behaviour.
  */
 
 export const GEOAPIFY_BASE = "https://api.geoapify.com";
+
+/** Default geocoder country filter (ISO alpha-2, lowercase). */
+export const DEFAULT_COUNTRY = "vn";
+/** Default response language (BCP 47). */
+export const DEFAULT_LANG = "vi";
 
 export type GeoapifyApiName =
   | "geocoding"
@@ -251,10 +262,10 @@ export class GeoapifyApi {
 
   /* ---------------------------- Geocoding ---------------------------- */
 
-  async geocode(text: string, o: { lang?: string; limit?: number; type?: string; biasLonLat?: [number, number] } = {}): Promise<{ results: GeocodeResult[]; seq: number }> {
+  async geocode(text: string, o: { lang?: string; country?: string; limit?: number; type?: string; biasLonLat?: [number, number] } = {}): Promise<{ results: GeocodeResult[]; seq: number }> {
     const { data, record } = await this.request<{ results?: GeocodeResult[] }>(
       "geocoding", "GET", "/v1/geocode/search",
-      { text, lang: o.lang ?? "vi", limit: o.limit ?? 5, type: o.type, filter: "countrycode:vn", bias: o.biasLonLat ? `proximity:${o.biasLonLat[0]},${o.biasLonLat[1]}` : undefined, format: "json" },
+      { text, lang: o.lang ?? DEFAULT_LANG, limit: o.limit ?? 5, type: o.type, filter: `countrycode:${o.country ?? DEFAULT_COUNTRY}`, bias: o.biasLonLat ? `proximity:${o.biasLonLat[0]},${o.biasLonLat[1]}` : undefined, format: "json" },
       undefined,
       (d) => ({ count: d.results?.length ?? 0, top: d.results?.[0]?.formatted, type: d.results?.[0]?.result_type, confidence: d.results?.[0]?.rank?.confidence }),
       () => 1,
@@ -262,10 +273,10 @@ export class GeoapifyApi {
     return { results: data.results ?? [], seq: record.seq };
   }
 
-  async autocomplete(text: string, o: { lang?: string; limit?: number; biasLonLat?: [number, number] } = {}): Promise<{ results: GeocodeResult[]; seq: number }> {
+  async autocomplete(text: string, o: { lang?: string; country?: string; limit?: number; biasLonLat?: [number, number] } = {}): Promise<{ results: GeocodeResult[]; seq: number }> {
     const { data, record } = await this.request<{ results?: GeocodeResult[] }>(
       "autocomplete", "GET", "/v1/geocode/autocomplete",
-      { text, lang: o.lang ?? "vi", limit: o.limit ?? 5, filter: "countrycode:vn", bias: o.biasLonLat ? `proximity:${o.biasLonLat[0]},${o.biasLonLat[1]}` : undefined, format: "json" },
+      { text, lang: o.lang ?? DEFAULT_LANG, limit: o.limit ?? 5, filter: `countrycode:${o.country ?? DEFAULT_COUNTRY}`, bias: o.biasLonLat ? `proximity:${o.biasLonLat[0]},${o.biasLonLat[1]}` : undefined, format: "json" },
       undefined,
       (d) => ({ count: d.results?.length ?? 0, top: d.results?.[0]?.formatted }),
       () => 1,
@@ -276,7 +287,7 @@ export class GeoapifyApi {
   async reverse(lat: number, lon: number, o: { lang?: string; type?: string } = {}): Promise<{ result?: GeocodeResult; seq: number }> {
     const { data, record } = await this.request<{ results?: GeocodeResult[] }>(
       "reverse-geocoding", "GET", "/v1/geocode/reverse",
-      { lat, lon, lang: o.lang ?? "vi", type: o.type, format: "json" },
+      { lat, lon, lang: o.lang ?? DEFAULT_LANG, type: o.type, format: "json" },
       undefined,
       (d) => ({ top: d.results?.[0]?.formatted, type: d.results?.[0]?.result_type }),
       () => 1,
@@ -288,9 +299,9 @@ export class GeoapifyApi {
    * Batch geocoding (async job): POST the list, then poll the job URL until
    * results are ready. Used by the HCMC address benchmark.
    */
-  async batchGeocode(addresses: string[], o: { lang?: string; pollMs?: number; maxPolls?: number } = {}): Promise<{ results: Array<GeocodeResult & { query?: { text?: string } }>; seqs: number[] }> {
+  async batchGeocode(addresses: string[], o: { lang?: string; country?: string; pollMs?: number; maxPolls?: number } = {}): Promise<{ results: Array<GeocodeResult & { query?: { text?: string } }>; seqs: number[] }> {
     const seqs: number[] = [];
-    const params = { lang: o.lang ?? "vi", filter: "countrycode:vn" };
+    const params = { lang: o.lang ?? DEFAULT_LANG, filter: `countrycode:${o.country ?? DEFAULT_COUNTRY}` };
     const { data: job, record } = await this.request<{ id?: string; url?: string; status?: string }>(
       "batch-geocoding", "POST", "/v1/batch/geocode/search", params, addresses,
       (d) => ({ job: d.id, status: d.status ?? "pending", items: addresses.length }),
@@ -316,7 +327,7 @@ export class GeoapifyApi {
   async places(o: { categories: string[]; filter: string; bias?: string; limit?: number; lang?: string; conditions?: string }): Promise<{ features: Array<Feature<PlaceProps>>; seq: number }> {
     const { data, record } = await this.request<FeatureCollection<PlaceProps>>(
       "places", "GET", "/v2/places",
-      { categories: o.categories.join(","), filter: o.filter, bias: o.bias, limit: o.limit ?? 100, lang: o.lang ?? "vi", conditions: o.conditions },
+      { categories: o.categories.join(","), filter: o.filter, bias: o.bias, limit: o.limit ?? 100, lang: o.lang ?? DEFAULT_LANG, conditions: o.conditions },
       undefined,
       (d) => ({ count: d.features?.length ?? 0, categories: o.categories.join(",") }),
       (d) => estimateCredits("places", { results: d.features?.length ?? 0 }),
@@ -328,7 +339,7 @@ export class GeoapifyApi {
   async placeDetails(o: { id?: string; lat?: number; lon?: number; features?: string[]; lang?: string }): Promise<{ features: Feature[]; seq: number }> {
     const { data, record } = await this.request<FeatureCollection>(
       "place-details", "GET", "/v2/place-details",
-      { id: o.id, lat: o.lat, lon: o.lon, features: (o.features ?? ["details"]).join(","), lang: o.lang ?? "vi" },
+      { id: o.id, lat: o.lat, lon: o.lon, features: (o.features ?? ["details"]).join(","), lang: o.lang ?? DEFAULT_LANG },
       undefined,
       (d) => ({ features: (d.features ?? []).map((f) => String(f.properties?.feature_type ?? "?")).join(",") }),
       // 1 credit, plus 1 for each 5 minutes of an isochrone feature such as walk_10 / drive_5 (pricing-details)
@@ -415,7 +426,7 @@ export class GeoapifyApi {
   async boundariesPartOf(lat: number, lon: number, o: { lang?: string; geometry?: "point" | "geometry_1000" | "geometry_5000" | "geometry_10000" } = {}): Promise<{ features: Feature[]; seq: number }> {
     const { data, record } = await this.request<FeatureCollection>(
       "boundaries", "GET", "/v1/boundaries/part-of",
-      { lat, lon, lang: o.lang ?? "vi", geometry: o.geometry ?? "geometry_1000" },
+      { lat, lon, lang: o.lang ?? DEFAULT_LANG, geometry: o.geometry ?? "geometry_1000" },
       undefined,
       (d) => ({ levels: (d.features ?? []).map((f) => String(f.properties?.name ?? "?")).join(" ⊂ ") }),
       (d) => estimateCredits("boundaries", { results: d.features?.length ?? 0, geometry: o.geometry ?? "geometry_1000" }),
@@ -426,7 +437,7 @@ export class GeoapifyApi {
   async boundariesConsistsOf(id: string, o: { lang?: string; sublevel?: number } = {}): Promise<{ features: Feature[]; seq: number }> {
     const { data, record } = await this.request<FeatureCollection>(
       "boundaries", "GET", "/v1/boundaries/consists-of",
-      { id, lang: o.lang ?? "vi", sublevel: o.sublevel, geometry: "geometry_1000" },
+      { id, lang: o.lang ?? DEFAULT_LANG, sublevel: o.sublevel, geometry: "geometry_1000" },
       undefined,
       (d) => ({ parts: d.features?.length ?? 0 }),
       (d) => estimateCredits("boundaries", { results: d.features?.length ?? 0, geometry: "geometry_1000" }),

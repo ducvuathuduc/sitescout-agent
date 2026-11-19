@@ -8,6 +8,9 @@
  *    therefore prefers the smallest containing box.
  *  - primaryCity values are the largest city of each country by population.
  *  - adminLevels are descriptive labels, not verified unit lists.
+ *  - bbox and adminLevels have NOT yet been checked against authoritative
+ *    sources; treat them as provisional.
+ *  - lang is the default geocoder language for each country.
  */
 import { fold } from "../text.js";
 import type { BBox, CountryCode, CountryProfile } from "./types.js";
@@ -18,16 +21,20 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     name: "Singapore",
     localName: "Singapore",
     isoCountry: "sg",
+    lang: "en",
     bbox: { minLon: 103.6, minLat: 1.16, maxLon: 104.1, maxLat: 1.48 },
     primaryCity: "Singapore",
     adminLevels: ["country", "planning area"],
-    textPatterns: [/\bsingapore\b/, /\bsg\b/],
+    // Bare "sg" removed (matches unrelated abbreviations). Postal-code context
+    // ("sg 018956" or "singapore 018956") is still matched by the second pattern.
+    textPatterns: [/\bsingapore\b/, /\bsg \d{6}\b/],
   },
   {
     code: "VN",
     name: "Vietnam",
     localName: "Việt Nam",
     isoCountry: "vn",
+    lang: "vi",
     bbox: { minLon: 102.14, minLat: 8.15, maxLon: 109.47, maxLat: 23.39 },
     primaryCity: "Ho Chi Minh City",
     adminLevels: ["province / city", "commune / ward"],
@@ -38,6 +45,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     name: "Thailand",
     localName: "ประเทศไทย",
     isoCountry: "th",
+    lang: "th",
     bbox: { minLon: 97.34, minLat: 5.61, maxLon: 105.64, maxLat: 20.46 },
     primaryCity: "Bangkok",
     adminLevels: ["province", "district", "sub-district"],
@@ -48,6 +56,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     name: "Malaysia",
     localName: "Malaysia",
     isoCountry: "my",
+    lang: "en",
     bbox: { minLon: 99.64, minLat: 0.85, maxLon: 119.27, maxLat: 7.36 },
     primaryCity: "Kuala Lumpur",
     adminLevels: ["state / federal territory", "district", "locality"],
@@ -58,6 +67,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     name: "Indonesia",
     localName: "Indonesia",
     isoCountry: "id",
+    lang: "id",
     bbox: { minLon: 95.01, minLat: -11.01, maxLon: 141.02, maxLat: 6.08 },
     primaryCity: "Jakarta",
     adminLevels: ["province", "regency / city", "district", "village"],
@@ -68,6 +78,7 @@ export const COUNTRY_PROFILES: readonly CountryProfile[] = [
     name: "Philippines",
     localName: "Pilipinas",
     isoCountry: "ph",
+    lang: "en",
     bbox: { minLon: 116.93, minLat: 4.59, maxLon: 126.6, maxLat: 21.12 },
     primaryCity: "Manila",
     adminLevels: ["region", "province", "city / municipality", "barangay"],
