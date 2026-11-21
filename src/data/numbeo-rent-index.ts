@@ -2,20 +2,19 @@
  * Numbeo Rent Index: versioned static table for ASEAN-6 key cities, plus a
  * normaliser that turns a rent index into a marketCostIndex in (0, 1).
  *
- * Status: VALUES NOT YET VERIFIED. Every rentIndex is null until it is
- * copied from a dated Numbeo snapshot and the source is recorded in
- * sourceNote. While a value is null, cityCostIndex returns undefined, and
- * scoreCandidate treats the missing cost as neutral (0.5).
+ * Status: PROVISIONAL. The values below are midpoints of the 2026 ranges
+ * supplied by the project owner, not values copied from a verified Numbeo
+ * snapshot. Replace them with dated snapshot values and set
+ * NUMBEO_SNAPSHOT_DATE before relying on them for a production decision.
  *
  * Mapping: costIndex = r / (r + median). It is 0.5 at the market median, lies
- * strictly inside (0, 1), and increases with rent. It matches the diminishing-
- * returns form used in src/scoring/model.ts, so the cost sub-score is
- * 1 - costIndex (cheaper sites score higher).
+ * strictly inside (0, 1), and increases with rent. The scorer uses
+ * 1 - costIndex as the cost sub-score (cheaper sites score higher).
  *
  * Bump NUMBEO_RENT_INDEX_VERSION whenever a value or the mapping changes.
  */
 
-export const NUMBEO_RENT_INDEX_VERSION = "0.1.0";
+export const NUMBEO_RENT_INDEX_VERSION = "0.2.0";
 
 /** Snapshot date of the source values (YYYY-MM-DD), or null until verified. */
 export const NUMBEO_SNAPSHOT_DATE: string | null = null;
@@ -27,29 +26,29 @@ export interface RentIndexEntry {
   /** ISO 3166-1 alpha-2, uppercase. */
   country: string;
   /**
-   * Numbeo Rent Index (New York City = 100 on Numbeo's basis), or null until
-   * copied from a verified snapshot.
+   * Numbeo Rent Index (New York City = 100 on Numbeo's basis), or null when
+   * no value is available.
    */
   rentIndex: number | null;
   /** Where the value came from, or why it is missing. */
   sourceNote: string;
 }
 
-const PENDING = "Not yet copied from a verified Numbeo snapshot.";
+const PROVISIONAL = "Provisional: midpoint of owner-supplied 2026 range; not yet checked against a dated Numbeo snapshot.";
 
 export const ASEAN6_RENT_INDEX: readonly RentIndexEntry[] = [
-  { cityId: "vn-hcmc", city: "Ho Chi Minh City", country: "VN", rentIndex: null, sourceNote: PENDING },
-  { cityId: "vn-hanoi", city: "Hanoi", country: "VN", rentIndex: null, sourceNote: PENDING },
-  { cityId: "th-bangkok", city: "Bangkok", country: "TH", rentIndex: null, sourceNote: PENDING },
-  { cityId: "sg-singapore", city: "Singapore", country: "SG", rentIndex: null, sourceNote: PENDING },
-  { cityId: "id-jakarta", city: "Jakarta", country: "ID", rentIndex: null, sourceNote: PENDING },
-  { cityId: "ph-manila", city: "Manila", country: "PH", rentIndex: null, sourceNote: PENDING },
-  { cityId: "my-kl", city: "Kuala Lumpur", country: "MY", rentIndex: null, sourceNote: PENDING },
+  { cityId: "vn-hcmc", city: "Ho Chi Minh City", country: "VN", rentIndex: 20, sourceNote: PROVISIONAL },
+  { cityId: "vn-hanoi", city: "Hanoi", country: "VN", rentIndex: 15.5, sourceNote: PROVISIONAL },
+  { cityId: "th-bangkok", city: "Bangkok", country: "TH", rentIndex: 27.5, sourceNote: PROVISIONAL },
+  { cityId: "sg-singapore", city: "Singapore", country: "SG", rentIndex: 75, sourceNote: PROVISIONAL },
+  { cityId: "id-jakarta", city: "Jakarta", country: "ID", rentIndex: 16.5, sourceNote: PROVISIONAL },
+  { cityId: "ph-manila", city: "Manila", country: "PH", rentIndex: 19, sourceNote: PROVISIONAL },
+  { cityId: "my-kl", city: "Kuala Lumpur", country: "MY", rentIndex: 16.5, sourceNote: PROVISIONAL },
 ];
 
 /**
  * Median of the valid rent indices in the table, or undefined when no value
- * is available yet.
+ * is available.
  */
 export function medianRentIndex(entries: readonly RentIndexEntry[] = ASEAN6_RENT_INDEX): number | undefined {
   const values = entries
