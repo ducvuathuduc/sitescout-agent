@@ -18,12 +18,21 @@
  *  - HTTP 429 / 5xx / network timeouts → exponential backoff, 3 attempts, jitter;
  *  - HTTP 401 → fail fast (bad key; retrying is pointless);
  *  - MCP `isError: true` → surfaced, never retried (validation failure).
+ *
+ * Auditability (v2): when a TraceLogger is passed in options, every tools/call
+ * is sealed into the hash-chained trace (kind "mcp.tools/call") and the returned
+ * ToolCallResult carries its [T#] reference. Failed calls are logged too, with
+ * the error message. The API key is never part of the logged payload.
  */
 import { z } from "zod";
 import { validateToolArgs } from "./schemas.js";
+import type { TraceLogger, TraceRef } from "../trace/logger.js";
 
 export const MCP_ENDPOINT = "https://api.geoapify.com/v1/mcp";
 export const MCP_PROTOCOL_VERSION = "2025-06-18";
+
+/** Trace entry kind used for every MCP tool call. */
+export const MCP_TRACE_KIND = "mcp.tools/call";
 
 /** The complete Geoapify MCP tool surface (11 tools, verified 2026-10). */
 export const MCP_TOOL_NAMES = [
@@ -62,6 +71,8 @@ export interface ToolCallResult {
   result: unknown;
   /** True when the MCP server returned an error instead of a result. */
   isError: boolean;
+  /** Citation id of the trace entry that recorded this call, when a logger is attached. */
+  traceRef?: TraceRef;
 }
 
 export class McpError extends Error {
@@ -81,6 +92,8 @@ export interface McpClientOptions {
   timeoutMs?: number;
   /** Max attempts for retryable failures (default 3). */
   maxAttempts?: number;
+  /** Optional auditability sink. Every callTool is recorded when set. */
+  trace?: TraceLogger;
 }
 
 interface JsonRpcResponse {
@@ -114,6 +127,7 @@ export class GeoapifyMcpClient {
   private readonly apiKey: string;
   private readonly timeoutMs: number;
   private readonly maxAttempts: number;
+  private readonly trace?: TraceLogger;
   private nextId = 1;
   private sessionId: string | null = null;
   private initialized = false;
@@ -124,6 +138,7 @@ export class GeoapifyMcpClient {
     this.endpoint = opts.endpoint ?? MCP_ENDPOINT;
     this.timeoutMs = opts.timeoutMs ?? 30_000;
     this.maxAttempts = opts.maxAttempts ?? 3;
+    this.trace = opts.trace;
   }
 
   /** MCP handshake: initialize → notifications/initialized. Idempotent. */
@@ -183,14 +198,28 @@ export class GeoapifyMcpClient {
    * Call one MCP tool. Args are validated against the per-tool zod schema
    * BEFORE the request is sent. Retryable HTTP/network failures are retried
    * with exponential backoff + jitter; 401 fails fast; isError is surfaced.
+   * With a TraceLogger attached, the outcome (result or error) is sealed into
+   * the trace before the call returns or throws.
    */
   async callTool(name: McpToolName, args: ToolArgs): Promise<ToolCallResult> {
     const validated = validateToolArgs(name, args) as ToolArgs;
     await this.ensureSession();
-    const res = (await this.rawRequest("tools/call", {
-      name,
-      arguments: validated,
-    })) as { content?: unknown; structuredContent?: unknown; isError?: boolean };
+    let res: { content?: unknown; structuredContent?: unknown; isError?: boolean };
+    try {
+      res = (await this.rawRequest("tools/call", {
+        name,
+        arguments: validated,
+      })) as { content?: unknown; structuredContent?: unknown; isError?: boolean };
+    } catch (err) {
+      if (this.trace) {
+        await this.trace.append(MCP_TRACE_KIND, {
+          tool: name,
+          arguments: validated,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      throw err;
+    }
     // Keep the whole MCP result object ({content, structuredContent}); the
     // parsers in results.ts read structuredContent first, then the text block.
     // (v0.1 returned res.content — a bare array — which every parser rejected.)
@@ -200,7 +229,18 @@ export class GeoapifyMcpClient {
     // Geoapify reports upstream 4xx (e.g. unsupported category) as a text
     // block {statusCode:400,...} with isError=false — surface it as an error.
     const upstream = upstreamError(result);
-    return { result, isError: res.isError === true || upstream !== undefined };
+    const isError = res.isError === true || upstream !== undefined;
+    let traceRef: TraceRef | undefined;
+    if (this.trace) {
+      const entry = await this.trace.append(MCP_TRACE_KIND, {
+        tool: name,
+        arguments: validated,
+        result,
+        isError,
+      });
+      traceRef = entry.id;
+    }
+    return { result, isError, traceRef };
   }
 
   private async rawRequest(
