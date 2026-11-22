@@ -21,7 +21,7 @@
  * (default VN_HCMC_PROFILE); its isoCountry and lang are passed to every
  * Geoapify call that accepts them.
  */
-import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
+import { GeoapifyApi, GeoapifyError, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
 import { VN_HCMC_PROFILE, type CountryProfile } from "./profile.js";
 import {
@@ -80,7 +80,19 @@ export interface CandidateResult {
   why: string;
   refs: number[];
   /** Competitor & demand POIs inside the isochrone (for the map). */
-  pois: Array<{ name: string; lat: number; lon: number; kind: "competitor" | "demand"; category: string }>;
+  pois: Array<{ name: string; lat: number; lon: number; kind: "competitor" | "demand"; category: string; placeId?: string }>;
+}
+
+/** A competitor Place Details could not confirm — closed, delisted, or absent. */
+export interface UnconfirmedPoi {
+  name: string;
+  lat: number;
+  lon: number;
+  category: string;
+  /** Always "unconfirmed — verify on foot". */
+  reason: string;
+  /** Trace seqs backing the call (the Place Details call that proved it). */
+  refs: number[];
 }
 
 export interface ScoutResult {
@@ -104,6 +116,8 @@ export interface ScoutResult {
   candidates: CandidateResult[];
   /** Candidates below the POI floor: excluded from ranking, never scored. */
   excluded: Array<{ id: string; label: string; reason: string; refs: number[] }>;
+  /** Competitors Place Details could not confirm — verify on foot, never scored. */
+  unconfirmed: UnconfirmedPoi[];
   /** Date the underlying data was fetched (YYYY-MM-DD, = generatedAt date). */
   dataAsOf: string;
   /** Memo expiry date (YYYY-MM-DD): dataAsOf + 30 days. */
@@ -215,6 +229,20 @@ export async function resolvePlace(api: GeoapifyApi, text: string, profile: Coun
  * office.coworking` returned 0 while `office.company` alone returned 8.
  * Reported in docs/FEEDBACK.md; until clarified we query categories singly.
  */
+/**
+ * True when a Place Details result marks the place closed/delisted.
+ * Contract (see tests/fixtures/ghost-poi.json): properties.closed === true,
+ * properties.status in {"closed", "delisted"}, or the OSM raw record
+ * carries permanently_closed. The real Geoapify closed representation is
+ * undocumented — this predicate defines what the engine treats as closed.
+ */
+export function isClosedPlaceDetails(props: Record<string, unknown>): boolean {
+  if (props.closed === true) return true;
+  if (props.status === "closed" || props.status === "delisted") return true;
+  const datasource = props.datasource as { raw?: Record<string, unknown> } | undefined;
+  return datasource?.raw?.permanently_closed === true;
+}
+
 export async function placesMulti(api: GeoapifyApi, categories: string[], filter: string, limit: number, lang?: string): Promise<{ features: Array<Feature<PlaceProps>>; refs: number[] }> {
   const seen = new Set<string>();
   const features: Array<Feature<PlaceProps>> = [];
@@ -244,6 +272,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   const spacing = opts.gridSpacingM ?? 300;
   const studyR = opts.studyRadiusM ?? 1300;
   const limitations: string[] = [];
+  const unconfirmed: UnconfirmedPoi[] = [];
 
   // 1 — anchor
   emit({ type: "stage", stage: "geocode", detail: plan.area });
@@ -344,14 +373,55 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
       const pr = f.properties as PlaceProps;
       if (pr.categories?.includes(plan.competitorCategory)) {
         competitors++;
-        pois.push({ name: pr.name ?? pr.address_line1 ?? "competitor", lat: pr.lat, lon: pr.lon, kind: "competitor", category: plan.competitorCategory });
+        pois.push({ name: pr.name ?? pr.address_line1 ?? "competitor", lat: pr.lat, lon: pr.lon, kind: "competitor", category: plan.competitorCategory, placeId: pr.place_id });
       } else {
         const c = plan.demandCategories.find((d) => pr.categories?.includes(d));
         if (c) {
           demand[c]++;
-          pois.push({ name: pr.name ?? pr.address_line1 ?? c, lat: pr.lat, lon: pr.lon, kind: "demand", category: c });
+          pois.push({ name: pr.name ?? pr.address_line1 ?? c, lat: pr.lat, lon: pr.lon, kind: "demand", category: c, placeId: pr.place_id });
         }
       }
+    }
+    // Ghost-POI filter (spec §2/H2.2): cross-check each competitor POI
+    // with Place Details (features ["details"] only — 1 credit per call).
+    // No result, a 404, or a closed/delisted marker → unconfirmed: out of
+    // the count and out of the score inputs, listed for a foot check. Any
+    // other Place Details failure (network/429) does NOT unconfirm — the
+    // POI stays counted and a limitation is added instead. Never silently
+    // inflate or deflate a score.
+    let ghostIncomplete = 0;
+    const keptPois: CandidateResult["pois"] = [];
+    for (const p of pois) {
+      if (p.kind !== "competitor" || !p.placeId) {
+        keptPois.push(p);
+        continue;
+      }
+      try {
+        const d = await api.placeDetails({ id: p.placeId, features: ["details"], lang });
+        const f = d.features[0];
+        if (!f || isClosedPlaceDetails(f.properties)) {
+          unconfirmed.push({ name: p.name, lat: p.lat, lon: p.lon, category: p.category, reason: "unconfirmed — verify on foot", refs: [d.seq] });
+          competitors--;
+        } else {
+          keptPois.push(p);
+        }
+      } catch (e) {
+        if (e instanceof GeoapifyError && e.status === 404) {
+          // 404: the place no longer exists in the index — unconfirmed.
+          // The failed call is still recorded in api.calls; cite its seq.
+          const failedSeq = (e as { record?: { seq?: number } }).record?.seq;
+          unconfirmed.push({ name: p.name, lat: p.lat, lon: p.lon, category: p.category, reason: "unconfirmed — verify on foot", refs: failedSeq !== undefined ? [failedSeq] : [] });
+          competitors--;
+        } else {
+          ghostIncomplete++;
+          keptPois.push(p);
+        }
+      }
+    }
+    pois.length = 0;
+    pois.push(...keptPois);
+    if (ghostIncomplete > 0) {
+      limitations.push(`Ghost check incomplete for ${ghostIncomplete} competitor(s) — Place Details failed, counts kept as-is; verify on foot.`);
     }
     const cand = {
       id: `c${i + 1}`,
@@ -512,6 +582,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     origins,
     candidates: scored,
     excluded,
+    unconfirmed,
     dataAsOf,
     expiresAt: expiryFor(dataAsOf),
     winnerRoute,

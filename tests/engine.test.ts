@@ -12,6 +12,7 @@ import { emptyChecklist, type MicroChecklist } from "../src/engine/checklist.js"
 import { renderHtml, renderMarkdown, staticMapBody } from "../src/engine/render.js";
 import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
 import { runScout, type ScoutResult } from "../src/engine/scout.js";
+import { isStale } from "../src/engine/freshness.js";
 import { offset } from "../src/geo/grid.js";
 
 describe("planner", () => {
@@ -59,7 +60,7 @@ describe("planner", () => {
 });
 
 /** Fake Geoapify (tests only): a tiny synthetic city around Thảo Điền. */
-function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean } = {}): typeof fetch {
+function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean; ghost?: boolean } = {}): typeof fetch {
   // With thinFirstCandidate, the first geometry-filtered places query (the
   // first candidate's isoline) returns 1 café and 0 demand POIs.
   let thinFilter: string | null = null;
@@ -67,6 +68,19 @@ function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean 
     if (!opts.thinFirstCandidate || !filter.startsWith("geometry:")) return false;
     if (thinFilter === null) thinFilter = filter;
     return filter === thinFilter;
+  };
+  // With ghost, the first geometry-filtered places query returns one extra
+  // competitor, "Ghost Cafe" (place_id ghost-1), and Place Details for that
+  // id returns a closed marker (see tests/fixtures/ghost-poi.json).
+  let ghostFilter: string | null = null;
+  const isGhostFilter = (filter: string): boolean => {
+    if (!opts.ghost || !filter.startsWith("geometry:")) return false;
+    if (ghostFilter === null) ghostFilter = filter;
+    return filter === ghostFilter;
+  };
+  const ghostPoi = () => {
+    const g = offset(anchor, 120, 80);
+    return { type: "Feature", properties: { name: "Ghost Cafe", lat: g.lat, lon: g.lon, categories: ["catering", "catering.cafe"], place_id: "ghost-1" }, geometry: { type: "Point", coordinates: [g.lon, g.lat] } };
   };
   const anchor = { lat: 10.8035, lon: 106.7375 };
   const poi = (i: number, cat: string, dx: number, dy: number) => {
@@ -99,7 +113,9 @@ function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean 
           return j({ type: "FeatureCollection", features: Array.from({ length: n }, (_, i) => poi(i, cat, (i - 2) * 300 + (cat.length % 7) * 40, (i % 3) * 250 - 250)) });
         }
         const n = cat === "catering.cafe" ? 6 : 4;
-        return j({ type: "FeatureCollection", features: Array.from({ length: n }, (_, i) => poi(i, cat, (i - 2) * 300 + (cat.length % 7) * 40, (i % 3) * 250 - 250)) });
+        const features = Array.from({ length: n }, (_, i) => poi(i, cat, (i - 2) * 300 + (cat.length % 7) * 40, (i % 3) * 250 - 250));
+        if (cat === "catering.cafe" && isGhostFilter(q.get("filter") ?? "")) features.push(ghostPoi());
+        return j({ type: "FeatureCollection", features });
       }
       case "/v1/routematrix": {
         const body = JSON.parse(String(init?.body));
@@ -108,6 +124,12 @@ function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean 
       case "/v1/routing":
         return j({ features: [{ type: "Feature", properties: { time: 1200, distance: 8000 }, geometry: { type: "LineString", coordinates: [[106.7, 10.77], [106.73, 10.8]] } }] });
       case "/v2/place-details":
+        if (opts.ghost && q.get("id") === "ghost-1") {
+          // Closed marker per tests/fixtures/ghost-poi.json.
+          const closed = ghostPoi();
+          (closed.properties as Record<string, unknown>).closed = true;
+          return j({ type: "FeatureCollection", features: [closed] });
+        }
         return j({ features: [{ type: "Feature", properties: { feature_type: "drive_5" }, geometry: square(anchor.lat, anchor.lon, 1500) }] });
       default:
         return new Response("{}", { status: 404 });
@@ -228,6 +250,11 @@ function thinDataApi(): typeof fetch {
   return fakeFetch({ thinFirstCandidate: true });
 }
 
+/** Variant of fakeFetch() whose first candidate sees a closed "Ghost Cafe". */
+function ghostApi(): typeof fetch {
+  return fakeFetch({ ghost: true });
+}
+
 /** All six micro-factors VERIFIED (site visit 2026-11-20). */
 const allVerifiedChecklist = (): MicroChecklist => ({
   walkability: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
@@ -295,5 +322,28 @@ describe("memo v2 rendering", () => {
       expect(md).toContain(c.total.toFixed(2));
       expect(html).toContain(c.total.toFixed(2));
     }
+  });
+});
+
+describe("ghost-POI filter", () => {
+  it("moves a known-closed competitor out of the count into unconfirmed", async () => {
+    const r = await runScout("coffee in Thảo Điền", heuristicPlan("coffee in Thảo Điền"), { api: new GeoapifyApi({ fetchImpl: ghostApi() }) });
+    expect(r.unconfirmed.map((u) => u.name)).toContain("Ghost Cafe");
+    expect(r.candidates.flatMap((c) => c.pois.map((p) => p.name))).not.toContain("Ghost Cafe");
+    // The ghost no longer counts as competition for its candidate (c1 had
+    // 6 real cafés + the ghost; the ghost is the only one removed).
+    expect(r.candidates.find((c) => c.id === "c1")?.competitors).toBe(6);
+    expect(r.unconfirmed[0]).toMatchObject({ name: "Ghost Cafe", category: "catering.cafe", reason: "unconfirmed — verify on foot" });
+    // And the memo renders the unconfirmed section in both formats.
+    const md = renderMarkdown(r);
+    const html = renderHtml(r);
+    for (const out of [md, html]) {
+      expect(out).toContain("Unconfirmed competitors — verify on foot");
+      expect(out).toContain("Ghost Cafe");
+    }
+  });
+  it("flags counts older than 90 days as stale", () => {
+    expect(isStale("2026-08-01", new Date("2026-11-22"))).toBe(true);
+    expect(isStale("2026-11-01", new Date("2026-11-22"))).toBe(false);
   });
 });

@@ -1,0 +1,22 @@
+{
+  "name": "Ghost Cafe",
+  "place_id": "ghost-1",
+  "category": "catering.cafe",
+  "note": "Synthetic fixture (tests only — never a live API result, never a real place). In fakeFetch's ghost mode, the first candidate's /v2/places response for catering.cafe includes this competitor, and /v2/place-details?id=ghost-1&features=details returns a closed marker (properties.closed === true). The ghost filter must move it out of the competitor count into ScoutResult.unconfirmed with reason 'unconfirmed — verify on foot', and drop it from the candidate's pois before scoring.",
+  "closed_marker_contract": "A Place Details result counts as closed/delisted when ANY of these holds: properties.closed === true; properties.status is 'closed' or 'delisted'; properties.datasource.raw.permanently_closed === true. (The real Geoapify closed representation is undocumented — this fixture defines the contract.) An empty features array or a 404 from Place Details also counts as unconfirmed. Any other Place Details failure (network, 429) does NOT unconfirm — the POI stays counted and a limitation is added instead.",
+  "place_details_response": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Ghost Cafe",
+          "place_id": "ghost-1",
+          "categories": ["catering", "catering.cafe"],
+          "closed": true
+        },
+        "geometry": { "type": "Point", "coordinates": [106.7385, 10.8043] }
+      }
+    ]
+  }
+}

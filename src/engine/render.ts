@@ -80,7 +80,7 @@ export function renderMarkdown(r: ScoutResult): string {
     L.push(`- Sub-scores: competition ${f2(c.scores.competition)} · complementarity ${f2(c.scores.complementarity)} · catchment ${f2(c.scores.catchment)} · accessibility ${f2(c.scores.accessibility)} · cost ${f2(c.scores.cost)}`);
     L.push(`- Projected traffic: ${formatTrafficBand(c.trafficBand ?? null)}`);
     L.push(`- Data coverage: ${coverageOf(c)}`);
-    L.push(`- Counts as of ${asOf(r)} (Geoapify Places; walk zone: Geoapify Isoline) ${cite(c.refs)}`);
+    L.push(`- Counts as of ${asOf(r)} (Geoapify Places; walk zone: Geoapify Isoline)${isStale(asOf(r)) ? " — **stale** (older than 90 days)" : ""} ${cite(c.refs)}`);
     L.push(`- Verdict: ${verdictOf(c)}`);
     L.push(`- Demand mix: ${Object.entries(c.demand).map(([k, n]) => `${k} ${n}`).join(", ")}`);
     L.push(`- Drive time by origin: ${r.origins.filter((o) => o.lat !== undefined).map((o, i) => `${o.query.split(",")[0]} ${c.driveMinByOrigin[i] ?? "n/a"} min`).join(" · ")}`);
@@ -121,6 +121,16 @@ export function renderMarkdown(r: ScoutResult): string {
     L.push("");
     for (const x of r.excluded ?? []) {
       L.push(`- **${x.label}** — ${x.reason} ${cite(x.refs)}`);
+    }
+    L.push("");
+  }
+  if ((r.unconfirmed ?? []).length > 0) {
+    L.push("## Unconfirmed competitors — verify on foot");
+    L.push("");
+    L.push("These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are **not counted** in any competitor total or score — verify on foot before treating the area as empty.");
+    L.push("");
+    for (const u of r.unconfirmed ?? []) {
+      L.push(`- **${u.name}** — ${u.category} · ${u.lat}, ${u.lon} — ${u.reason} ${cite(u.refs)}`);
     }
     L.push("");
   }
@@ -195,7 +205,7 @@ export function staticMapBody(r: ScoutResult, width = 1200, height = 760): Recor
 export function renderHtml(r: ScoutResult, mapFile = "map.jpg"): string {
   const esc = (s: string): string => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] as string);
   const rows = r.candidates
-    .map((c) => `<tr><td><span class="dot" style="background:${RANK_COLORS[(c.rank - 1) % RANK_COLORS.length]}">${c.rank}</span></td><td>${esc(c.label)}<div class="why">${esc(c.why)}<br>Projected traffic: ${esc(formatTrafficBand(c.trafficBand ?? null))} · Coverage: ${coverageOf(c)} · Verdict: ${esc(verdictOf(c))}<br>Counts as of ${esc(asOf(r))} (Geoapify Places; walk zone: Geoapify Isoline).</div></td><td class="n"><b>${c.total.toFixed(2)}</b></td><td class="n">${coverageOf(c)}</td><td class="n">${c.demandTotal}</td><td class="n">${c.competitors}</td><td class="n">${c.meanDriveMin ?? "n/a"}</td><td class="refs">${[...new Set(c.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</td></tr>`)
+    .map((c) => `<tr><td><span class="dot" style="background:${RANK_COLORS[(c.rank - 1) % RANK_COLORS.length]}">${c.rank}</span></td><td>${esc(c.label)}<div class="why">${esc(c.why)}<br>Projected traffic: ${esc(formatTrafficBand(c.trafficBand ?? null))} · Coverage: ${coverageOf(c)} · Verdict: ${esc(verdictOf(c))}<br>Counts as of ${esc(asOf(r))} (Geoapify Places; walk zone: Geoapify Isoline)${isStale(asOf(r)) ? " — <b>stale</b> (older than 90 days)" : ""}.</div></td><td class="n"><b>${c.total.toFixed(2)}</b></td><td class="n">${coverageOf(c)}</td><td class="n">${c.demandTotal}</td><td class="n">${c.competitors}</td><td class="n">${c.meanDriveMin ?? "n/a"}</td><td class="refs">${[...new Set(c.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</td></tr>`)
     .join("");
   const top3 = [...r.candidates].sort((a, b) => a.rank - b.rank).slice(0, 3);
   const summaryRows = top3
@@ -239,6 +249,7 @@ ${isStale(asOf(r)) ? `<p><b>Stale data:</b> this memo's data is older than 90 da
 <div class="card"><h3>Micro-feature checklist</h3><p>Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.</p><table><thead><tr><th>Candidate</th>${MICRO_FACTORS.map((f) => `<th>${esc(MICRO_FACTOR_LABELS[f])}</th>`).join("")}</tr></thead><tbody>${checklistRows}</tbody></table></div>
 <div class="card"><h3>What this model cannot see</h3><p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p><ul>${blindspot}</ul></div>
 ${(r.excluded ?? []).length > 0 ? `<div class="card"><h3>Excluded — insufficient data</h3><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)} ${[...new Set(x.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
+${(r.unconfirmed ?? []).length > 0 ? `<div class="card"><h3>Unconfirmed competitors — verify on foot</h3><p>These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are <b>not counted</b> in any competitor total or score — verify on foot before treating the area as empty.</p><ul>${(r.unconfirmed ?? []).map((u) => `<li><b>${esc(u.name)}</b> — ${esc(u.category)} · ${u.lat}, ${u.lon} — ${esc(u.reason)} ${[...new Set(u.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
 <div class="card"><h3>Limitations</h3><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>
 <div class="card"><h3>Evidence trace</h3><table><thead><tr><th>T</th><th>API</th><th>Request</th><th>Status</th><th>ms</th><th>Result</th></tr></thead><tbody>${trace}</tbody></table></div>
 <footer>Powered by <a href="https://www.geoapify.com/">Geoapify</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</footer>
