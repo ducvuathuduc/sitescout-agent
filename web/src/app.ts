@@ -17,6 +17,7 @@ import { runScout, type ScoutResult, type CandidateResult, type Geometry } from 
 import { DEFAULT_WEIGHTS, formatTrafficBand } from "../../src/scoring/model.js";
 import { MICRO_FACTORS, MICRO_FACTOR_DESCRIPTIONS, MICRO_FACTOR_LABELS, checklistEntryText, emptyChecklist, verdictFor, type MicroChecklist } from "../../src/engine/checklist.js";
 import { expiryFor, isExpired, isStale } from "../../src/engine/freshness.js";
+import { renderDashboard, type MemoIndex } from "./dashboard.js";
 
 /* ============================== constants ============================== */
 const REPO = "https://github.com/ducvuathuduc/sitescout-agent";
@@ -83,7 +84,7 @@ const I = {
 
 /* ================================ state ================================ */
 interface Bands { mode: Mode; features: Array<{ properties: { range: number }; geometry: Geometry }>; ref: number }
-type Tab = "ranking" | "compare" | "evidence";
+type Tab = "ranking" | "compare" | "evidence" | "dashboard";
 type Banner = { kind: "quota" | "error" | "info"; text: string } | null;
 interface State {
   result: ScoutResult | null;
@@ -105,11 +106,16 @@ interface State {
   status: { spent?: number; credits: number; creditCap: number; yourCalls: number; yourCap: number } | null;
   banner: Banner;
   openCall: number | null;
+  /** Committed memo index for the Dashboard tab (fetched lazily from /memos-index.json). */
+  dashboard: MemoIndex | null;
+  dashboardLoading: boolean;
+  dashboardError: string | null;
 }
 const S: State = {
   result: null, source: null, calls: [], bands: new Map(), reachMode: "walk", reachLoading: false, selected: null, compare: [], tab: "ranking",
   layers: { zones: true, competitors: true, demand: true, hex: false }, running: false, step: "", stepDetail: "", planner: "llm",
   question: EXAMPLES[0].q, status: null, banner: null, openCall: null,
+  dashboard: null, dashboardLoading: false, dashboardError: null,
 };
 
 const esc = (s: unknown): string => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
@@ -437,6 +443,30 @@ function bars(c: CandidateResult): string {
   return `<div class="bd">${VISIBLE_METRICS.map((m) => `<div class="bd-row" title="${esc(m.hint)}"><span class="bd-k">${m.label}<em>${Math.round(DEFAULT_WEIGHTS[m.k] * 100)}%</em></span><span class="bd-track"><i class="bd-${m.k}" style="width:${pct(c.scores[m.k])}%"></i></span><span class="bd-v">${c.scores[m.k].toFixed(2)}</span></div>`).join("")}</div>`;
 }
 
+/** Dashboard pane: the committed memo index (recorded runs), fetched lazily. */
+function dashboardHtml(): string {
+  if (S.dashboard) return renderDashboard(S.dashboard);
+  if (S.dashboardError) {
+    return `<div class="block empty"><p class="h3">Dashboard unavailable</p><p class="muted">${esc(S.dashboardError)}</p></div>`;
+  }
+  if (!S.dashboardLoading) {
+    S.dashboardLoading = true;
+    void fetch("/memos-index.json")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`memos-index.json: HTTP ${res.status}`);
+        S.dashboard = (await res.json()) as MemoIndex;
+        S.dashboardLoading = false;
+        renderResult();
+      })
+      .catch((e: unknown) => {
+        S.dashboardLoading = false;
+        S.dashboardError = e instanceof Error ? e.message : String(e);
+        renderResult();
+      });
+  }
+  return `<div class="block empty"><p class="h3">Loading dashboard…</p><p class="muted">Reading the committed memo index.</p></div>`;
+}
+
 function renderResult(): void {
   const el = $("#result");
   const r = S.result;
@@ -446,7 +476,7 @@ function renderResult(): void {
   }
   const best = [...r.candidates].sort((a, b) => a.rank - b.rank)[0];
   const col = RAMP[rampIdx(best, r)];
-  const tabs: Array<[Tab, string]> = [["ranking", "Ranking"], ["compare", "Compare"], ["evidence", `Evidence · ${S.calls.length}`]];
+  const tabs: Array<[Tab, string]> = [["ranking", "Ranking"], ["compare", "Compare"], ["evidence", `Evidence · ${S.calls.length}`], ["dashboard", "Dashboard"]];
   el.innerHTML = `
   <section class="block summary">
     <div class="eyebrow">Best spot for a ${esc(r.plan.business)}</div>
@@ -478,7 +508,7 @@ function renderResult(): void {
     </div>
   </section>
   <div class="tabs" role="tablist" aria-label="Result views">${tabs.map(([t, l]) => `<button role="tab" id="tab-${t}" aria-selected="${S.tab === t}" aria-controls="pane" tabindex="${S.tab === t ? 0 : -1}" data-tab="${t}">${l}</button>`).join("")}</div>
-  <section class="block pane" id="pane" role="tabpanel" aria-labelledby="tab-${S.tab}">${S.tab === "ranking" ? rankingHtml(r) : S.tab === "compare" ? compareHtml(r) : evidenceHtml()}</section>
+  <section class="block pane" id="pane" role="tabpanel" aria-labelledby="tab-${S.tab}">${S.tab === "dashboard" ? dashboardHtml() : S.tab === "ranking" ? rankingHtml(r) : S.tab === "compare" ? compareHtml(r) : evidenceHtml()}</section>
   ${r.limitations.length ? `<details class="block limits"><summary>Limitations (${r.limitations.length}) ${I.down}</summary><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}`;
   wireResult();
 }
@@ -976,7 +1006,7 @@ async function refreshStatus(): Promise<void> {
 /* ================================ boot ================================ */
 window.addEventListener("resize", () => map.invalidateSize());
 const hp = new URLSearchParams(location.hash.slice(1));
-const hTab = (["ranking", "compare", "evidence"] as Tab[]).find((t) => t === hp.get("tab"));
+const hTab = (["ranking", "compare", "evidence", "dashboard"] as Tab[]).find((t) => t === hp.get("tab"));
 renderAll();
 if (hp.get("r")) void loadShared(hp.get("r")!, hp.get("sel") ?? undefined, hTab);
 else {

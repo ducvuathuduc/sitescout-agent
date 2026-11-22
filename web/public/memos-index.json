@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-11-22T15:08:39.301Z",
+  "memos": [
+    {
+      "memoId": "binhthanh-pharmacy",
+      "market": "vn-hcmc",
+      "business": "pharmacy",
+      "status": "delivered",
+      "topCandidate": "113 Nguyễn Hữu Cảnh",
+      "band": null
+    },
+    {
+      "memoId": "example-memo",
+      "market": "unknown",
+      "business": "unknown memo",
+      "status": "outcome-recorded",
+      "topCandidate": null,
+      "band": {
+        "low": 120,
+        "high": 180
+      },
+      "outcome": {
+        "_example": true,
+        "actualDailyCustomersMean": 150,
+        "actualTrafficTier": "high",
+        "candidateId": "c1",
+        "candidateLabel": "Example café — Thảo Điền (synthetic)",
+        "decision": "opened",
+        "measurementMethod": "customer-counts",
+        "memoId": "example-memo",
+        "observedAt": "2026-11-22",
+        "projectedHigh": 180,
+        "projectedLow": 120,
+        "source": "EXAMPLE — synthetic, not a real pilot outcome"
+      }
+    },
+    {
+      "memoId": "saigon-lunch",
+      "market": "vn-hcmc",
+      "business": "restaurant",
+      "status": "delivered",
+      "topCandidate": "Tổng Lãnh sự quán Pháp, Đường Nguyễn Thị Minh Khai",
+      "band": null
+    },
+    {
+      "memoId": "thaodien-coffee",
+      "market": "vn-hcmc",
+      "business": "coffee shop",
+      "status": "delivered",
+      "topCandidate": "159, Võ Nguyên Giáp",
+      "band": null
+    }
+  ],
+  "metering": {
+    "memosGenerated": 3,
+    "marketsUsed": [
+      "vn-hcmc"
+    ],
+    "outcomesRecorded": 0
+  },
+  "calibration": [
+    {
+      "market": "vn-hcmc",
+      "version": "2.0.0-unified",
+      "runDate": null
+    },
+    {
+      "market": "th-bangkok",
+      "version": "2.0.0-unified",
+      "runDate": "2026-11-22"
+    }
+  ],
+  "accountId": null,
+  "_note": "draft is a valid status but no v2 source produces it (a memo exists the moment it is generated, so every indexed memo is at least delivered); accountId is always null in v2 — v2 has no accounts or auth, so there is no account key to meter by (reserved for later pricing work); example outcomes (_example: true) are listed as rows when their memo is missing but excluded from metering.outcomesRecorded; orphan outcomes (memo missing from examples/) are shown as 'unknown memo' rows, never silently dropped."
+}
