@@ -3,7 +3,11 @@
  *
  *   sitescout scout "Where should I open a specialty coffee shop in Thảo Điền?"
  *     [--id thaodien-coffee] [--planner heuristic|llm] [--out examples/<id>]
- *     [--credit-cap 300]
+ *     [--credit-cap 300] [--checklist <file>]
+ *
+ * A --checklist file ({ candidates: { <id>: <MicroChecklist> } }) attaches
+ * hand-verified street-level facts to candidates; a malformed file, or one
+ * naming an unknown candidate id, aborts before any API call.
  *
  * Writes result.json, report.md, report.html, map.jpg (Geoapify Static Maps)
  * and trace.jsonl. The key is read from GEOAPIFY_API_KEY and sent as an
@@ -17,6 +21,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { GeoapifyApi } from "./engine/geoapify.js";
+import { parseChecklistFile, type MicroChecklist } from "./engine/checklist.js";
 import { heuristicPlan, llmPlan } from "./engine/plan.js";
 import { runScout } from "./engine/scout.js";
 import { renderHtml, renderMarkdown, staticMapBody, traceJsonl } from "./engine/render.js";
@@ -44,6 +49,11 @@ export async function cmdScout(rest: string[], apiKey: string): Promise<void> {
   const out = flag(rest, "--out") ?? join("examples", id);
   const plannerKind = flag(rest, "--planner") ?? "heuristic";
   const cap = Number(flag(rest, "--credit-cap") ?? 300);
+  // Parse the checklist BEFORE any API call: a bad file aborts here.
+  const checklistPath = flag(rest, "--checklist");
+  const checklist: Record<string, MicroChecklist> | undefined = checklistPath
+    ? parseChecklistFile(checklistPath).candidates
+    : undefined;
 
   const planned =
     plannerKind === "llm"
@@ -61,7 +71,7 @@ export async function cmdScout(rest: string[], apiKey: string): Promise<void> {
   });
   console.log(`[plan:${planned.planner}] ${JSON.stringify(planned.plan)}`);
   for (const n of planned.notes) console.log(`  note: ${n}`);
-  const result = await runScout(question, planned, { api });
+  const result = await runScout(question, planned, { api, checklist });
 
   mkdirSync(out, { recursive: true });
   try {

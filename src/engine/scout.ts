@@ -29,11 +29,20 @@ import {
   INSUFFICIENT_DATA_POI_FLOOR,
   scoreCandidate,
   TH_BANGKOK_PROFILE as TH_BANGKOK_MARKET_PROFILE,
+  trafficBandFor,
   VN_HCMC_PROFILE as VN_HCMC_MARKET_PROFILE,
   WEIGHTS_VERSION as UNIFIED_WEIGHTS_VERSION,
   type EvidenceBundle,
   type SubScores,
 } from "../scoring/model.js";
+import {
+  applyChecklists,
+  emptyChecklist,
+  verdictFor,
+  type MicroChecklist,
+  type Verdict,
+} from "./checklist.js";
+import { expiryFor } from "./freshness.js";
 import { geometryAreaM2, haversineM, hexGrid, pointInGeometry, round6, type LatLon } from "../geo/grid.js";
 import { foldKey } from "../geo/text.js";
 
@@ -61,6 +70,12 @@ export interface CandidateResult {
   scores: SubScores;
   /** Data-coverage score in [0, 1]: POIs found vs. the profile expectation. */
   coverage: number;
+  /** Street-level micro-checklist (all UNVERIFIED when no file was given). */
+  checklist: MicroChecklist;
+  /** "recommend" or "verify on foot before deciding" (≥2 UNVERIFIED in top 3). */
+  verdict: Verdict;
+  /** Projected daily-customer band, or null while no trafficScale exists. */
+  trafficBand: { low: number; high: number } | null;
   total: number;
   why: string;
   refs: number[];
@@ -89,6 +104,10 @@ export interface ScoutResult {
   candidates: CandidateResult[];
   /** Candidates below the POI floor: excluded from ranking, never scored. */
   excluded: Array<{ id: string; label: string; reason: string; refs: number[] }>;
+  /** Date the underlying data was fetched (YYYY-MM-DD, = generatedAt date). */
+  dataAsOf: string;
+  /** Memo expiry date (YYYY-MM-DD): dataAsOf + 30 days. */
+  expiresAt: string;
   winnerRoute: { origin: string; timeS?: number; distanceM?: number; geometry?: Geometry; ref: number } | null;
   winnerDrive5: { geometry: Geometry; ref: number } | null;
   limitations: string[];
@@ -115,6 +134,8 @@ export interface ScoutOptions {
   studyRadiusM?: number;
   /** Market profile: geocoder bias, boundary check, stopwords. Default VN_HCMC_PROFILE. */
   profile?: CountryProfile;
+  /** Micro-checklists per candidate id (parsed from a --checklist file). */
+  checklist?: Record<string, MicroChecklist>;
 }
 
 function pickAnchor(results: GeocodeResult[], profile: CountryProfile = VN_HCMC_PROFILE): GeocodeResult | undefined {
@@ -287,7 +308,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   }
 
   // 5–7 — per candidate: label, walk isoline, POIs inside it
-  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin" | "coverage">> = [];
+  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin" | "coverage" | "checklist" | "verdict" | "trafficBand">> = [];
   for (const [i, p] of chosen.entries()) {
     emit({ type: "stage", stage: "candidate", detail: `${i + 1}/${chosen.length}` });
     const refs: number[] = [];
@@ -417,14 +438,20 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     };
     const refs = [...c.refs, ...(matrixRef !== undefined ? [matrixRef] : [])];
     const scoredCandidate = scoreCandidate(evidence, marketProfile, refs);
+    const total = Math.round(scoredCandidate.total * 1000) / 1000;
     const topDemand = Object.entries(c.demand).sort((a, b) => b[1] - a[1]).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(", ") || "no demand POIs";
     const why = `${plan.walkMinutes}-min walk reaches ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² with ${topDemand} and ${c.competitors} competing ${plan.competitorCategory}` + (meanDrive[i] !== null ? `; ${Math.round(meanDrive[i] as number)} min average drive from ${okOrigins.length} origin(s).` : ".");
     return {
       ...c,
       rank: 0,
       scores: scoredCandidate.scores,
-      total: Math.round(scoredCandidate.total * 1000) / 1000,
+      total,
       coverage: dataCoverageScore(c.competitors + c.demandTotal, marketProfile),
+      // Checklist + verdict are set after ranking (verdict needs the rank);
+      // trafficBand derives from the published (rounded) total.
+      checklist: opts.checklist?.[c.id] ?? emptyChecklist(),
+      verdict: "recommend" as Verdict,
+      trafficBand: trafficBandFor(total, marketProfile),
       why,
       refs,
       meanDriveMin: meanDrive[i] === null ? null : Math.round((meanDrive[i] as number) * 10) / 10,
@@ -433,6 +460,11 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   });
   scored.sort((a, b) => b.total - a.total);
   scored.forEach((c, i) => (c.rank = i + 1));
+  // Memo v2 data model: a checklist naming an id not in this run fails
+  // loudly (applyChecklists throws); every candidate then gets its verdict
+  // from its checklist and its final rank.
+  if (opts.checklist) applyChecklists({ candidates: scored }, opts.checklist);
+  for (const c of scored) c.verdict = verdictFor(c.checklist, c.rank);
 
   // 10–11 — winner context
   let winnerRoute: ScoutResult["winnerRoute"] = null;
@@ -465,6 +497,8 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     "Decision support only — visit the site before signing a lease.",
   );
 
+  const generatedAt = new Date().toISOString();
+  const dataAsOf = generatedAt.slice(0, 10);
   const result: ScoutResult = {
     engine: `sitescout-engine@${ENGINE_VERSION}`,
     weightsVersion: UNIFIED_WEIGHTS_VERSION,
@@ -478,12 +512,14 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     origins,
     candidates: scored,
     excluded,
+    dataAsOf,
+    expiresAt: expiryFor(dataAsOf),
     winnerRoute,
     winnerDrive5,
     limitations: [...new Set(limitations)],
     calls: api.calls,
     creditsEstimated: api.creditsSpent,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     durationMs: Date.now() - t0,
   };
   emit({ type: "done", result });

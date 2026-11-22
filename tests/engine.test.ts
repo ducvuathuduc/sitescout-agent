@@ -8,6 +8,7 @@ import { BUSINESS_RULES, heuristicPlan, parseLlmPlan, AREA_ALIASES, reconcileCom
 import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
 import { TH_BANGKOK_PROFILE } from "../src/engine/profile.js";
+import { emptyChecklist, type MicroChecklist } from "../src/engine/checklist.js";
 import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
 import { runScout } from "../src/engine/scout.js";
 import { renderMarkdown, staticMapBody } from "../src/engine/render.js";
@@ -185,6 +186,49 @@ describe("runScout (fake fetch)", () => {
   it("coverage score is 0 with no POIs and 1 at the profile expectation", () => {
     expect(dataCoverageScore(0, VN_HCMC_PROFILE)).toBe(0);
     expect(dataCoverageScore(33, VN_HCMC_PROFILE)).toBe(1); // 8 + 25
+  });
+});
+
+describe("runScout memo v2 data model", () => {
+  const allVerifiedChecklist = (): MicroChecklist => ({
+    walkability: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+    curbAppeal: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+    construction: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+    morningShade: { status: "VERIFIED", source: "Street View 2026-10-15", observedAt: "2026-10-15" },
+    motorcycleParking: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+    alleyLighting: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+  });
+
+  it("attaches an all-UNVERIFIED checklist, a verdict, and dates to every candidate", async () => {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), { api });
+    expect(r.dataAsOf).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(r.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(r.dataAsOf).toBe(r.generatedAt.slice(0, 10));
+    for (const c of r.candidates) {
+      expect(Object.values(c.checklist).every((f) => f.status === "UNVERIFIED")).toBe(true);
+      // All-UNVERIFIED top-3 candidates cannot be recommended.
+      expect(c.verdict).toBe(c.rank <= 3 ? "verify on foot before deciding" : "recommend");
+      expect(c.trafficBand).toBeNull(); // no trafficScale yet
+    }
+  });
+
+  it("a verified top-3 candidate is recommended; an unknown id fails loudly", async () => {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), {
+      api,
+      checklist: { c1: allVerifiedChecklist() },
+    });
+    expect(r.candidates.find((c) => c.id === "c1")!.verdict).toBe("recommend");
+    expect(r.candidates.find((c) => c.id === "c2")!.verdict).toBe("verify on foot before deciding");
+
+    const api2 = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    await expect(
+      runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), {
+        api: api2,
+        checklist: { c9: emptyChecklist() },
+      }),
+    ).rejects.toThrow(/c9/);
   });
 });
 
