@@ -63,4 +63,12 @@ describe("renderReport memo v2", () => {
     expect(md).toContain("UNVERIFIED");
     expect(md).not.toContain("VERIFIED —");
   });
+
+  it("attributes the MCP walk zone to a circular buffer, never to Geoapify Isoline", () => {
+    // The MCP path's catchments are transform_geometry buffers (the
+    // Limitations section says so); the MCP server exposes no Isoline tool.
+    const md = renderReport(fixtureData());
+    expect(md).toContain("walk zone: circular buffer (no Isoline tool on the MCP server)");
+    expect(md).not.toContain("walk zone: Geoapify Isoline");
+  });
 });

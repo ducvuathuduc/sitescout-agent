@@ -174,7 +174,7 @@ export function renderReport(data: SiteReportData): string {
       lines.push(`- Catchment sub-score ${fmt(c.scores.catchment)} ${refs}`);
       lines.push(`- Accessibility sub-score ${fmt(c.scores.accessibility)} ${refs}`);
       lines.push(`- Projected traffic: ${formatTrafficBand(trafficBandFor(c.total, VN_HCMC_PROFILE))}`);
-      if (data.dataAsOf) lines.push(`- Counts as of ${data.dataAsOf} (Geoapify Places; walk zone: Geoapify Isoline) ${refs}`);
+      if (data.dataAsOf) lines.push(`- Counts as of ${data.dataAsOf} (Geoapify Places; walk zone: circular buffer (no Isoline tool on the MCP server)) ${refs}`);
       lines.push(`- Verdict: ${verdictFor(data.checklists?.[c.candidateId] ?? emptyChecklist(), i + 1)}`);
       lines.push("");
     }
