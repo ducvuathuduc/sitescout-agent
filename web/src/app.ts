@@ -11,6 +11,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
+import { execSummaryLine, topCandidate } from "../../src/engine/render.js";
 import { GeoapifyApi, type CallRecord } from "../../src/engine/geoapify.js";
 import { heuristicPlan, parseLlmPlan, PLANNER_SYSTEM_PROMPT, type PlanOutcome } from "../../src/engine/plan.js";
 import { runScout, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
@@ -475,7 +476,25 @@ function renderResult(): void {
     el.innerHTML = S.running ? "" : `<div class="block empty"><div class="empty-art">${I.pin("#C7DBFF", "#1570EF")}</div><p class="h3">No analysis yet</p><p class="muted">Pick a recorded example or ask your own question to rank candidate sites.</p></div>`;
     return;
   }
-  const best = [...r.candidates].sort((a, b) => a.rank - b.rank)[0];
+  const best = topCandidate(r);
+  if (!best) {
+    // Every candidate below the POI floor: no [0] to dereference — render
+    // the empty state with the Excluded list instead of crashing the pane.
+    el.innerHTML = `
+  <section class="block summary">
+    <div class="eyebrow">Best spot for a ${esc(r.plan.business)}</div>
+    <p class="h3">No candidates ranked</p>
+    <p class="muted">Every candidate was excluded — insufficient data (floor 5 POIs). Nothing was scored, so there is no best spot to show.</p>
+    ${(r.excluded ?? []).length ? `<div class="h4">Excluded — insufficient data</div><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)}</li>`).join("")}</ul>` : ""}
+    <div class="actions">
+      <button class="btn btn-sm" id="share">${I.share} Share link</button>
+      <button class="btn btn-sm" id="pdf">${I.pdf} Export PDF</button>
+    </div>
+  </section>
+  ${r.limitations.length ? `<details class="block limits"><summary>Limitations (${r.limitations.length}) ${I.down}</summary><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}`;
+    wireResult();
+    return;
+  }
   const col = RAMP[rampIdx(best, r)];
   const tabs: Array<[Tab, string]> = [["ranking", "Ranking"], ["compare", "Compare"], ["evidence", `Evidence · ${S.calls.length}`], ["dashboard", "Dashboard"]];
   el.innerHTML = `
@@ -756,7 +775,7 @@ function exportPdf(): void {
     <p>${esc(cap(r.plan.business))} · ${esc(r.area.ward?.name ?? r.plan.area)} · planner ${r.planner === "llm" ? "AI" : "rules"} · competitors <code>${esc(r.plan.competitorCategory)}</code> · demand ${r.plan.demandCategories.map((d) => `<code>${esc(d)}</code>`).join(" ")} · ${r.plan.walkMinutes}-min walk zones</p>
     <p>Data as of ${esc(asOf)} · valid until ${esc(exp)} (30 days).${isExpired(exp) ? " <b>This memo has expired — re-run before deciding.</b>" : ""}${isStale(asOf) ? " <b>Stale data:</b> this memo's data is older than 90 days — re-run before deciding." : ""}</p>
     <h2>Executive summary</h2>
-    <p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p>
+    <p>${esc(execSummaryLine(r))}</p>
     <p>SiteScout — Placer.ai for Southeast Asia.</p>
     <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>
     ${best.slice(0, 3).map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td><td>${esc(formatTrafficBand(c.trafficBand ?? null))}</td><td>${esc(verdictOf(c))}</td></tr>`).join("")}

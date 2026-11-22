@@ -9,7 +9,7 @@ import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
 import { TH_BANGKOK_PROFILE } from "../src/engine/profile.js";
 import { emptyChecklist, type MicroChecklist } from "../src/engine/checklist.js";
-import { renderHtml, renderMarkdown, staticMapBody } from "../src/engine/render.js";
+import { execSummaryLine, renderHtml, renderMarkdown, staticMapBody, topCandidate } from "../src/engine/render.js";
 import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
 import { runScout, type ScoutResult } from "../src/engine/scout.js";
 import { isStale } from "../src/engine/freshness.js";
@@ -350,6 +350,43 @@ describe("memo v2 rendering", () => {
     const copy = [renderDashboard(sampleIndex()), renderMarkdown(await memoV2Result())].join("\n");
     expect(copy).not.toMatch(/as accurate as|same (data|features) as|parity with/i);
     expect(copy).toMatch(/Placer\.ai for Southeast Asia/);
+  });
+});
+
+describe("zero-candidate result (every candidate below the POI floor)", () => {
+  async function emptyResult(): Promise<ScoutResult> {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), { api });
+    r.excluded = r.candidates.map((c) => ({
+      id: c.id,
+      label: c.label,
+      reason: "insufficient data: 1 POIs across all sweeps (floor 5)",
+      refs: c.refs,
+    }));
+    r.candidates = [];
+    return r;
+  }
+
+  it("renders a no-candidates line instead of 'the three spots' in md and html, and lists the excluded", async () => {
+    const r = await emptyResult();
+    const md = renderMarkdown(r);
+    const html = renderHtml(r);
+    for (const out of [md, html]) {
+      expect(out).toContain("No candidates ranked");
+      expect(out).toContain("Excluded — insufficient data");
+      expect(out).not.toContain("The three spots to filter from");
+    }
+    expect(md).toContain("insufficient data: 1 POIs across all sweeps (floor 5)");
+  });
+
+  it("topCandidate is undefined for a zero-candidate result and rank-1 otherwise", async () => {
+    const empty = await emptyResult();
+    expect(topCandidate(empty)).toBeUndefined();
+    expect(execSummaryLine(empty)).toContain("No candidates ranked");
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    const full = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), { api });
+    expect(topCandidate(full)?.rank).toBe(1);
+    expect(execSummaryLine(full)).toContain("The three spots to filter from");
   });
 });
 
