@@ -9,9 +9,9 @@ import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
 import { TH_BANGKOK_PROFILE } from "../src/engine/profile.js";
 import { emptyChecklist, type MicroChecklist } from "../src/engine/checklist.js";
+import { renderHtml, renderMarkdown, staticMapBody } from "../src/engine/render.js";
 import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
-import { runScout } from "../src/engine/scout.js";
-import { renderMarkdown, staticMapBody } from "../src/engine/render.js";
+import { runScout, type ScoutResult } from "../src/engine/scout.js";
 import { offset } from "../src/geo/grid.js";
 
 describe("planner", () => {
@@ -190,15 +190,6 @@ describe("runScout (fake fetch)", () => {
 });
 
 describe("runScout memo v2 data model", () => {
-  const allVerifiedChecklist = (): MicroChecklist => ({
-    walkability: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
-    curbAppeal: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
-    construction: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
-    morningShade: { status: "VERIFIED", source: "Street View 2026-10-15", observedAt: "2026-10-15" },
-    motorcycleParking: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
-    alleyLighting: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
-  });
-
   it("attaches an all-UNVERIFIED checklist, a verdict, and dates to every candidate", async () => {
     const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
     const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), { api });
@@ -237,6 +228,16 @@ function thinDataApi(): typeof fetch {
   return fakeFetch({ thinFirstCandidate: true });
 }
 
+/** All six micro-factors VERIFIED (site visit 2026-11-20). */
+const allVerifiedChecklist = (): MicroChecklist => ({
+  walkability: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+  curbAppeal: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+  construction: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+  morningShade: { status: "VERIFIED", source: "Street View 2026-10-15", observedAt: "2026-10-15" },
+  motorcycleParking: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+  alleyLighting: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },
+});
+
 describe("GeoapifyApi against the demo proxy", () => {
   it("does not retry a 429 the proxy marks as 'daily budget used up'", async () => {
     let n = 0;
@@ -253,5 +254,46 @@ describe("GeoapifyApi against the demo proxy", () => {
     const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
     await api.isoline({ lat: 10.8, lon: 106.73, mode: "walk", range: 600 });
     expect(api.calls[0].credits).toBe(2);
+  });
+});
+
+describe("memo v2 rendering", () => {
+  /**
+   * Fake-fetch run + a 2-UNVERIFIED checklist on #1 + a 120–180 band on #1.
+   * Async because the fixture is built from runScout (the plan's snippet
+   * shows a sync call; runScout is async, so the builder and test await).
+   */
+  async function memoV2Result(): Promise<ScoutResult> {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    const c1 = allVerifiedChecklist();
+    c1.walkability.status = "UNVERIFIED";
+    c1.motorcycleParking.status = "UNVERIFIED";
+    const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), {
+      api,
+      checklist: { c1 },
+    });
+    const top = r.candidates.find((c) => c.rank === 1)!;
+    top.trafficBand = { low: 120, high: 180 };
+    return r;
+  }
+
+  it("memo v2 renders the checklist, the band, and the expiry notice in md and html", async () => {
+    const r = await memoV2Result();
+    const md = renderMarkdown(r);
+    const html = renderHtml(r);
+    for (const out of [md, html]) {
+      expect(out).toContain("What this model cannot see");
+      expect(out).toContain("Data as of");
+      expect(out).toContain("verify on foot before deciding");
+      expect(out).toContain("Visit the site before signing a lease.");
+      expect(out).not.toMatch(/calibrated/i);
+    }
+    expect(md).toContain("120–180"); // band fixture value, never a point projection
+    expect(html).toContain("120–180");
+    // md and html agree on the numbers: same totals and verdicts in both.
+    for (const c of r.candidates) {
+      expect(md).toContain(c.total.toFixed(2));
+      expect(html).toContain(c.total.toFixed(2));
+    }
   });
 });

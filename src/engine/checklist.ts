@@ -74,6 +74,32 @@ export const ChecklistFileSchema = z.object({
 
 export type ChecklistFile = z.infer<typeof ChecklistFileSchema>;
 
+/** Short labels for the six micro-factors (checklist tables). */
+export const MICRO_FACTOR_LABELS: Record<MicroFactor, string> = {
+  walkability: "Walkability",
+  curbAppeal: "Curb appeal",
+  construction: "Construction",
+  morningShade: "Morning shade",
+  motorcycleParking: "Motorcycle parking",
+  alleyLighting: "Alley lighting",
+};
+
+/** Full descriptions for the "What this model cannot see" section. */
+export const MICRO_FACTOR_DESCRIPTIONS: Record<MicroFactor, string> = {
+  walkability: "Walkability of the approach (pavement, crossing, slope)",
+  curbAppeal: "Curb appeal (visibility from the street, signage line-of-sight)",
+  construction: "Active construction on the street/block",
+  morningShade: "Morning-shade side of the street",
+  motorcycleParking: "Motorcycle parking within 50 m",
+  alleyLighting: "Alley lighting after dark (soi candidates)",
+};
+
+/** One checklist entry as memo copy: "VERIFIED — <source>, <date>" or the raw status. */
+export function checklistEntryText(e: ChecklistEntry): string {
+  if (e.status !== "VERIFIED") return e.status;
+  return `VERIFIED — ${e.source ?? "unnamed source"}${e.observedAt ? `, ${e.observedAt}` : ""}`;
+}
+
 /** Every factor UNVERIFIED — the default when no checklist file is given. */
 export function emptyChecklist(): MicroChecklist {
   return Object.fromEntries(MICRO_FACTORS.map((f) => [f, { status: "UNVERIFIED" }])) as MicroChecklist;

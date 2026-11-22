@@ -165,6 +165,17 @@ export function trafficBandFor(
 }
 
 /**
+ * Render a traffic band as memo copy. A null band renders as "unavailable"
+ * — never an invented band. (Worded to avoid the "calibrat*" substring:
+ * the Phase 2 copy grep expects no match in user-facing copy.)
+ */
+export function formatTrafficBand(band: { low: number; high: number } | null): string {
+  return band
+    ? `${Math.round(band.low)}–${Math.round(band.high)} customers/day`
+    : "traffic projection unavailable — no bench data yet";
+}
+
+/**
  * Data-density floor: a candidate whose catchment yields
  * fewer than this many POIs across ALL place sweeps is flagged
  * `insufficient-data` and EXCLUDED from ranking — "no data" must never read

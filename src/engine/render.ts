@@ -2,11 +2,28 @@
  * Render a ScoutResult as Markdown, a self-contained HTML page, a JSONL
  * trace, and a Geoapify Static Maps request body. Pure functions — no I/O.
  */
-import type { ScoutResult } from "./scout.js";
-import { DEFAULT_WEIGHTS } from "../scoring/model.js";
+import type { CandidateResult, ScoutResult } from "./scout.js";
+import { DEFAULT_WEIGHTS, formatTrafficBand } from "../scoring/model.js";
+import {
+  MICRO_FACTORS,
+  MICRO_FACTOR_DESCRIPTIONS,
+  MICRO_FACTOR_LABELS,
+  checklistEntryText,
+  emptyChecklist,
+  verdictFor,
+  type MicroChecklist,
+} from "./checklist.js";
+import { expiryFor, isExpired, isStale } from "./freshness.js";
 
 const cite = (seqs: number[]): string => [...new Set(seqs)].sort((a, b) => a - b).map((s) => `[T${s}]`).join(" ");
 const f2 = (x: number): string => x.toFixed(2);
+
+/** Defensive reads: memos recorded before v2 lack these fields. */
+const asOf = (r: ScoutResult): string => r.dataAsOf ?? r.generatedAt.slice(0, 10);
+const expires = (r: ScoutResult): string => r.expiresAt ?? expiryFor(asOf(r));
+const checklistOf = (c: CandidateResult): MicroChecklist => c.checklist ?? emptyChecklist();
+const verdictOf = (c: CandidateResult): string => c.verdict ?? verdictFor(checklistOf(c), c.rank);
+const coverageOf = (c: CandidateResult): string => (typeof c.coverage === "number" ? c.coverage.toFixed(2) : "n/a");
 
 export const RANK_COLORS = ["#1785FB", "#2E9F5B", "#F29D38", "#8F5BD7", "#E05263", "#3BB5C4", "#7A8B99", "#B5893B"];
 
@@ -16,8 +33,23 @@ export function renderMarkdown(r: ScoutResult): string {
   L.push("");
   L.push(`> **Question:** ${r.question}`);
   L.push(`> Generated ${r.generatedAt} · ${r.calls.length} Geoapify API calls · ~${r.creditsEstimated} credits · ${(r.durationMs / 1000).toFixed(1)} s · ${r.engine} · weights \`${r.weightsVersion}\` · planner: ${r.planner}${r.plannerModel ? ` (${r.plannerModel})` : ""}`);
+  L.push(`> Data as of ${asOf(r)} · valid until ${expires(r)} (30 days).`);
+  if (isExpired(expires(r))) L.push(`> **This memo has expired — re-run before deciding.**`);
+  if (isStale(asOf(r))) L.push(`> **Stale data:** this memo's data is older than 90 days — re-run before deciding.`);
   L.push("");
   L.push("![Shortlist map](map.jpg)");
+  L.push("");
+  L.push("## Executive summary");
+  L.push("");
+  L.push("The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.");
+  L.push("");
+  L.push(`| # | Candidate | Score | Projected traffic | Verdict |`);
+  L.push(`|---|---|---|---|---|`);
+  for (const c of [...r.candidates].sort((a, b) => a.rank - b.rank).slice(0, 3)) {
+    L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${formatTrafficBand(c.trafficBand ?? null)} | ${verdictOf(c)} |`);
+  }
+  L.push("");
+  L.push("**Visit the site before signing a lease.**");
   L.push("");
   L.push("## Plan");
   L.push("");
@@ -33,7 +65,7 @@ export function renderMarkdown(r: ScoutResult): string {
   L.push(`| # | Candidate | Score | Coverage | Demand POIs (10-min walk) | Competitors | Walk area | Mean drive | Evidence |`);
   L.push(`|---|---|---|---|---|---|---|---|---|`);
   for (const c of r.candidates) {
-    L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${typeof c.coverage === "number" ? c.coverage.toFixed(2) : "n/a"} | ${c.demandTotal} | ${c.competitors} | ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² | ${c.meanDriveMin ?? "n/a"} min | ${cite(c.refs)} |`);
+    L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${coverageOf(c)} | ${c.demandTotal} | ${c.competitors} | ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² | ${c.meanDriveMin ?? "n/a"} min | ${cite(c.refs)} |`);
   }
   L.push("");
   L.push(`Score = ${DEFAULT_WEIGHTS.competition.toFixed(2)}·competition + ${DEFAULT_WEIGHTS.complementarity.toFixed(2)}·complementarity + ${DEFAULT_WEIGHTS.catchment.toFixed(2)}·catchment + ${DEFAULT_WEIGHTS.accessibility.toFixed(2)}·accessibility + ${DEFAULT_WEIGHTS.cost.toFixed(2)}·cost, each sub-score normalised to [0, 1] (unified model, weights \`${r.weightsVersion}\`).`);
@@ -46,11 +78,34 @@ export function renderMarkdown(r: ScoutResult): string {
     L.push(`${c.why} ${cite(c.refs)}`);
     L.push("");
     L.push(`- Sub-scores: competition ${f2(c.scores.competition)} · complementarity ${f2(c.scores.complementarity)} · catchment ${f2(c.scores.catchment)} · accessibility ${f2(c.scores.accessibility)} · cost ${f2(c.scores.cost)}`);
+    L.push(`- Projected traffic: ${formatTrafficBand(c.trafficBand ?? null)}`);
+    L.push(`- Data coverage: ${coverageOf(c)}`);
+    L.push(`- Counts as of ${asOf(r)} (Geoapify Places; walk zone: Geoapify Isoline) ${cite(c.refs)}`);
+    L.push(`- Verdict: ${verdictOf(c)}`);
     L.push(`- Demand mix: ${Object.entries(c.demand).map(([k, n]) => `${k} ${n}`).join(", ")}`);
     L.push(`- Drive time by origin: ${r.origins.filter((o) => o.lat !== undefined).map((o, i) => `${o.query.split(",")[0]} ${c.driveMinByOrigin[i] ?? "n/a"} min`).join(" · ")}`);
     L.push(`- Coordinates: ${c.lat}, ${c.lon}`);
     L.push("");
   }
+  L.push("## Micro-feature checklist");
+  L.push("");
+  L.push("Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.");
+  L.push("");
+  L.push(`| Candidate | ${MICRO_FACTORS.map((f) => MICRO_FACTOR_LABELS[f]).join(" | ")} |`);
+  L.push(`|---|${MICRO_FACTORS.map(() => "---").join("|")}|`);
+  for (const c of r.candidates) {
+    const cl = checklistOf(c);
+    L.push(`| ${c.rank}. ${c.label} | ${MICRO_FACTORS.map((f) => checklistEntryText(cl[f])).join(" | ")} |`);
+  }
+  L.push("");
+  L.push("## What this model cannot see");
+  L.push("");
+  L.push("The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.");
+  L.push("");
+  for (const f of MICRO_FACTORS) {
+    L.push(`- ${MICRO_FACTOR_DESCRIPTIONS[f]}: ${r.candidates.map((c) => `#${c.rank} ${checklistOf(c)[f].status}`).join(" · ")}`);
+  }
+  L.push("");
   if (r.winnerRoute) {
     L.push(`**Route to #1:** from ${r.winnerRoute.origin}, ${Math.round((r.winnerRoute.timeS ?? 0) / 60)} min / ${((r.winnerRoute.distanceM ?? 0) / 1000).toFixed(1)} km by car ${cite([r.winnerRoute.ref])}.`);
     L.push("");
@@ -140,8 +195,21 @@ export function staticMapBody(r: ScoutResult, width = 1200, height = 760): Recor
 export function renderHtml(r: ScoutResult, mapFile = "map.jpg"): string {
   const esc = (s: string): string => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] as string);
   const rows = r.candidates
-    .map((c) => `<tr><td><span class="dot" style="background:${RANK_COLORS[(c.rank - 1) % RANK_COLORS.length]}">${c.rank}</span></td><td>${esc(c.label)}<div class="why">${esc(c.why)}</div></td><td class="n"><b>${c.total.toFixed(2)}</b></td><td class="n">${c.demandTotal}</td><td class="n">${c.competitors}</td><td class="n">${c.meanDriveMin ?? "n/a"}</td><td class="refs">${[...new Set(c.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</td></tr>`)
+    .map((c) => `<tr><td><span class="dot" style="background:${RANK_COLORS[(c.rank - 1) % RANK_COLORS.length]}">${c.rank}</span></td><td>${esc(c.label)}<div class="why">${esc(c.why)}<br>Projected traffic: ${esc(formatTrafficBand(c.trafficBand ?? null))} · Coverage: ${coverageOf(c)} · Verdict: ${esc(verdictOf(c))}<br>Counts as of ${esc(asOf(r))} (Geoapify Places; walk zone: Geoapify Isoline).</div></td><td class="n"><b>${c.total.toFixed(2)}</b></td><td class="n">${coverageOf(c)}</td><td class="n">${c.demandTotal}</td><td class="n">${c.competitors}</td><td class="n">${c.meanDriveMin ?? "n/a"}</td><td class="refs">${[...new Set(c.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</td></tr>`)
     .join("");
+  const top3 = [...r.candidates].sort((a, b) => a.rank - b.rank).slice(0, 3);
+  const summaryRows = top3
+    .map((c) => `<tr><td><span class="dot" style="background:${RANK_COLORS[(c.rank - 1) % RANK_COLORS.length]}">${c.rank}</span></td><td>${esc(c.label)}</td><td class="n"><b>${c.total.toFixed(2)}</b></td><td>${esc(formatTrafficBand(c.trafficBand ?? null))}</td><td>${esc(verdictOf(c))}</td></tr>`)
+    .join("");
+  const checklistRows = r.candidates
+    .map((c) => {
+      const cl = checklistOf(c);
+      return `<tr><td>${c.rank}. ${esc(c.label)}</td>${MICRO_FACTORS.map((f) => `<td>${esc(checklistEntryText(cl[f]))}</td>`).join("")}</tr>`;
+    })
+    .join("");
+  const blindspot = MICRO_FACTORS.map(
+    (f) => `<li><b>${esc(MICRO_FACTOR_DESCRIPTIONS[f])}:</b> ${r.candidates.map((c) => `#${c.rank} ${esc(checklistOf(c)[f].status)}`).join(" · ")}</li>`,
+  ).join("");
   const trace = r.calls
     .map((c) => `<tr id="T${c.seq}"><td>T${c.seq}</td><td>${c.api}</td><td><code>${esc(c.method + " " + c.endpoint).slice(0, 160)}</code></td><td>${c.status}</td><td>${c.durationMs}</td><td>${esc(JSON.stringify(c.summary)).slice(0, 120)}</td></tr>`)
     .join("");
@@ -160,11 +228,16 @@ th{font-size:10px;text-transform:uppercase;color:#636D72;font-weight:600}
 .dot{display:inline-flex;width:22px;height:22px;border-radius:50%;color:#fff;align-items:center;justify-content:center;font-weight:600;font-size:12px}
 code{font-size:11px;word-break:break-all}footer{font-size:12px;color:#636D72}
 </style></head><body><main>
-<div class="meta">SiteScout · ${esc(r.generatedAt)} · ${r.calls.length} Geoapify calls · ~${r.creditsEstimated} credits</div>
+<div class="meta">SiteScout · ${esc(r.generatedAt)} · ${r.calls.length} Geoapify calls · ~${r.creditsEstimated} credits · Data as of ${esc(asOf(r))} · valid until ${esc(expires(r))}</div>
+${isExpired(expires(r)) ? `<p><b>This memo has expired — re-run before deciding.</b></p>` : ""}
+${isStale(asOf(r)) ? `<p><b>Stale data:</b> this memo's data is older than 90 days — re-run before deciding.</p>` : ""}
 <h1>${esc(r.plan.business)} in ${esc(r.area.ward?.name ?? r.plan.area)}</h1>
 <p>${esc(r.question)}</p>
 <div class="card"><img src="${mapFile}" alt="Shortlist map with ${r.plan.walkMinutes}-minute walking isochrones"></div>
-<div class="card"><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th class="n">Demand</th><th class="n">Competitors</th><th class="n">Drive (min)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
+<div class="card"><h3>Executive summary</h3><p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>${summaryRows}</tbody></table><p><b>Visit the site before signing a lease.</b></p></div>
+<div class="card"><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th class="n">Coverage</th><th class="n">Demand</th><th class="n">Competitors</th><th class="n">Drive (min)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
+<div class="card"><h3>Micro-feature checklist</h3><p>Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.</p><table><thead><tr><th>Candidate</th>${MICRO_FACTORS.map((f) => `<th>${esc(MICRO_FACTOR_LABELS[f])}</th>`).join("")}</tr></thead><tbody>${checklistRows}</tbody></table></div>
+<div class="card"><h3>What this model cannot see</h3><p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p><ul>${blindspot}</ul></div>
 ${(r.excluded ?? []).length > 0 ? `<div class="card"><h3>Excluded — insufficient data</h3><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)} ${[...new Set(x.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
 <div class="card"><h3>Limitations</h3><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>
 <div class="card"><h3>Evidence trace</h3><table><thead><tr><th>T</th><th>API</th><th>Request</th><th>Status</th><th>ms</th><th>Result</th></tr></thead><tbody>${trace}</tbody></table></div>

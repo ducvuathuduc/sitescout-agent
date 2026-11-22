@@ -493,8 +493,8 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   limitations.push(
     "POI counts come from Geoapify Places (OpenStreetMap-based); coverage of small shops is incomplete, so counts are relative signals, not market sizes.",
     "Drive times use Geoapify's approximated traffic at query time, not a specific hour.",
-    `Weights (${UNIFIED_WEIGHTS_VERSION}) are heuristic and not calibrated against real store outcomes.`,
-    "Decision support only — visit the site before signing a lease.",
+    `Weights (${UNIFIED_WEIGHTS_VERSION}) are heuristic and have not been validated against real store outcomes.`,
+    "Decision support only.",
   );
 
   const generatedAt = new Date().toISOString();
