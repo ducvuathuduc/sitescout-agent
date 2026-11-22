@@ -14,6 +14,7 @@ import {
   type MicroChecklist,
 } from "./checklist.js";
 import { expiryFor, isExpired, isStale } from "./freshness.js";
+import { SIGNAL_KIND_LABELS } from "./signals.js";
 
 const cite = (seqs: number[]): string => [...new Set(seqs)].sort((a, b) => a - b).map((s) => `[T${s}]`).join(" ");
 const f2 = (x: number): string => x.toFixed(2);
@@ -134,6 +135,16 @@ export function renderMarkdown(r: ScoutResult): string {
     }
     L.push("");
   }
+  if ((r.signals ?? []).length > 0) {
+    L.push("## Local signals (operator-reported)");
+    L.push("");
+    L.push("Human-observed or operator-reported facts the model cannot fetch. They are displayed evidence only — they never alter a score.");
+    L.push("");
+    for (const s of r.signals ?? []) {
+      L.push(`- **${SIGNAL_KIND_LABELS[s.kind]}** — ${s.street} — observed by ${s.observedBy} on ${s.observedAt}${s.note ? ` — ${s.note}` : ""}`);
+    }
+    L.push("");
+  }
   L.push("## Limitations");
   L.push("");
   for (const l of r.limitations) L.push(`- ${l}`);
@@ -250,6 +261,7 @@ ${isStale(asOf(r)) ? `<p><b>Stale data:</b> this memo's data is older than 90 da
 <div class="card"><h3>What this model cannot see</h3><p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p><ul>${blindspot}</ul></div>
 ${(r.excluded ?? []).length > 0 ? `<div class="card"><h3>Excluded — insufficient data</h3><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)} ${[...new Set(x.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
 ${(r.unconfirmed ?? []).length > 0 ? `<div class="card"><h3>Unconfirmed competitors — verify on foot</h3><p>These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are <b>not counted</b> in any competitor total or score — verify on foot before treating the area as empty.</p><ul>${(r.unconfirmed ?? []).map((u) => `<li><b>${esc(u.name)}</b> — ${esc(u.category)} · ${u.lat}, ${u.lon} — ${esc(u.reason)} ${[...new Set(u.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
+${(r.signals ?? []).length > 0 ? `<div class="card"><h3>Local signals (operator-reported)</h3><p>Human-observed or operator-reported facts the model cannot fetch. They are displayed evidence only — they never alter a score.</p><ul>${(r.signals ?? []).map((s) => `<li><b>${esc(SIGNAL_KIND_LABELS[s.kind])}</b> — ${esc(s.street)} — observed by ${esc(s.observedBy)} on ${esc(s.observedAt)}${s.note ? ` — ${esc(s.note)}` : ""}</li>`).join("")}</ul></div>` : ""}
 <div class="card"><h3>Limitations</h3><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>
 <div class="card"><h3>Evidence trace</h3><table><thead><tr><th>T</th><th>API</th><th>Request</th><th>Status</th><th>ms</th><th>Result</th></tr></thead><tbody>${trace}</tbody></table></div>
 <footer>Powered by <a href="https://www.geoapify.com/">Geoapify</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</footer>

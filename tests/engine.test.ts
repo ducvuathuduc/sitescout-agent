@@ -13,6 +13,8 @@ import { renderHtml, renderMarkdown, staticMapBody } from "../src/engine/render.
 import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
 import { runScout, type ScoutResult } from "../src/engine/scout.js";
 import { isStale } from "../src/engine/freshness.js";
+import { parseSignalsFile } from "../src/engine/signals-file.js";
+import { type LocalSignal } from "../src/engine/signals.js";
 import { offset } from "../src/geo/grid.js";
 
 describe("planner", () => {
@@ -345,5 +347,58 @@ describe("ghost-POI filter", () => {
   it("flags counts older than 90 days as stale", () => {
     expect(isStale("2026-08-01", new Date("2026-11-22"))).toBe(true);
     expect(isStale("2026-11-01", new Date("2026-11-22"))).toBe(false);
+  });
+});
+
+describe("local signals (operator-reported)", () => {
+  /**
+   * Async because the fixture is built from runScout (the plan's snippet
+   * shows a sync call; runScout is async, so the builder and test await —
+   * same as the memo v2 fixture above).
+   */
+  async function resultWithSignal(signal: LocalSignal): Promise<ScoutResult> {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    return runScout(
+      "Where should I open a specialty coffee shop in Thảo Điền?",
+      heuristicPlan("coffee in Thảo Điền"),
+      { api, signals: [signal] },
+    );
+  }
+
+  it("renders an operator-reported signal with observer and date", async () => {
+    const r = await resultWithSignal({
+      kind: "closure",
+      street: "Soi 55",
+      observedBy: "operator",
+      observedAt: "2026-11-20",
+    });
+    expect(r.signals).toHaveLength(1);
+    const md = renderMarkdown(r);
+    const html = renderHtml(r);
+    for (const out of [md, html]) {
+      expect(out).toContain("Local signals (operator-reported)");
+      expect(out).toContain("Soi 55");
+      expect(out).toContain("2026-11-20");
+      expect(out).toContain("operator");
+    }
+  });
+  it("signals never alter a score", async () => {
+    const plain = await runScout(
+      "Where should I open a specialty coffee shop in Thảo Điền?",
+      heuristicPlan("coffee in Thảo Điền"),
+      { api: new GeoapifyApi({ fetchImpl: fakeFetch() }) },
+    );
+    const withSignal = await resultWithSignal({
+      kind: "delivery-presence",
+      street: "Soi 55",
+      observedBy: "operator",
+      observedAt: "2026-11-20",
+      note: "Delivery riders queued outside",
+    });
+    expect(withSignal.candidates.map((c) => c.total)).toEqual(plain.candidates.map((c) => c.total));
+    expect(withSignal.candidates.map((c) => c.rank)).toEqual(plain.candidates.map((c) => c.rank));
+  });
+  it("rejects a signal without observer or date", () => {
+    expect(() => parseSignalsFile("tests/fixtures/bad-signals.json")).toThrow(/observedBy|observedAt/);
   });
 });

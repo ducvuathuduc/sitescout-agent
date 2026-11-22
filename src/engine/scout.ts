@@ -43,6 +43,7 @@ import {
   type Verdict,
 } from "./checklist.js";
 import { expiryFor } from "./freshness.js";
+import type { LocalSignal } from "./signals.js";
 import { geometryAreaM2, haversineM, hexGrid, pointInGeometry, round6, type LatLon } from "../geo/grid.js";
 import { foldKey } from "../geo/text.js";
 
@@ -118,6 +119,8 @@ export interface ScoutResult {
   excluded: Array<{ id: string; label: string; reason: string; refs: number[] }>;
   /** Competitors Place Details could not confirm — verify on foot, never scored. */
   unconfirmed: UnconfirmedPoi[];
+  /** Operator-reported local signals — displayed evidence only, never scored. */
+  signals: LocalSignal[];
   /** Date the underlying data was fetched (YYYY-MM-DD, = generatedAt date). */
   dataAsOf: string;
   /** Memo expiry date (YYYY-MM-DD): dataAsOf + 30 days. */
@@ -150,6 +153,8 @@ export interface ScoutOptions {
   profile?: CountryProfile;
   /** Micro-checklists per candidate id (parsed from a --checklist file). */
   checklist?: Record<string, MicroChecklist>;
+  /** Operator-reported local signals (parsed from a --signals file). Display only — never scored. */
+  signals?: LocalSignal[];
 }
 
 function pickAnchor(results: GeocodeResult[], profile: CountryProfile = VN_HCMC_PROFILE): GeocodeResult | undefined {
@@ -583,6 +588,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     candidates: scored,
     excluded,
     unconfirmed,
+    signals: opts.signals ?? [],
     dataAsOf,
     expiresAt: expiryFor(dataAsOf),
     winnerRoute,

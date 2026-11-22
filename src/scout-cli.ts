@@ -3,11 +3,15 @@
  *
  *   sitescout scout "Where should I open a specialty coffee shop in Thảo Điền?"
  *     [--id thaodien-coffee] [--planner heuristic|llm] [--out examples/<id>]
- *     [--credit-cap 300] [--checklist <file>]
+ *     [--credit-cap 300] [--checklist <file>] [--signals <file>]
  *
  * A --checklist file ({ candidates: { <id>: <MicroChecklist> } }) attaches
  * hand-verified street-level facts to candidates; a malformed file, or one
  * naming an unknown candidate id, aborts before any API call.
+ *
+ * A --signals file ({ signals: [LocalSignal] }) attaches operator-reported
+ * local signals (delivery presence, new competitor, closure) to the memo;
+ * a malformed file aborts before any API call. Signals never alter a score.
  *
  * Writes result.json, report.md, report.html, map.jpg (Geoapify Static Maps)
  * and trace.jsonl. The key is read from GEOAPIFY_API_KEY and sent as an
@@ -23,6 +27,8 @@ import { join } from "node:path";
 import { GeoapifyApi } from "./engine/geoapify.js";
 import { parseChecklistFile } from "./engine/checklist-file.js";
 import { type MicroChecklist } from "./engine/checklist.js";
+import { parseSignalsFile } from "./engine/signals-file.js";
+import { type LocalSignal } from "./engine/signals.js";
 import { heuristicPlan, llmPlan } from "./engine/plan.js";
 import { runScout } from "./engine/scout.js";
 import { renderHtml, renderMarkdown, staticMapBody, traceJsonl } from "./engine/render.js";
@@ -55,6 +61,9 @@ export async function cmdScout(rest: string[], apiKey: string): Promise<void> {
   const checklist: Record<string, MicroChecklist> | undefined = checklistPath
     ? parseChecklistFile(checklistPath).candidates
     : undefined;
+  // Same for signals: a bad file aborts before any API call.
+  const signalsPath = flag(rest, "--signals");
+  const signals: LocalSignal[] | undefined = signalsPath ? parseSignalsFile(signalsPath).signals : undefined;
 
   const planned =
     plannerKind === "llm"
@@ -72,7 +81,7 @@ export async function cmdScout(rest: string[], apiKey: string): Promise<void> {
   });
   console.log(`[plan:${planned.planner}] ${JSON.stringify(planned.plan)}`);
   for (const n of planned.notes) console.log(`  note: ${n}`);
-  const result = await runScout(question, planned, { api, checklist });
+  const result = await runScout(question, planned, { api, checklist, signals });
 
   mkdirSync(out, { recursive: true });
   try {
