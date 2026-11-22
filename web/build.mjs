@@ -27,6 +27,9 @@ for (const d of readdirSync(join(root, "examples"))) {
   const b = join(root, "examples", d, "bands.json");
   if (existsSync(b)) copyFileSync(b, join(here, "public/examples", `${d}.bands.json`));
 }
+// The chain dashboard fetches the committed memo index at /memos-index.json.
+const idx = join(here, "src/memos-index.json");
+if (existsSync(idx)) copyFileSync(idx, join(here, "public/memos-index.json"));
 
 // Embed public/ into the Worker bundle (worker/assets.gen.ts). Wrangler's
 // separate asset-upload step is not usable from every CI/proxy setup, and the

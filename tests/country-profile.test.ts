@@ -101,3 +101,10 @@ describe("resolvePlace honours the profile boundary", () => {
     expect(r.hit?.formatted).toBe("Hồ Hoàn Kiếm, Hà Nội");
   });
 });
+
+describe("bench CLI", () => {
+  it("help lists the bangkok-coffee suite", async () => {
+    const { help } = await import("../src/cli.js");
+    expect(help()).toContain("bangkok-coffee");
+  });
+});

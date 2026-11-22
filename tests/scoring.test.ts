@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_MARKET_PROFILE,
   DEFAULT_WEIGHTS,
+  TH_BANGKOK_PROFILE,
+  VN_HCMC_PROFILE,
   rankCandidates,
   scoreCandidate,
+  trafficBandFor,
   type EvidenceBundle,
 } from "../src/scoring/model.js";
 
@@ -40,6 +44,22 @@ describe("scoreCandidate", () => {
     const low = scoreCandidate({ ...base, competitorCount: 0 });
     const high = scoreCandidate({ ...base, competitorCount: 40 });
     expect(low.scores.competition).toBeGreaterThan(high.scores.competition);
+  });
+
+  it("vn-hcmc and th-bangkok profiles reproduce the default scores exactly", () => {
+    // Guard against a vacuous pass: a missing named ESM import resolves to
+    // undefined under esbuild, and scoreCandidate(undefined) falls back to
+    // the default profile — so pin the profile identities first.
+    expect(VN_HCMC_PROFILE.id).toBe("vn-hcmc");
+    expect(TH_BANGKOK_PROFILE.id).toBe("th-bangkok");
+    const s0 = scoreCandidate(base, DEFAULT_MARKET_PROFILE);
+    expect(scoreCandidate(base, VN_HCMC_PROFILE)).toEqual(s0);
+    expect(scoreCandidate(base, TH_BANGKOK_PROFILE)).toEqual(s0);
+  });
+
+  it("traffic band is null while the profile has no trafficScale", () => {
+    expect(trafficBandFor(0.66, VN_HCMC_PROFILE)).toBeNull();
+    expect(trafficBandFor(0.66, TH_BANGKOK_PROFILE)).toBeNull();
   });
 
   it("missing accessibility evidence scores neutral 0.5", () => {

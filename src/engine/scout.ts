@@ -13,7 +13,7 @@
  *   9. Route Matrix         origins × candidates, drive, traffic≈     [route-matrix]
  *  10. Routing              best origin → #1 (polyline)               [routing]
  *  11. Place Details        5-min DRIVE isochrone around #1           [place-details, drive_5]
- *  12. Scoring              min-max normalised across candidates (local)
+ *  12. Scoring              single unified model (src/scoring/model.ts)
  *
  * Runtime-agnostic: used by the CLI (Node) and the Cloudflare Worker demo.
  * Every number in the result carries `refs` = trace seqs of the calls that
@@ -21,15 +21,33 @@
  * (default VN_HCMC_PROFILE); its isoCountry and lang are passed to every
  * Geoapify call that accepts them.
  */
-import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
+import { GeoapifyApi, GeoapifyError, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
 import { VN_HCMC_PROFILE, type CountryProfile } from "./profile.js";
+import {
+  dataCoverageScore,
+  INSUFFICIENT_DATA_POI_FLOOR,
+  scoreCandidate,
+  TH_BANGKOK_PROFILE as TH_BANGKOK_MARKET_PROFILE,
+  trafficBandFor,
+  VN_HCMC_PROFILE as VN_HCMC_MARKET_PROFILE,
+  WEIGHTS_VERSION as UNIFIED_WEIGHTS_VERSION,
+  type EvidenceBundle,
+  type SubScores,
+} from "../scoring/model.js";
+import {
+  applyChecklists,
+  emptyChecklist,
+  verdictFor,
+  type MicroChecklist,
+  type Verdict,
+} from "./checklist.js";
+import { expiryFor } from "./freshness.js";
+import type { LocalSignal } from "./signals.js";
 import { geometryAreaM2, haversineM, hexGrid, pointInGeometry, round6, type LatLon } from "../geo/grid.js";
 import { foldKey } from "../geo/text.js";
 
 export const ENGINE_VERSION = "1.0.0";
-export const WEIGHTS = { demand: 0.35, competition: 0.25, access: 0.25, reach: 0.15 } as const;
-export const WEIGHTS_VERSION = "1.0.0-isoline";
 
 export type Geometry = { type: string; coordinates: unknown };
 
@@ -49,12 +67,33 @@ export interface CandidateResult {
   /** Mean drive time from demand origins, minutes. */
   meanDriveMin: number | null;
   driveMinByOrigin: Array<number | null>;
-  scores: { demand: number; competition: number; access: number; reach: number };
+  /** Unified five-factor sub-scores (see src/scoring/model.ts). */
+  scores: SubScores;
+  /** Data-coverage score in [0, 1]: POIs found vs. the profile expectation. */
+  coverage: number;
+  /** Street-level micro-checklist (all UNVERIFIED when no file was given). */
+  checklist: MicroChecklist;
+  /** "recommend" or "verify on foot before deciding" (≥2 UNVERIFIED in top 3). */
+  verdict: Verdict;
+  /** Projected daily-customer band, or null while no trafficScale exists. */
+  trafficBand: { low: number; high: number } | null;
   total: number;
   why: string;
   refs: number[];
   /** Competitor & demand POIs inside the isochrone (for the map). */
-  pois: Array<{ name: string; lat: number; lon: number; kind: "competitor" | "demand"; category: string }>;
+  pois: Array<{ name: string; lat: number; lon: number; kind: "competitor" | "demand"; category: string; placeId?: string }>;
+}
+
+/** A competitor Place Details could not confirm — closed, delisted, or absent. */
+export interface UnconfirmedPoi {
+  name: string;
+  lat: number;
+  lon: number;
+  category: string;
+  /** Always "unconfirmed — verify on foot". */
+  reason: string;
+  /** Trace seqs backing the call (the Place Details call that proved it). */
+  refs: number[];
 }
 
 export interface ScoutResult {
@@ -76,6 +115,16 @@ export interface ScoutResult {
   };
   origins: Array<{ query: string; label?: string; lat?: number; lon?: number; ref?: number }>;
   candidates: CandidateResult[];
+  /** Candidates below the POI floor: excluded from ranking, never scored. */
+  excluded: Array<{ id: string; label: string; reason: string; refs: number[] }>;
+  /** Competitors Place Details could not confirm — verify on foot, never scored. */
+  unconfirmed: UnconfirmedPoi[];
+  /** Operator-reported local signals — displayed evidence only, never scored. */
+  signals: LocalSignal[];
+  /** Date the underlying data was fetched (YYYY-MM-DD, = generatedAt date). */
+  dataAsOf: string;
+  /** Memo expiry date (YYYY-MM-DD): dataAsOf + 30 days. */
+  expiresAt: string;
   winnerRoute: { origin: string; timeS?: number; distanceM?: number; geometry?: Geometry; ref: number } | null;
   winnerDrive5: { geometry: Geometry; ref: number } | null;
   limitations: string[];
@@ -102,12 +151,10 @@ export interface ScoutOptions {
   studyRadiusM?: number;
   /** Market profile: geocoder bias, boundary check, stopwords. Default VN_HCMC_PROFILE. */
   profile?: CountryProfile;
-}
-
-function minMax(xs: number[]): (x: number) => number {
-  const lo = Math.min(...xs);
-  const hi = Math.max(...xs);
-  return (x) => (hi - lo < 1e-9 ? 0.5 : (x - lo) / (hi - lo));
+  /** Micro-checklists per candidate id (parsed from a --checklist file). */
+  checklist?: Record<string, MicroChecklist>;
+  /** Operator-reported local signals (parsed from a --signals file). Display only — never scored. */
+  signals?: LocalSignal[];
 }
 
 function pickAnchor(results: GeocodeResult[], profile: CountryProfile = VN_HCMC_PROFILE): GeocodeResult | undefined {
@@ -187,6 +234,20 @@ export async function resolvePlace(api: GeoapifyApi, text: string, profile: Coun
  * office.coworking` returned 0 while `office.company` alone returned 8.
  * Reported in docs/FEEDBACK.md; until clarified we query categories singly.
  */
+/**
+ * True when a Place Details result marks the place closed/delisted.
+ * Contract (see tests/fixtures/ghost-poi.json): properties.closed === true,
+ * properties.status in {"closed", "delisted"}, or the OSM raw record
+ * carries permanently_closed. The real Geoapify closed representation is
+ * undocumented — this predicate defines what the engine treats as closed.
+ */
+export function isClosedPlaceDetails(props: Record<string, unknown>): boolean {
+  if (props.closed === true) return true;
+  if (props.status === "closed" || props.status === "delisted") return true;
+  const datasource = props.datasource as { raw?: Record<string, unknown> } | undefined;
+  return datasource?.raw?.permanently_closed === true;
+}
+
 export async function placesMulti(api: GeoapifyApi, categories: string[], filter: string, limit: number, lang?: string): Promise<{ features: Array<Feature<PlaceProps>>; refs: number[] }> {
   const seen = new Set<string>();
   const features: Array<Feature<PlaceProps>> = [];
@@ -216,6 +277,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   const spacing = opts.gridSpacingM ?? 300;
   const studyR = opts.studyRadiusM ?? 1300;
   const limitations: string[] = [];
+  const unconfirmed: UnconfirmedPoi[] = [];
 
   // 1 — anchor
   emit({ type: "stage", stage: "geocode", detail: plan.area });
@@ -280,7 +342,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   }
 
   // 5–7 — per candidate: label, walk isoline, POIs inside it
-  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin">> = [];
+  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin" | "coverage" | "checklist" | "verdict" | "trafficBand">> = [];
   for (const [i, p] of chosen.entries()) {
     emit({ type: "stage", stage: "candidate", detail: `${i + 1}/${chosen.length}` });
     const refs: number[] = [];
@@ -316,14 +378,55 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
       const pr = f.properties as PlaceProps;
       if (pr.categories?.includes(plan.competitorCategory)) {
         competitors++;
-        pois.push({ name: pr.name ?? pr.address_line1 ?? "competitor", lat: pr.lat, lon: pr.lon, kind: "competitor", category: plan.competitorCategory });
+        pois.push({ name: pr.name ?? pr.address_line1 ?? "competitor", lat: pr.lat, lon: pr.lon, kind: "competitor", category: plan.competitorCategory, placeId: pr.place_id });
       } else {
         const c = plan.demandCategories.find((d) => pr.categories?.includes(d));
         if (c) {
           demand[c]++;
-          pois.push({ name: pr.name ?? pr.address_line1 ?? c, lat: pr.lat, lon: pr.lon, kind: "demand", category: c });
+          pois.push({ name: pr.name ?? pr.address_line1 ?? c, lat: pr.lat, lon: pr.lon, kind: "demand", category: c, placeId: pr.place_id });
         }
       }
+    }
+    // Ghost-POI filter (spec §2/H2.2): cross-check each competitor POI
+    // with Place Details (features ["details"] only — 1 credit per call).
+    // No result, a 404, or a closed/delisted marker → unconfirmed: out of
+    // the count and out of the score inputs, listed for a foot check. Any
+    // other Place Details failure (network/429) does NOT unconfirm — the
+    // POI stays counted and a limitation is added instead. Never silently
+    // inflate or deflate a score.
+    let ghostIncomplete = 0;
+    const keptPois: CandidateResult["pois"] = [];
+    for (const p of pois) {
+      if (p.kind !== "competitor" || !p.placeId) {
+        keptPois.push(p);
+        continue;
+      }
+      try {
+        const d = await api.placeDetails({ id: p.placeId, features: ["details"], lang });
+        const f = d.features[0];
+        if (!f || isClosedPlaceDetails(f.properties)) {
+          unconfirmed.push({ name: p.name, lat: p.lat, lon: p.lon, category: p.category, reason: "unconfirmed — verify on foot", refs: [d.seq] });
+          competitors--;
+        } else {
+          keptPois.push(p);
+        }
+      } catch (e) {
+        if (e instanceof GeoapifyError && e.status === 404) {
+          // 404: the place no longer exists in the index — unconfirmed.
+          // The failed call is still recorded in api.calls; cite its seq.
+          const failedSeq = (e as { record?: { seq?: number } }).record?.seq;
+          unconfirmed.push({ name: p.name, lat: p.lat, lon: p.lon, category: p.category, reason: "unconfirmed — verify on foot", refs: failedSeq !== undefined ? [failedSeq] : [] });
+          competitors--;
+        } else {
+          ghostIncomplete++;
+          keptPois.push(p);
+        }
+      }
+    }
+    pois.length = 0;
+    pois.push(...keptPois);
+    if (ghostIncomplete > 0) {
+      limitations.push(`Ghost check incomplete for ${ghostIncomplete} competitor(s) — Place Details failed, counts kept as-is; verify on foot.`);
     }
     const cand = {
       id: `c${i + 1}`,
@@ -367,33 +470,63 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     }
   }
 
-  // 12 — scoring (min-max across the candidate set)
-  const density = cands.map((c) => c.demandTotal / Math.max(0.05, c.isolineAreaM2 / 1e6));
+  // 12 — scoring via the single unified model (src/scoring/model.ts).
+  // The REST `reach` factor is dropped as a weight and folded into
+  // `catchment` (POIs per km² already divides by isoline area).
   const meanDrive = cands.map((_, ti) => {
     const col = times.map((row) => row[ti]).filter((x) => Number.isFinite(x));
     return col.length ? col.reduce((a, b) => a + b, 0) / col.length / 60 : null;
   });
-  const nDemand = minMax(density);
-  const nComp = minMax(cands.map((c) => c.competitors));
-  const nReach = minMax(cands.map((c) => c.isolineAreaM2));
-  const drives = meanDrive.filter((x): x is number => x !== null);
-  const nDrive = drives.length ? minMax(drives) : () => 0.5;
-  const scored: CandidateResult[] = cands.map((c, i) => {
-    const scores = {
-      demand: nDemand(density[i]),
-      competition: 1 - nComp(c.competitors),
-      access: meanDrive[i] === null ? 0.5 : 1 - nDrive(meanDrive[i] as number),
-      reach: nReach(c.isolineAreaM2),
+  // Market profile for scoring: the run's geocoder profile selects it
+  // ("th-bangkok" → TH_BANGKOK_PROFILE, anything else → VN_HCMC_PROFILE).
+  const marketProfile = profile.id === "th-bangkok" ? TH_BANGKOK_MARKET_PROFILE : VN_HCMC_MARKET_PROFILE;
+  // Insufficient-data floor (spec §1/H1.4): a candidate with fewer than
+  // INSUFFICIENT_DATA_POI_FLOOR POIs across all sweeps is excluded from
+  // ranking — "no data" must never read as "no competition". Excluded
+  // candidates never enter `scored`, never receive a rank, and never
+  // affect the winner route/drive-5 steps (those read scored[0]).
+  const excluded: ScoutResult["excluded"] = [];
+  const rankable: Array<{ cand: (typeof cands)[number]; i: number }> = [];
+  for (const [i, c] of cands.entries()) {
+    const totalPois = c.competitors + c.demandTotal;
+    if (totalPois < INSUFFICIENT_DATA_POI_FLOOR) {
+      excluded.push({
+        id: c.id,
+        label: c.label,
+        reason: `insufficient data: ${totalPois} POIs across all sweeps (floor ${INSUFFICIENT_DATA_POI_FLOOR})`,
+        refs: [...c.refs],
+      });
+    } else {
+      rankable.push({ cand: c, i });
+    }
+  }
+  const scored: CandidateResult[] = rankable.map(({ cand: c, i }) => {
+    const evidence: EvidenceBundle = {
+      candidateId: c.id,
+      candidateLabel: c.label,
+      competitorCount: c.competitors,
+      complementaryPoiCount: c.demandTotal,
+      // [ASSUMPTION] walk speed 80 m/min: catchment radius = walk minutes × 80.
+      catchmentRadiusM: plan.walkMinutes * 80,
+      catchmentAreaM2: c.isolineAreaM2,
+      ...(meanDrive[i] === null ? {} : { meanAccessDurationS: meanDrive[i] * 60 }),
     };
-    const total = WEIGHTS.demand * scores.demand + WEIGHTS.competition * scores.competition + WEIGHTS.access * scores.access + WEIGHTS.reach * scores.reach;
     const refs = [...c.refs, ...(matrixRef !== undefined ? [matrixRef] : [])];
+    const scoredCandidate = scoreCandidate(evidence, marketProfile, refs);
+    const total = Math.round(scoredCandidate.total * 1000) / 1000;
     const topDemand = Object.entries(c.demand).sort((a, b) => b[1] - a[1]).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(", ") || "no demand POIs";
     const why = `${plan.walkMinutes}-min walk reaches ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² with ${topDemand} and ${c.competitors} competing ${plan.competitorCategory}` + (meanDrive[i] !== null ? `; ${Math.round(meanDrive[i] as number)} min average drive from ${okOrigins.length} origin(s).` : ".");
     return {
       ...c,
       rank: 0,
-      scores,
-      total: Math.round(total * 1000) / 1000,
+      scores: scoredCandidate.scores,
+      total,
+      coverage: dataCoverageScore(c.competitors + c.demandTotal, marketProfile),
+      // Checklist + verdict are set after ranking (verdict needs the rank);
+      // trafficBand derives from the published (rounded) total.
+      checklist: opts.checklist?.[c.id] ?? emptyChecklist(),
+      verdict: "recommend" as Verdict,
+      trafficBand: trafficBandFor(total, marketProfile),
       why,
       refs,
       meanDriveMin: meanDrive[i] === null ? null : Math.round((meanDrive[i] as number) * 10) / 10,
@@ -402,6 +535,11 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   });
   scored.sort((a, b) => b.total - a.total);
   scored.forEach((c, i) => (c.rank = i + 1));
+  // Memo v2 data model: a checklist naming an id not in this run fails
+  // loudly (applyChecklists throws); every candidate then gets its verdict
+  // from its checklist and its final rank.
+  if (opts.checklist) applyChecklists({ candidates: scored }, opts.checklist);
+  for (const c of scored) c.verdict = verdictFor(c.checklist, c.rank);
 
   // 10–11 — winner context
   let winnerRoute: ScoutResult["winnerRoute"] = null;
@@ -430,13 +568,15 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   limitations.push(
     "POI counts come from Geoapify Places (OpenStreetMap-based); coverage of small shops is incomplete, so counts are relative signals, not market sizes.",
     "Drive times use Geoapify's approximated traffic at query time, not a specific hour.",
-    `Weights (${WEIGHTS_VERSION}) are heuristic and not calibrated against real store outcomes.`,
-    "Decision support only — visit the site before signing a lease.",
+    `Weights (${UNIFIED_WEIGHTS_VERSION}) are heuristic and have not been validated against real store outcomes.`,
+    "Decision support only.",
   );
 
+  const generatedAt = new Date().toISOString();
+  const dataAsOf = generatedAt.slice(0, 10);
   const result: ScoutResult = {
     engine: `sitescout-engine@${ENGINE_VERSION}`,
-    weightsVersion: WEIGHTS_VERSION,
+    weightsVersion: UNIFIED_WEIGHTS_VERSION,
     question,
     plan,
     planner: planned.planner,
@@ -446,12 +586,17 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     area: { query: plan.area, anchor, ward, studyRadiusM: studyR, refs: areaRefs },
     origins,
     candidates: scored,
+    excluded,
+    unconfirmed,
+    signals: opts.signals ?? [],
+    dataAsOf,
+    expiresAt: expiryFor(dataAsOf),
     winnerRoute,
     winnerDrive5,
     limitations: [...new Set(limitations)],
     calls: api.calls,
     creditsEstimated: api.creditsSpent,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     durationMs: Date.now() - t0,
   };
   emit({ type: "done", result });

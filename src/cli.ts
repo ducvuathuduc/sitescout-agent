@@ -24,8 +24,19 @@
  *       Re-render Markdown/HTML from an existing trace + run manifest
  *       (no MCP calls — reproducibility check).
  *
- *   sitescout bench run [--suite vngeobench]
- *       Score bench/vngeobench/questions.json against logs/*.jsonl traces.
+ *   sitescout bench run [--suite vngeobench|bangkok-coffee]
+ *       Score bench/vngeobench/questions.json against logs/*.jsonl traces,
+ *       or run the Bangkok coffee calibration bench (bench/bangkok-coffee/).
+ *
+ *   sitescout outcome record --memo <id> --candidate <id>
+ *       --decision <signed|opened|passed> --method <customer-counts|pos-transactions>
+ *       [--band-low <n> --band-high <n>] [--actual-mean <n>] [--tier <high|medium|low>]
+ *       Append one ground-truth outcome to bench/outcomes/outcomes.jsonl.
+ *       Refuses orphans: without a usable band and without a matching
+ *       examples/<id>/result.json, nothing is recorded.
+ *
+ *   sitescout outcome report [--out bench/outcomes/CALIBRATION-REPORT.md]
+ *       Publish the ±20% calibration report from the outcomes file.
  *
  *   sitescout static <report.html> <out.png>
  *       Static PNG export (playwright if installed; honest manual
@@ -52,8 +63,11 @@ import {
 import { renderReport } from "./report/render.js";
 import { rankCandidates } from "./scoring/model.js";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
 import { cmdScout } from "./scout-cli.js";
+import { cmdOutcome } from "./outcome-cli.js";
 
 loadDotenv({ path: ".env.local" });
 
@@ -70,7 +84,8 @@ function requireApiKey(): string {
   return key;
 }
 
-function help(): string {
+/** Exported for tests: the CLI help text. */
+export function help(): string {
   return [
     "sitescout — evidence-traced location-intelligence agent (Geoapify MCP-first)",
     "",
@@ -80,7 +95,11 @@ function help(): string {
     "  sitescout smoke [--question thaodien-coffee] [--budget N]",
     "  sitescout trace validate <file>",
     "  sitescout report <question-id> [--format md|html]",
-    "  sitescout bench run [--suite vngeobench]",
+    "  sitescout bench run [--suite vngeobench|bangkok-coffee]",
+    "  sitescout outcome record --memo <id> --candidate <id>",
+    "      --decision <signed|opened|passed> --method <customer-counts|pos-transactions>",
+    "      [--band-low <n> --band-high <n>] [--actual-mean <n>] [--tier <high|medium|low>]",
+    "  sitescout outcome report [--out bench/outcomes/CALIBRATION-REPORT.md]",
     "  sitescout static <report.html> <out.png>",
     "  sitescout --help",
     "",
@@ -239,10 +258,23 @@ async function cmdReport(rest: string[]): Promise<void> {
 }
 
 function cmdBench(rest: string[]): void {
-  if (rest[0] !== "run") throw new Error("usage: sitescout bench run [--suite vngeobench]");
+  if (rest[0] !== "run") throw new Error("usage: sitescout bench run [--suite vngeobench|bangkok-coffee]");
   const suite = flag(rest, "--suite") ?? "vngeobench";
-  if (suite !== "vngeobench") throw new Error(`unknown suite "${suite}"`);
-  runSuite();
+  if (suite === "vngeobench") {
+    runSuite();
+    return;
+  }
+  if (suite === "bangkok-coffee") {
+    // Offline bench: spawn the runner (same spawnSync pattern as `static`)
+    // and forward its exit code. Writes bench/bangkok-coffee/RESULTS.md.
+    // (A specific recorded run is scored via `node bench/bangkok-coffee/run.mjs <run.json>`.)
+    const r = spawnSync(process.execPath, [join("bench", "bangkok-coffee", "run.mjs")], {
+      stdio: "inherit",
+    });
+    process.exitCode = r.status ?? 1;
+    return;
+  }
+  throw new Error(`unknown suite "${suite}"`);
 }
 
 async function main(): Promise<void> {
@@ -259,8 +291,8 @@ async function main(): Promise<void> {
   if (cmd === "smoke") return cmdSmoke(rest);
   if (cmd === "report") return cmdReport(rest);
   if (cmd === "bench") return cmdBench(rest);
+  if (cmd === "outcome") return cmdOutcome(rest);
   if (cmd === "static") {
-    const { spawnSync } = await import("node:child_process");
     const r = spawnSync(process.execPath, [join("dist", "report", "static.js"), ...rest], {
       stdio: "inherit",
     });
@@ -272,7 +304,14 @@ async function main(): Promise<void> {
   process.exitCode = 1;
 }
 
-main().catch((err) => {
-  console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-  process.exitCode = 1;
-});
+// Only run the CLI when this file is the entry point — importing it (e.g.
+// from tests) must not execute main() with the importer's argv.
+const invokedAsMain =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (invokedAsMain) {
+  main().catch((err) => {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exitCode = 1;
+  });
+}

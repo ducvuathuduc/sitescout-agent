@@ -17,8 +17,21 @@ import {
   ScoredCandidate,
   ScoredVenue,
   WEIGHTS_VERSION,
+  formatTrafficBand,
   rankCandidates,
+  trafficBandFor,
+  VN_HCMC_PROFILE,
 } from "../scoring/model.js";
+import {
+  MICRO_FACTORS,
+  MICRO_FACTOR_DESCRIPTIONS,
+  MICRO_FACTOR_LABELS,
+  checklistEntryText,
+  emptyChecklist,
+  verdictFor,
+  type MicroChecklist,
+} from "../engine/checklist.js";
+import { expiryFor, isExpired, isStale } from "../engine/freshness.js";
 
 function fmt(n: number): string {
   return n.toFixed(2);
@@ -38,6 +51,11 @@ export interface SiteReportData {
   trace: readonly TraceEntry[];
   weightsVersion: string;
   creditsReport: string;
+  /** Hand-verified street facts per candidate id (defaults to all-UNVERIFIED). */
+  checklists?: Record<string, MicroChecklist>;
+  /** Date the underlying data was fetched (YYYY-MM-DD); memo expires 30 days later. */
+  dataAsOf?: string;
+  expiresAt?: string;
   extras?: {
     droppedCategories: string[];
     coverage: { unionAreaM2?: number; sumAreaM2: number; refs: number[] };
@@ -88,7 +106,7 @@ function siteLimitationsMd(): string[] {
     "## Limitations (read before acting on this report)",
     "",
     "- **Catchments are circular-buffer approximations** (`transform_geometry` buffer), not drive-time isochrones. The Geoapify MCP server exposes no isochrone tool (Isoline is REST-only); this gap is filed as `docs/FEEDBACK.md#1`. Treat accessibility scores as directional.",
-    `- Scores use heuristic weights (version \`${WEIGHTS_VERSION}\`); not calibrated against real store outcomes.`,
+    `- Scores use heuristic weights (version \`${WEIGHTS_VERSION}\`); not yet measured against real store outcomes.`,
     "- Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition”.",
     "- POI data reflects Geoapify's places index at query time, not live foot traffic. Route times use approximated traffic at query time — time-of-day dependent.",
     "- This report is decision support, not a guarantee of business outcomes.",
@@ -107,6 +125,12 @@ export function renderReport(data: SiteReportData): string {
   lines.push(
     `> Generated: ${new Date().toISOString()} · trace: \`logs/${question.id}.jsonl\` (${trace.length} tool calls) · weights \`${data.weightsVersion}\``,
   );
+  if (data.dataAsOf) {
+    const exp = data.expiresAt ?? expiryFor(data.dataAsOf);
+    lines.push(`> Data as of ${data.dataAsOf} · valid until ${exp} (30 days).`);
+    if (isExpired(exp)) lines.push(`> **This memo has expired — re-run before deciding.**`);
+    if (isStale(data.dataAsOf)) lines.push(`> **Stale data:** this memo's data is older than 90 days — re-run before deciding.`);
+  }
   lines.push("");
 
   if (ranked.length === 0) {
@@ -115,6 +139,19 @@ export function renderReport(data: SiteReportData): string {
     );
     lines.push("");
   } else {
+    lines.push("## Executive summary");
+    lines.push("");
+    lines.push("The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.");
+    lines.push("");
+    lines.push("| # | Candidate | Score | Projected traffic | Verdict |");
+    lines.push("|---|---|---|---|---|");
+    ranked.slice(0, 3).forEach((c, i) => {
+      const cl = data.checklists?.[c.candidateId] ?? emptyChecklist();
+      lines.push(`| ${i + 1} | ${c.candidateLabel} | **${fmt(c.total)}** | ${formatTrafficBand(trafficBandFor(c.total, VN_HCMC_PROFILE))} | ${verdictFor(cl, i + 1)} |`);
+    });
+    lines.push("");
+    lines.push("**Visit the site before signing a lease.**");
+    lines.push("");
     lines.push("## Ranked shortlist");
     lines.push("");
     lines.push("| Rank | Candidate | Total | Competition | Complementarity | Catchment | Accessibility | Evidence |");
@@ -129,15 +166,37 @@ export function renderReport(data: SiteReportData): string {
     lines.push("");
     lines.push("## Why each site ranks here");
     lines.push("");
-    for (const c of ranked) {
+    for (const [i, c] of ranked.entries()) {
       const refs = c.evidenceRefs.map(TraceLog.cite).join(" ");
       lines.push(`### ${c.candidateLabel} (total ${fmt(c.total)})`);
       lines.push(`- Competition sub-score ${fmt(c.scores.competition)} ${refs}`);
       lines.push(`- Complementarity sub-score ${fmt(c.scores.complementarity)} ${refs}`);
       lines.push(`- Catchment sub-score ${fmt(c.scores.catchment)} ${refs}`);
       lines.push(`- Accessibility sub-score ${fmt(c.scores.accessibility)} ${refs}`);
+      lines.push(`- Projected traffic: ${formatTrafficBand(trafficBandFor(c.total, VN_HCMC_PROFILE))}`);
+      if (data.dataAsOf) lines.push(`- Counts as of ${data.dataAsOf} (Geoapify Places; walk zone: circular buffer (no Isoline tool on the MCP server)) ${refs}`);
+      lines.push(`- Verdict: ${verdictFor(data.checklists?.[c.candidateId] ?? emptyChecklist(), i + 1)}`);
       lines.push("");
     }
+    lines.push("## Micro-feature checklist");
+    lines.push("");
+    lines.push("Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.");
+    lines.push("");
+    lines.push(`| Candidate | ${MICRO_FACTORS.map((f) => MICRO_FACTOR_LABELS[f]).join(" | ")} |`);
+    lines.push(`|---|${MICRO_FACTORS.map(() => "---").join("|")}|`);
+    for (const c of ranked) {
+      const cl = data.checklists?.[c.candidateId] ?? emptyChecklist();
+      lines.push(`| ${c.candidateLabel} | ${MICRO_FACTORS.map((f) => checklistEntryText(cl[f])).join(" | ")} |`);
+    }
+    lines.push("");
+    lines.push("## What this model cannot see");
+    lines.push("");
+    lines.push("The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.");
+    lines.push("");
+    for (const f of MICRO_FACTORS) {
+      lines.push(`- ${MICRO_FACTOR_DESCRIPTIONS[f]}: ${ranked.map((c, i) => `#${i + 1} ${(data.checklists?.[c.candidateId] ?? emptyChecklist())[f].status}`).join(" · ")}`);
+    }
+    lines.push("");
   }
 
   if (data.extras) {

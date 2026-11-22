@@ -35,7 +35,7 @@
   --ok: #1A7F37; --warn-ink: #7A4D00; --warn-bg: #FFF4D6; --warn-line: #F2C94C;
   --err-ink: #A4161A; --err-bg: #FDECEC; --err-line: #F1A7A9;
   /* factor colours (score breakdown) */
-  --f-demand: #0E9384; --f-competition: #E07B00; --f-access: #1570EF; --f-reach: #7A5AF8;
+  --f-competition: #E07B00; --f-complementarity: #0E9384; --f-catchment: #7A5AF8; --f-accessibility: #1570EF; --f-cost: #636D72;
   /* radius + elevation */
   --r1: 6px; --r2: 10px; --r3: 14px;
   --e1: 0 1px 2px rgba(16, 24, 40, 0.08), 0 1px 3px rgba(16, 24, 40, 0.06);
@@ -259,7 +259,7 @@ code { font: 500 var(--t-xs)/1.4 var(--mono); background: var(--sunken); border:
 .bd-track { height: 8px; background: rgba(21, 33, 46, 0.08); border-radius: 4px; overflow: hidden; }
 .bd-track i { display: block; height: 100%; border-radius: 4px; }
 .bd-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
-.bd-demand { background: var(--f-demand); } .bd-competition { background: var(--f-competition); } .bd-access { background: var(--f-access); } .bd-reach { background: var(--f-reach); }
+.bd-competition { background: var(--f-competition); } .bd-complementarity { background: var(--f-complementarity); } .bd-catchment { background: var(--f-catchment); } .bd-accessibility { background: var(--f-accessibility); } .bd-cost { background: var(--f-cost); }
 .why { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); font-size: var(--t-xs); line-height: 18px; }
 .why li { display: grid; grid-template-columns: 8px 1fr; gap: var(--s2); }
 .why-k { width: 8px; height: 8px; border-radius: 2px; margin-top: 5px; }

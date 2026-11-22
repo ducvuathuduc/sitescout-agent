@@ -46,12 +46,14 @@ import {
 } from "../mcp/results.js";
 import { candidateQueries } from "../geo/vietnam-address.js";
 import { hexRing } from "../geo/grid.js";
+import { expiryFor } from "../engine/freshness.js";
 import {
   EvidenceBundle,
   INSUFFICIENT_DATA_POI_FLOOR,
   MeetupVenueEvidence,
   ScoredCandidate,
   ScoredVenue,
+  VN_HCMC_PROFILE,
   WEIGHTS_VERSION,
   rankCandidates,
   rankVenues,
@@ -594,8 +596,12 @@ export async function runSiteSelection(
   }
 
   // Phase 3 — score, rank, render.
+  // The MCP path is HCMC-only (all geocoding is country_codes ["vn"],
+  // Vietnam; SiteSelectionQuestion carries no market field), so the
+  // vn-hcmc market profile is passed explicitly. Scores are identical to
+  // the default profile: VN_HCMC_PROFILE reproduces it exactly.
   const scored = rankCandidates(
-    rankable.map((c) => scoreCandidate(c.evidence, undefined, c.refs)),
+    rankable.map((c) => scoreCandidate(c.evidence, VN_HCMC_PROFILE, c.refs)),
   );
 
   // Phase 3b — route from the first demand origin to the #1 candidate
@@ -644,6 +650,10 @@ export async function runSiteSelection(
     trace: trace.all(),
     weightsVersion: WEIGHTS_VERSION,
     creditsReport: deps.budget.report(),
+    // The MCP path has no checklist input yet (no --checklist equivalent for
+    // `ask`) — renderReport defaults every candidate to all-UNVERIFIED.
+    dataAsOf: new Date().toISOString().slice(0, 10),
+    expiresAt: expiryFor(new Date().toISOString().slice(0, 10)),
     extras: { droppedCategories, coverage, winnerRoute, toolsUsed: [...new Set(trace.all().map((e) => e.tool))] },
   };
   const reportMarkdown = renderReport(data);
@@ -1034,7 +1044,7 @@ function tracePanel(trace: readonly TraceEntry[]): TracePanelEntry[] {
 function siteLimitations(): string[] {
   return [
     "Catchments are circular-buffer approximations (transform_geometry buffer), not drive-time isochrones — the Geoapify MCP server exposes no isochrone tool (Isoline is REST-only); filed as docs/FEEDBACK.md#1. Treat accessibility scores as directional.",
-    `Scores use v0 heuristic weights (${WEIGHTS_VERSION}); calibration against ground truth is pending a live key.`,
+    `Scores use heuristic weights (${WEIGHTS_VERSION}); measurement against ground truth is pending a live key.`,
     "Candidates below the POI data-density floor are excluded from ranking, never scored as “no competition”.",
     "POI data reflects Geoapify's places index at query time, not live foot traffic. Route times use approximated traffic at query time — time-of-day dependent.",
     "This report is decision support, not a guarantee of business outcomes.",

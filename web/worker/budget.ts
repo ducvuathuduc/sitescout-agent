@@ -23,6 +23,49 @@ export const TILE_CREDITS = 0.25;
 export const DEFAULT_DAILY_CAP = 2400;
 export const DEFAULT_PER_IP_CALL_CAP = 180;
 
+export type Market = "hcmc" | "bangkok";
+
+/**
+ * [ASSUMPTION] (spec silent) The 2,400-credit daily budget splits 1,200 /
+ * 1,200 per market by default (env-overridable via DAILY_CREDIT_CAP_HCMC /
+ * DAILY_CREDIT_CAP_BANGKOK); a Bangkok run cannot eat the HCMC budget and
+ * vice versa.
+ */
+export const DEFAULT_DAILY_CAP_HCMC = 1200;
+export const DEFAULT_DAILY_CAP_BANGKOK = 1200;
+
+/** HCMC bias point [lon, lat] — mirrors VN_HCMC_PROFILE.biasPoint (src/engine/profile.ts). */
+export const HCMC_BIAS: [number, number] = [106.7009, 10.7769];
+/** Bangkok bias point [lon, lat] — mirrors TH_BANGKOK_PROFILE.biasPoint. */
+export const BANGKOK_BIAS: [number, number] = [100.5018, 13.7563];
+/** Thailand national extent [west, south, east, north] — mirrors TH_BBOX. */
+export const TH_BBOX: [number, number, number, number] = [97.344, 5.613, 105.637, 20.465];
+/** Market radius: a point is in a market when within this of its bias point (mirrors both profiles' boundaryCheck). */
+export const MARKET_RADIUS_M = 40_000;
+
+// Haversine, ported from src/geo/grid.ts — the Worker must not import Node code.
+const R_M = 6_371_008.8;
+const rad = (d: number): number => (d * Math.PI) / 180;
+function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R_M * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Which demo market a point belongs to, or null when out of scope.
+ * HCMC mirrors VN_HCMC_PROFILE.boundaryCheck (within 40 km of the bias
+ * point); Bangkok mirrors TH_BANGKOK_PROFILE.boundaryCheck (inside the
+ * Thailand bbox AND within 40 km of the bias point).
+ */
+export function marketOf(lat: number, lon: number): Market | null {
+  if (haversineM(lat, lon, HCMC_BIAS[1], HCMC_BIAS[0]) < MARKET_RADIUS_M) return "hcmc";
+  const inTh = lon >= TH_BBOX[0] && lat >= TH_BBOX[1] && lon <= TH_BBOX[2] && lat <= TH_BBOX[3];
+  if (inTh && haversineM(lat, lon, BANGKOK_BIAS[1], BANGKOK_BIAS[0]) < MARKET_RADIUS_M) return "bangkok";
+  return null;
+}
+
 /** Credits for one time isoline request: `range` is in seconds, comma-separated for several bands. */
 export function isolineCredits(range: string | null, type: string | null = "time"): number {
   const ranges = (range ?? "").split(",").map(Number).filter((r) => r > 0);

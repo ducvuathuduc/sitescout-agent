@@ -1,0 +1,54 @@
+{
+  "_note": "SYNTHETIC — recorded-run fixture for tests only, not a real engine run",
+  "candidates": [
+    {
+      "id": "r1",
+      "label": "Thonglor Soi 10",
+      "lat": 13.731,
+      "lon": 100.581,
+      "total": 0.82
+    },
+    {
+      "id": "r2",
+      "label": "Thonglor Soi 8",
+      "lat": 13.729,
+      "lon": 100.579,
+      "total": 0.74
+    },
+    {
+      "id": "r3",
+      "label": "Thonglor Soi 13",
+      "lat": 13.732,
+      "lon": 100.582,
+      "total": 0.66
+    },
+    {
+      "id": "r4",
+      "label": "Sukhumvit 55",
+      "lat": 13.728,
+      "lon": 100.583,
+      "total": 0.58
+    },
+    {
+      "id": "r5",
+      "label": "Thonglor Soi 17",
+      "lat": 13.733,
+      "lon": 100.578,
+      "total": 0.51
+    },
+    {
+      "id": "r6",
+      "label": "Sukhumvit 49",
+      "lat": 13.727,
+      "lon": 100.577,
+      "total": 0.44
+    },
+    {
+      "id": "r7",
+      "label": "Thonglor Soi 21",
+      "lat": 13.734,
+      "lon": 100.584,
+      "total": 0.38
+    }
+  ]
+}

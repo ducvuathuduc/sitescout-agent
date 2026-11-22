@@ -2,22 +2,23 @@
  * SiteScout live demo — Cloudflare Worker (free plan).
  *
  *  /geo/*          allow-listed proxy to api.geoapify.com. The key lives only
- *                  here, as the GEOAPIFY_KEY secret. HCMC-only coordinates,
- *                  per-IP + global daily caps (D1), 24 h edge cache.
- *  /tiles/z/x/y    Geoapify "positron" raster tiles, HCMC bbox, 30-day cache.
+ *                  here, as the GEOAPIFY_KEY secret. HCMC + Bangkok
+ *                  coordinates, per-IP + per-market daily caps (D1), 24 h edge cache.
+ *  /tiles/z/x/y    Geoapify "positron" raster tiles, HCMC and Bangkok bboxes, 30-day cache.
  *  /api/plan       optional LLM planner on Workers AI (no third-party key);
  *                  the browser validates the JSON with zod before use.
- *  /api/status     today's usage vs caps (shown in the UI).
+ *  /api/status     today's usage vs caps, per market (shown in the UI).
  *  /api/share      POST a finished run → short id; GET /api/share/<id> → the run
  *                  (D1, 1.5 MB cap, 20 shares per visitor per day). No Geoapify credits.
  *  everything else static assets (web/public).
  *
- * API calls and map tiles share ONE daily credit budget (budget.ts):
- * spent = credits + tiles × 0.25. When a cap is reached the proxy answers
+ * API calls and map tiles share a daily credit budget per market (budget.ts):
+ * spent = credits + tiles × 0.25. The 2,400-credit budget splits 1,200 / 1,200
+ * (HCMC / Bangkok) by default. When a cap is reached the proxy answers
  * 429 {fallback:true} and the UI switches to the pre-recorded runs in /examples/.
  */
 import { ASSETS as EMBEDDED } from "./assets.gen.js";
-import { checkCaps, credits, spent, DEFAULT_DAILY_CAP, DEFAULT_PER_IP_CALL_CAP, TILE_CREDITS } from "./budget.js";
+import { checkCaps, credits, marketOf, spent, DEFAULT_DAILY_CAP, DEFAULT_DAILY_CAP_BANGKOK, DEFAULT_DAILY_CAP_HCMC, DEFAULT_PER_IP_CALL_CAP, TH_BBOX, TILE_CREDITS, type Market } from "./budget.js";
 
 const bin = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 function serveEmbedded(url: URL): Response {
@@ -41,14 +42,16 @@ h1{font-size:22px;font-weight:600;margin:0 0 10px}p{font-size:18px;line-height:1
 .btn{background:#fff;color:#1570EF;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none}
 </style></head><body><header><span>SITESCOUT</span><a href="https://github.com/ducvuathuduc/sitescout-agent">GitHub</a></header><main>
 <div class="badge"><svg width="24" height="27" viewBox="0 0 24 27"><path d="M12 1C6.5 1 2 5.3 2 10.6 2 17.6 12 26 12 26s10-8.4 10-15.4C22 5.3 17.5 1 12 1z" fill="#fff"/><circle cx="12" cy="10.5" r="3.6" fill="#1570EF"/></svg></div>
-<h1>404 ERROR</h1><p>This place isn't on our map. The demo covers Ho Chi Minh City site analyses.</p><a class="btn" href="/">Back to the map</a></main></body></html>`;
+<h1>404 ERROR</h1><p>This place isn't on our map. The demo covers Ho Chi Minh City and Bangkok site analyses.</p><a class="btn" href="/">Back to the map</a></main></body></html>`;
 
 export interface Env {
   GEOAPIFY_KEY: string;
   DB: D1Database;
   AI?: { run(model: string, input: unknown): Promise<unknown> };
   ASSETS?: { fetch(req: Request): Promise<Response> };
-  DAILY_CREDIT_CAP?: string;
+  /** Per-market daily credit caps; each defaults to 1,200 (see budget.ts). */
+  DAILY_CREDIT_CAP_HCMC?: string;
+  DAILY_CREDIT_CAP_BANGKOK?: string;
   PER_IP_CALL_CAP?: string;
   TILE_CAP?: string;
 }
@@ -74,22 +77,22 @@ const json = (x: unknown, status = 200, extra: Record<string, string> = {}): Res
 
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-function inHcmc(lat: number, lon: number): boolean {
-  return lat >= BBOX.minLat && lat <= BBOX.maxLat && lon >= BBOX.minLon && lon <= BBOX.maxLon;
+function inScope(lat: number, lon: number): boolean {
+  return marketOf(lat, lon) !== null;
 }
 
 /** Reject requests that would use the key outside the demo's scope. */
 function scopeError(path: string, q: URLSearchParams, body: unknown): string | null {
   const num = (k: string): number => Number(q.get(k));
-  if (q.has("lat") && q.has("lon") && !inHcmc(num("lat"), num("lon"))) return "coordinates outside Ho Chi Minh City";
+  if (q.has("lat") && q.has("lon") && !inScope(num("lat"), num("lon"))) return "coordinates outside Ho Chi Minh City and Bangkok";
   if (path === "/v2/places") {
     const f = q.get("filter") ?? "";
     const cats = (q.get("categories") ?? "").split(",");
     if (cats.length > 3) return "too many categories";
     if (Number(q.get("limit") ?? 20) > 200) return "limit too high";
     const nums = f.replace(/^(rect|circle):/, "").split(",").map(Number);
-    if (f.startsWith("circle:") && (!inHcmc(nums[1], nums[0]) || nums[2] > 3000)) return "circle outside scope";
-    if (f.startsWith("rect:") && !(inHcmc(nums[1], nums[0]) && inHcmc(nums[3], nums[2]))) return "rect outside scope";
+    if (f.startsWith("circle:") && (!inScope(nums[1], nums[0]) || nums[2] > 3000)) return "circle outside scope";
+    if (f.startsWith("rect:") && !(inScope(nums[1], nums[0]) && inScope(nums[3], nums[2]))) return "rect outside scope";
     if (!/^(rect|circle|geometry):/.test(f)) return "filter required";
   }
   if (path === "/v1/isoline") {
@@ -99,39 +102,73 @@ function scopeError(path: string, q: URLSearchParams, body: unknown): string | n
   }
   if (path === "/v1/routing") {
     const wps = (q.get("waypoints") ?? "").split("|");
-    if (wps.length > 4 || wps.some((w) => { const [la, lo] = w.split(",").map(Number); return !inHcmc(la, lo); })) return "waypoints outside scope";
+    if (wps.length > 4 || wps.some((w) => { const [la, lo] = w.split(",").map(Number); return !inScope(la, lo); })) return "waypoints outside scope";
   }
   if (path === "/v1/routematrix") {
     const b = body as { sources?: Array<{ location: [number, number] }>; targets?: Array<{ location: [number, number] }> };
     const pts = [...(b?.sources ?? []), ...(b?.targets ?? [])];
     if (!pts.length || (b.sources?.length ?? 0) > 5 || (b.targets?.length ?? 0) > 10) return "matrix too large";
-    if (pts.some((p) => !inHcmc(p.location?.[1], p.location?.[0]))) return "matrix outside scope";
+    if (pts.some((p) => !inScope(p.location?.[1], p.location?.[0]))) return "matrix outside scope";
   }
   if ((path.startsWith("/v1/geocode/search") || path.startsWith("/v1/geocode/autocomplete")) && (q.get("text") ?? "").length > 160) return "text too long";
   return null;
 }
 
-const caps = (env: Env): { daily: number; perIp: number; tiles: number } => ({
-  daily: Number(env.DAILY_CREDIT_CAP ?? DEFAULT_DAILY_CAP),
-  perIp: Number(env.PER_IP_CALL_CAP ?? DEFAULT_PER_IP_CALL_CAP),
-  tiles: Number(env.TILE_CAP ?? 2500),
-});
+/**
+ * Which market a proxied request draws from, from the coordinates it
+ * carries (lat/lon params, places filter, isoline centre, routing
+ * waypoints, matrix points). Null when the request carries no coordinates
+ * (geocoding by text, geometry: isoline filters) — callers default those
+ * to "hcmc": the demo's original market.
+ */
+function requestMarket(path: string, q: URLSearchParams, body: unknown): Market | null {
+  const num = (k: string): number => Number(q.get(k));
+  if (q.has("lat") && q.has("lon")) return marketOf(num("lat"), num("lon"));
+  if (path === "/v2/places") {
+    const f = q.get("filter") ?? "";
+    const nums = f.replace(/^(rect|circle):/, "").split(",").map(Number);
+    if (f.startsWith("circle:") || f.startsWith("rect:")) return marketOf(nums[1], nums[0]);
+    return null; // geometry:<isoline-id> — the isoline's market is not in the request
+  }
+  if (path === "/v1/routing") {
+    const [la, lo] = (q.get("waypoints") ?? "").split("|")[0]?.split(",").map(Number) ?? [];
+    if (la !== undefined && lo !== undefined) return marketOf(la, lo);
+  }
+  if (path === "/v1/routematrix") {
+    const b = body as { sources?: Array<{ location: [number, number] }>; targets?: Array<{ location: [number, number] }> };
+    const p = b?.sources?.[0] ?? b?.targets?.[0];
+    if (p) return marketOf(p.location[1], p.location[0]);
+  }
+  return null;
+}
+
+const caps = (env: Env): { daily: number; perIp: number; tiles: number; hcmc: number; bangkok: number } => {
+  const hcmc = Number(env.DAILY_CREDIT_CAP_HCMC ?? DEFAULT_DAILY_CAP_HCMC);
+  const bangkok = Number(env.DAILY_CREDIT_CAP_BANGKOK ?? DEFAULT_DAILY_CAP_BANGKOK);
+  return {
+    daily: hcmc + bangkok,
+    perIp: Number(env.PER_IP_CALL_CAP ?? DEFAULT_PER_IP_CALL_CAP),
+    tiles: Number(env.TILE_CAP ?? 2500),
+    hcmc,
+    bangkok,
+  };
+};
 
 /** 429 answer the UI understands: it switches to a recorded run. */
-const capped = (error: string, used: number, cap: number): Response =>
-  json({ error, fallback: true, used, cap }, 429, { "x-sitescout-fallback": "quota" });
+const capped = (error: string, used: number, cap: number, market: Market): Response =>
+  json({ error, fallback: true, used, cap, market }, 429, { "x-sitescout-fallback": "quota" });
 
-async function usage(env: Env, ip: string): Promise<{ ipCalls: number; credits: number; tiles: number; plans: number }> {
+async function usage(env: Env, ip: string, market: Market = "hcmc"): Promise<{ ipCalls: number; credits: number; tiles: number; plans: number }> {
   const d = today();
-  const g = await env.DB.prepare("SELECT credits, tiles, plans FROM totals WHERE day=?").bind(d).first<{ credits: number; tiles: number; plans: number }>();
+  const g = await env.DB.prepare("SELECT credits, tiles, plans FROM totals WHERE day=? AND market=?").bind(d, market).first<{ credits: number; tiles: number; plans: number }>();
   const u = await env.DB.prepare("SELECT calls FROM ip_usage WHERE day=? AND ip=?").bind(d, ip).first<{ calls: number }>();
   return { ipCalls: u?.calls ?? 0, credits: g?.credits ?? 0, tiles: g?.tiles ?? 0, plans: g?.plans ?? 0 };
 }
 
-async function bump(env: Env, ip: string, c: { calls?: number; credits?: number; tiles?: number; plans?: number }): Promise<void> {
+async function bump(env: Env, ip: string, c: { calls?: number; credits?: number; tiles?: number; plans?: number }, market: Market = "hcmc"): Promise<void> {
   const d = today();
   await env.DB.batch([
-    env.DB.prepare("INSERT INTO totals(day,credits,tiles,plans,calls) VALUES(?,?,?,?,?) ON CONFLICT(day) DO UPDATE SET credits=credits+excluded.credits, tiles=tiles+excluded.tiles, plans=plans+excluded.plans, calls=calls+excluded.calls").bind(d, c.credits ?? 0, c.tiles ?? 0, c.plans ?? 0, c.calls ?? 0),
+    env.DB.prepare("INSERT INTO totals(day,market,credits,tiles,plans,calls) VALUES(?,?,?,?,?,?) ON CONFLICT(day,market) DO UPDATE SET credits=credits+excluded.credits, tiles=tiles+excluded.tiles, plans=plans+excluded.plans, calls=calls+excluded.calls").bind(d, market, c.credits ?? 0, c.tiles ?? 0, c.plans ?? 0, c.calls ?? 0),
     env.DB.prepare("INSERT INTO ip_usage(day,ip,calls) VALUES(?,?,?) ON CONFLICT(day,ip) DO UPDATE SET calls=calls+excluded.calls").bind(d, ip, c.calls ?? 0),
   ]);
 }
@@ -182,10 +219,11 @@ async function proxyGeo(req: Request, env: Env, url: URL, ctx: ExecutionContext)
   }
 
   const ip = await visitor(req);
-  const u = await usage(env, ip);
+  const market = requestMarket(path, url.searchParams, body) ?? "hcmc";
+  const u = await usage(env, ip, market);
   const c0 = caps(env);
-  const gate = checkCaps(u, c0);
-  if (!gate.ok) return capped(gate.reason === "daily" ? "daily live quota reached" : "per-visitor daily limit reached", gate.used, gate.cap);
+  const gate = checkCaps(u, { daily: c0[market], perIp: c0.perIp });
+  if (!gate.ok) return capped(gate.reason === "daily" ? "daily live quota reached" : "per-visitor daily limit reached", gate.used, gate.cap, market);
 
   const res = await fetch(upstream, {
     method,
@@ -197,7 +235,7 @@ async function proxyGeo(req: Request, env: Env, url: URL, ctx: ExecutionContext)
   try { data = JSON.parse(text); } catch { /* keep text */ }
   // 202 = isoline still computing; the engine polls and the final 200 is the billed answer.
   const c = res.status === 200 ? credits(path, url.searchParams, data, body) : 0;
-  ctx.waitUntil(bump(env, ip, { calls: 1, credits: c }));
+  ctx.waitUntil(bump(env, ip, { calls: 1, credits: c }, market));
   const out = new Response(text, { status: res.status, headers: { "content-type": "application/json", "cache-control": "public, max-age=86400", "x-sitescout-cache": "MISS", "x-sitescout-credits": String(c) } });
   if (res.status === 200) ctx.waitUntil(cache.put(cacheKey, out.clone()));
   return out;
@@ -213,20 +251,30 @@ async function sha(s: string): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
 }
 
-function tileInHcmc(z: number, x: number, y: number): boolean {
-  if (z < 9 || z > 18) return false;
+/**
+ * Which market a map tile belongs to, or null when out of scope (→ 204).
+ * Tiles admit both bboxes (the HCMC rect and the Thailand national rect) —
+ * coarser than marketOf's 40 km circles, because a tile spans an area, not
+ * a point. A tile overlapping the Thailand bbox draws from the Bangkok
+ * budget; one overlapping the HCMC bbox draws from the HCMC budget.
+ */
+function tileMarket(z: number, x: number, y: number): Market | null {
+  if (z < 9 || z > 18) return null;
   const n = 2 ** z;
   const lon = (x / n) * 360 - 180, lon2 = ((x + 1) / n) * 360 - 180;
   const lat = (180 / Math.PI) * Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n)));
   const lat2 = (180 / Math.PI) * Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + 1)) / n)));
-  return lon2 >= BBOX.minLon && lon <= BBOX.maxLon && lat >= BBOX.minLat && lat2 <= BBOX.maxLat;
+  if (lon2 >= BBOX.minLon && lon <= BBOX.maxLon && lat >= BBOX.minLat && lat2 <= BBOX.maxLat) return "hcmc";
+  if (lon2 >= TH_BBOX[0] && lon <= TH_BBOX[2] && lat >= TH_BBOX[1] && lat2 <= TH_BBOX[3]) return "bangkok";
+  return null;
 }
 
 async function proxyTile(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
   const m = url.pathname.match(/^\/tiles\/(\d+)\/(\d+)\/(\d+)(@2x)?\.png$/);
   if (!m) return new Response("bad tile", { status: 400 });
   const [z, x, y] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  if (!tileInHcmc(z, x, y)) return new Response(null, { status: 204 });
+  const market = tileMarket(z, x, y);
+  if (!market) return new Response(null, { status: 204 });
   const upstream = `${UPSTREAM}/v1/tile/positron/${z}/${x}/${y}${m[4] ?? ""}.png`;
   const cache = caches.default;
   const key = new Request(upstream);
@@ -237,14 +285,15 @@ async function proxyTile(req: Request, env: Env, url: URL, ctx: ExecutionContext
   }
   // Tiles draw from the same daily credit budget as API calls (0.25 credit each),
   // plus their own ceiling so a map-browsing spike cannot starve live analyses.
-  const u = await usage(env, "tiles");
+  // The ceiling applies per market, like the credit budget.
+  const u = await usage(env, "tiles", market);
   const c0 = caps(env);
-  if (!checkCaps({ ...u, ipCalls: 0 }, c0).ok || u.tiles >= c0.tiles) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
+  if (!checkCaps({ ...u, ipCalls: 0 }, { daily: c0[market], perIp: c0.perIp }).ok || u.tiles >= c0.tiles) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
   const res = await fetch(upstream, { headers: { "x-api-key": env.GEOAPIFY_KEY } });
   if (!res.ok) return new Response(null, { status: res.status });
   const out = new Response(res.body, { headers: { "content-type": "image/png", "cache-control": "public, max-age=2592000" } });
   ctx.waitUntil(cache.put(key, out.clone()));
-  ctx.waitUntil(bump(env, "tiles", { tiles: 1 }));
+  ctx.waitUntil(bump(env, "tiles", { tiles: 1 }, market));
   return out;
 }
 
@@ -298,14 +347,22 @@ export default {
       if (url.pathname === "/api/share" && req.method === "POST") return await share(req, env, url);
       if (url.pathname.startsWith("/api/share/") && req.method === "GET") return await share(req, env, url);
       if (url.pathname === "/api/status") {
-        const u = await usage(env, await visitor(req));
+        const ip = await visitor(req);
         const c0 = caps(env);
         const s = await stats(env);
+        const h = await usage(env, ip, "hcmc");
+        const b = await usage(env, ip, "bangkok");
         return json({
           day: today(),
-          spent: spent(u), creditCap: c0.daily, // API credits + tiles × 0.25: the one number the cap applies to
-          credits: u.credits, tiles: u.tiles, tileCap: c0.tiles,
-          yourCalls: u.ipCalls, yourCap: c0.perIp,
+          // Top-level fields stay the totals across markets (the UI reads
+          // these); per-market detail is in `markets` below.
+          spent: spent(h) + spent(b), creditCap: c0.daily, // API credits + tiles × 0.25, summed over markets
+          credits: h.credits + b.credits, tiles: h.tiles + b.tiles, tileCap: c0.tiles,
+          yourCalls: h.ipCalls, yourCap: c0.perIp,
+          markets: {
+            hcmc: { spent: spent(h), creditCap: c0.hcmc, credits: h.credits, tiles: h.tiles },
+            bangkok: { spent: spent(b), creditCap: c0.bangkok, credits: b.credits, tiles: b.tiles },
+          },
           cache: { hits: s.hits, tileHits: s.tileHits, savedCredits: s.saved },
           liveKey: Boolean(env.GEOAPIFY_KEY),
         });

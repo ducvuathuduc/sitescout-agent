@@ -11,9 +11,15 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
+import { execSummaryLine, topCandidate } from "../../src/engine/render.js";
 import { GeoapifyApi, type CallRecord } from "../../src/engine/geoapify.js";
 import { heuristicPlan, parseLlmPlan, PLANNER_SYSTEM_PROMPT, type PlanOutcome } from "../../src/engine/plan.js";
-import { runScout, WEIGHTS, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
+import { runScout, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
+import { DEFAULT_WEIGHTS, formatTrafficBand } from "../../src/scoring/model.js";
+import { MICRO_FACTORS, MICRO_FACTOR_DESCRIPTIONS, MICRO_FACTOR_LABELS, checklistEntryText, emptyChecklist, verdictFor, type MicroChecklist } from "../../src/engine/checklist.js";
+import { expiryFor, isExpired, isStale } from "../../src/engine/freshness.js";
+import { SIGNAL_KIND_LABELS } from "../../src/engine/signals.js";
+import { renderDashboard, type MemoIndex } from "./dashboard.js";
 
 /* ============================== constants ============================== */
 const REPO = "https://github.com/ducvuathuduc/sitescout-agent";
@@ -29,12 +35,16 @@ const MODES: Array<{ id: Mode; label: string }> = [
   { id: "motorcycle", label: "Motorbike" },
 ];
 const BAND_MIN = [5, 10, 15];
+/** Unified five-factor sub-scores (src/scoring/model.ts, 2.0.0-unified). */
 const METRICS = [
-  { k: "demand", label: "Demand", hint: "complementary places in the walk zone" },
   { k: "competition", label: "Competition", hint: "fewer direct competitors scores higher" },
-  { k: "access", label: "Access", hint: "drive time from the city origins" },
-  { k: "reach", label: "Reach", hint: "area covered by the walk zone" },
+  { k: "complementarity", label: "Complementarity", hint: "complementary places in the walk zone" },
+  { k: "catchment", label: "Catchment", hint: "places per km² inside the walk zone" },
+  { k: "accessibility", label: "Accessibility", hint: "drive time from the city origins" },
+  { k: "cost", label: "Cost", hint: "relative operating cost at this site" },
 ] as const;
+/** The cost row renders only when its weight is non-zero (0 in both v2 market profiles). */
+const VISIBLE_METRICS = METRICS.filter((m) => DEFAULT_WEIGHTS[m.k] > 0);
 type MetricKey = (typeof METRICS)[number]["k"];
 /** Sequential score ramp (low → high); text colour chosen for ≥4.5:1 contrast. */
 const RAMP = [
@@ -76,7 +86,7 @@ const I = {
 
 /* ================================ state ================================ */
 interface Bands { mode: Mode; features: Array<{ properties: { range: number }; geometry: Geometry }>; ref: number }
-type Tab = "ranking" | "compare" | "evidence";
+type Tab = "ranking" | "compare" | "evidence" | "dashboard";
 type Banner = { kind: "quota" | "error" | "info"; text: string } | null;
 interface State {
   result: ScoutResult | null;
@@ -98,11 +108,16 @@ interface State {
   status: { spent?: number; credits: number; creditCap: number; yourCalls: number; yourCap: number } | null;
   banner: Banner;
   openCall: number | null;
+  /** Committed memo index for the Dashboard tab (fetched lazily from /memos-index.json). */
+  dashboard: MemoIndex | null;
+  dashboardLoading: boolean;
+  dashboardError: string | null;
 }
 const S: State = {
   result: null, source: null, calls: [], bands: new Map(), reachMode: "walk", reachLoading: false, selected: null, compare: [], tab: "ranking",
   layers: { zones: true, competitors: true, demand: true, hex: false }, running: false, step: "", stepDetail: "", planner: "llm",
   question: EXAMPLES[0].q, status: null, banner: null, openCall: null,
+  dashboard: null, dashboardLoading: false, dashboardError: null,
 };
 
 const esc = (s: unknown): string => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
@@ -419,15 +434,39 @@ function explain(r: ScoutResult, c: CandidateResult): Array<{ k: MetricKey; text
   const topDem = Object.entries(c.demand).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} ${catName(k)}`).join(", ") || "none found";
   const drive = r.origins.map((o, i) => (o.lat !== undefined ? `${o.query.split(",")[0]} ${c.driveMinByOrigin[i] !== null && c.driveMinByOrigin[i] !== undefined ? Math.round(c.driveMinByOrigin[i] as number) + "′" : "n/a"}` : "")).filter(Boolean).join(", ");
   return [
-    { k: "demand", text: `${c.demandTotal} demand places inside the ${r.plan.walkMinutes}-min walk zone (${topDem}) — #${rankOf(r, c, "demand")} of ${n}.`, refs: refsOf(c, "places") },
     { k: "competition", text: `${c.competitors} direct competitor${c.competitors === 1 ? "" : "s"} (${catName(r.plan.competitorCategory)}) in the same zone — #${rankOf(r, c, "competition")} of ${n} for low competition.`, refs: refsOf(c, "places") },
-    { k: "access", text: c.meanDriveMin !== null ? `${Math.round(c.meanDriveMin)} min average drive (${drive}) — #${rankOf(r, c, "access")} of ${n}.` : "Drive times unavailable; scored neutral.", refs: [matrixRef(r)].filter((x): x is number => x !== undefined) },
-    { k: "reach", text: `The walk zone covers ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² — #${rankOf(r, c, "reach")} of ${n}.`, refs: refsOf(c, "isoline") },
+    { k: "complementarity", text: `${c.demandTotal} demand places inside the ${r.plan.walkMinutes}-min walk zone (${topDem}) — #${rankOf(r, c, "complementarity")} of ${n}.`, refs: refsOf(c, "places") },
+    { k: "catchment", text: `The walk zone covers ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² with ${c.demandTotal + c.competitors} places (${((c.demandTotal + c.competitors) / Math.max(c.isolineAreaM2 / 1e6, 0.01)).toFixed(0)} per km²) — #${rankOf(r, c, "catchment")} of ${n}.`, refs: refsOf(c, "isoline") },
+    { k: "accessibility", text: c.meanDriveMin !== null ? `${Math.round(c.meanDriveMin)} min average drive (${drive}) — #${rankOf(r, c, "accessibility")} of ${n}.` : "Drive times unavailable; scored neutral.", refs: [matrixRef(r)].filter((x): x is number => x !== undefined) },
   ];
 }
 
 function bars(c: CandidateResult): string {
-  return `<div class="bd">${METRICS.map((m) => `<div class="bd-row" title="${esc(m.hint)}"><span class="bd-k">${m.label}<em>${Math.round(WEIGHTS[m.k] * 100)}%</em></span><span class="bd-track"><i class="bd-${m.k}" style="width:${pct(c.scores[m.k])}%"></i></span><span class="bd-v">${c.scores[m.k].toFixed(2)}</span></div>`).join("")}</div>`;
+  return `<div class="bd">${VISIBLE_METRICS.map((m) => `<div class="bd-row" title="${esc(m.hint)}"><span class="bd-k">${m.label}<em>${Math.round(DEFAULT_WEIGHTS[m.k] * 100)}%</em></span><span class="bd-track"><i class="bd-${m.k}" style="width:${pct(c.scores[m.k])}%"></i></span><span class="bd-v">${c.scores[m.k].toFixed(2)}</span></div>`).join("")}</div>`;
+}
+
+/** Dashboard pane: the committed memo index (recorded runs), fetched lazily. */
+function dashboardHtml(): string {
+  if (S.dashboard) return renderDashboard(S.dashboard);
+  if (S.dashboardError) {
+    return `<div class="block empty"><p class="h3">Dashboard unavailable</p><p class="muted">${esc(S.dashboardError)}</p></div>`;
+  }
+  if (!S.dashboardLoading) {
+    S.dashboardLoading = true;
+    void fetch("/memos-index.json")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`memos-index.json: HTTP ${res.status}`);
+        S.dashboard = (await res.json()) as MemoIndex;
+        S.dashboardLoading = false;
+        renderResult();
+      })
+      .catch((e: unknown) => {
+        S.dashboardLoading = false;
+        S.dashboardError = e instanceof Error ? e.message : String(e);
+        renderResult();
+      });
+  }
+  return `<div class="block empty"><p class="h3">Loading dashboard…</p><p class="muted">Reading the committed memo index.</p></div>`;
 }
 
 function renderResult(): void {
@@ -437,9 +476,27 @@ function renderResult(): void {
     el.innerHTML = S.running ? "" : `<div class="block empty"><div class="empty-art">${I.pin("#C7DBFF", "#1570EF")}</div><p class="h3">No analysis yet</p><p class="muted">Pick a recorded example or ask your own question to rank candidate sites.</p></div>`;
     return;
   }
-  const best = [...r.candidates].sort((a, b) => a.rank - b.rank)[0];
+  const best = topCandidate(r);
+  if (!best) {
+    // Every candidate below the POI floor: no [0] to dereference — render
+    // the empty state with the Excluded list instead of crashing the pane.
+    el.innerHTML = `
+  <section class="block summary">
+    <div class="eyebrow">Best spot for a ${esc(r.plan.business)}</div>
+    <p class="h3">No candidates ranked</p>
+    <p class="muted">Every candidate was excluded — insufficient data (floor 5 POIs). Nothing was scored, so there is no best spot to show.</p>
+    ${(r.excluded ?? []).length ? `<div class="h4">Excluded — insufficient data</div><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)}</li>`).join("")}</ul>` : ""}
+    <div class="actions">
+      <button class="btn btn-sm" id="share">${I.share} Share link</button>
+      <button class="btn btn-sm" id="pdf">${I.pdf} Export PDF</button>
+    </div>
+  </section>
+  ${r.limitations.length ? `<details class="block limits"><summary>Limitations (${r.limitations.length}) ${I.down}</summary><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}`;
+    wireResult();
+    return;
+  }
   const col = RAMP[rampIdx(best, r)];
-  const tabs: Array<[Tab, string]> = [["ranking", "Ranking"], ["compare", "Compare"], ["evidence", `Evidence · ${S.calls.length}`]];
+  const tabs: Array<[Tab, string]> = [["ranking", "Ranking"], ["compare", "Compare"], ["evidence", `Evidence · ${S.calls.length}`], ["dashboard", "Dashboard"]];
   el.innerHTML = `
   <section class="block summary">
     <div class="eyebrow">Best spot for a ${esc(r.plan.business)}</div>
@@ -471,7 +528,7 @@ function renderResult(): void {
     </div>
   </section>
   <div class="tabs" role="tablist" aria-label="Result views">${tabs.map(([t, l]) => `<button role="tab" id="tab-${t}" aria-selected="${S.tab === t}" aria-controls="pane" tabindex="${S.tab === t ? 0 : -1}" data-tab="${t}">${l}</button>`).join("")}</div>
-  <section class="block pane" id="pane" role="tabpanel" aria-labelledby="tab-${S.tab}">${S.tab === "ranking" ? rankingHtml(r) : S.tab === "compare" ? compareHtml(r) : evidenceHtml()}</section>
+  <section class="block pane" id="pane" role="tabpanel" aria-labelledby="tab-${S.tab}">${S.tab === "dashboard" ? dashboardHtml() : S.tab === "ranking" ? rankingHtml(r) : S.tab === "compare" ? compareHtml(r) : evidenceHtml()}</section>
   ${r.limitations.length ? `<details class="block limits"><summary>Limitations (${r.limitations.length}) ${I.down}</summary><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}`;
   wireResult();
 }
@@ -521,7 +578,7 @@ function compareHtml(r: ScoutResult): string {
     return `<tr><th scope="row">${label}</th>${vals.map((v) => `<td class="${v === best ? "win" : ""}"><span class="cv">${fmt(v)}</span><span class="cbar"><i style="width:${pct(v / mx)}%"></i></span></td>`).join("")}</tr>`;
   };
   const [a, b] = cs;
-  const deltas = a && b ? METRICS.map((m) => ({ m, d: (a.scores[m.k] - b.scores[m.k]) * WEIGHTS[m.k] })).sort((x, y) => y.d - x.d) : [];
+  const deltas = a && b ? VISIBLE_METRICS.map((m) => ({ m, d: (a.scores[m.k] - b.scores[m.k]) * DEFAULT_WEIGHTS[m.k] })).sort((x, y) => y.d - x.d) : [];
   const lead = deltas.filter((x) => x.d > 0.005).slice(0, 2).map((x) => x.m.label.toLowerCase());
   const lag = deltas.filter((x) => x.d < -0.005).map((x) => x.m.label.toLowerCase());
   return `<p class="muted xs pane-hint">${S.compare.length >= 2 ? "Your selection." : "Top 3 by default — tick sites in Ranking to change."} Best value per row is highlighted.</p>
@@ -529,7 +586,7 @@ function compareHtml(r: ScoutResult): string {
     <thead><tr><th></th>${cs.map((c) => { const col = RAMP[rampIdx(c, r)]; return `<th scope="col"><button class="th-btn" data-select="${c.id}" data-row="${c.id}"><span class="badge" style="background:${col.bg};color:${col.fg}">${c.rank}</span><span class="th-label">${esc(c.label)}</span></button></th>`; }).join("")}</tr></thead>
     <tbody>
       ${row("Total score", cs.map((c) => c.total), (v) => v.toFixed(2), true, 1)}
-      ${METRICS.map((m) => row(`${m.label} <em>${Math.round(WEIGHTS[m.k] * 100)}%</em>`, cs.map((c) => c.scores[m.k]), (v) => v.toFixed(2), true, 1)).join("")}
+      ${VISIBLE_METRICS.map((m) => row(`${m.label} <em>${Math.round(DEFAULT_WEIGHTS[m.k] * 100)}%</em>`, cs.map((c) => c.scores[m.k]), (v) => v.toFixed(2), true, 1)).join("")}
       ${row("Demand places", cs.map((c) => c.demandTotal), (v) => String(v))}
       ${row("Competitors", cs.map((c) => c.competitors), (v) => String(v), false)}
       ${row("Avg drive (min)", cs.map((c) => c.meanDriveMin ?? 0), (v) => (v ? String(Math.round(v)) : "n/a"), false)}
@@ -708,13 +765,37 @@ function exportPdf(): void {
   const r = S.result;
   if (!r) return;
   const best = [...r.candidates].sort((a, b) => a.rank - b.rank);
+  // Defensive reads: memos recorded before v2 lack these fields.
+  const asOf = r.dataAsOf ?? r.generatedAt.slice(0, 10);
+  const exp = r.expiresAt ?? expiryFor(asOf);
+  const checklistOf = (c: CandidateResult): MicroChecklist => c.checklist ?? emptyChecklist();
+  const verdictOf = (c: CandidateResult): string => c.verdict ?? verdictFor(checklistOf(c), c.rank);
   $("#print").innerHTML = `<header class="pr-head"><div>${I.pin("#1570EF", "#fff")} <b>SiteScout</b> · site-selection report</div><div>${esc(new Date().toISOString().slice(0, 10))} · ${esc(location.host)}</div></header>
     <h1>${esc(r.question)}</h1>
     <p>${esc(cap(r.plan.business))} · ${esc(r.area.ward?.name ?? r.plan.area)} · planner ${r.planner === "llm" ? "AI" : "rules"} · competitors <code>${esc(r.plan.competitorCategory)}</code> · demand ${r.plan.demandCategories.map((d) => `<code>${esc(d)}</code>`).join(" ")} · ${r.plan.walkMinutes}-min walk zones</p>
-    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th>${METRICS.map((m) => `<th>${m.label}</th>`).join("")}<th>Demand</th><th>Comp.</th><th>Drive</th></tr></thead><tbody>
-    ${best.map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td>${METRICS.map((m) => `<td>${c.scores[m.k].toFixed(2)}</td>`).join("")}<td>${c.demandTotal}</td><td>${c.competitors}</td><td>${c.meanDriveMin !== null ? Math.round(c.meanDriveMin) + "′" : "n/a"}</td></tr>`).join("")}
+    <p>Data as of ${esc(asOf)} · valid until ${esc(exp)} (30 days).${isExpired(exp) ? " <b>This memo has expired — re-run before deciding.</b>" : ""}${isStale(asOf) ? " <b>Stale data:</b> this memo's data is older than 90 days — re-run before deciding." : ""}</p>
+    <h2>Executive summary</h2>
+    <p>${esc(execSummaryLine(r))}</p>
+    <p>SiteScout — Placer.ai for Southeast Asia.</p>
+    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>
+    ${best.slice(0, 3).map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td><td>${esc(formatTrafficBand(c.trafficBand ?? null))}</td><td>${esc(verdictOf(c))}</td></tr>`).join("")}
+    </tbody></table>
+    <p><b>Visit the site before signing a lease.</b></p>
+    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th>${VISIBLE_METRICS.map((m) => `<th>${m.label}</th>`).join("")}<th>Demand</th><th>Comp.</th><th>Drive</th></tr></thead><tbody>
+    ${best.map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td>${VISIBLE_METRICS.map((m) => `<td>${c.scores[m.k].toFixed(2)}</td>`).join("")}<td>${c.demandTotal}</td><td>${c.competitors}</td><td>${c.meanDriveMin !== null ? Math.round(c.meanDriveMin) + "′" : "n/a"}</td></tr>`).join("")}
     </tbody></table>
     ${best.slice(0, 3).map((c) => `<h2>#${c.rank} ${esc(c.label)}</h2><ul>${explain(r, c).map((e) => `<li>${esc(e.text)} ${e.refs.map((s) => `[T${s}]`).join(" ")}</li>`).join("")}</ul>`).join("")}
+    <h2>Micro-feature checklist</h2>
+    <p>Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.</p>
+    <table class="pr-table"><thead><tr><th>Site</th>${MICRO_FACTORS.map((f) => `<th>${MICRO_FACTOR_LABELS[f]}</th>`).join("")}</tr></thead><tbody>
+    ${best.map((c) => `<tr><td>${c.rank}. ${esc(c.label)}</td>${MICRO_FACTORS.map((f) => `<td>${esc(checklistEntryText(checklistOf(c)[f]))}</td>`).join("")}</tr>`).join("")}
+    </tbody></table>
+    <h2>What this model cannot see</h2>
+    <p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p>
+    <ul>${MICRO_FACTORS.map((f) => `<li><b>${esc(MICRO_FACTOR_DESCRIPTIONS[f])}:</b> ${best.map((c) => `#${c.rank} ${esc(checklistOf(c)[f].status)}`).join(" · ")}</li>`).join("")}</ul>
+    ${(r.excluded ?? []).length ? `<h2>Excluded — insufficient data</h2><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)}</li>`).join("")}</ul>` : ""}
+    ${(r.unconfirmed ?? []).length ? `<h2>Unconfirmed competitors — verify on foot</h2><p>These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are <b>not counted</b> in any competitor total or score — verify on foot before treating the area as empty.</p><ul>${(r.unconfirmed ?? []).map((u) => `<li><b>${esc(u.name)}</b> — ${esc(u.category)} · ${u.lat}, ${u.lon} — ${esc(u.reason)}</li>`).join("")}</ul>` : ""}
+    ${(r.signals ?? []).length ? `<h2>Local signals (operator-reported)</h2><p>Human-observed or operator-reported facts the model cannot fetch. They are displayed evidence only — they never alter a score.</p><ul>${(r.signals ?? []).map((s) => `<li><b>${esc(SIGNAL_KIND_LABELS[s.kind])}</b> — ${esc(s.street)} — observed by ${esc(s.observedBy)} on ${esc(s.observedAt)}${s.note ? ` — ${esc(s.note)}` : ""}</li>`).join("")}</ul>` : ""}
     <h2>Evidence (${S.calls.length} Geoapify calls)</h2><ol class="pr-calls">${S.calls.map((c) => `<li value="${c.seq}">T${c.seq} ${esc(c.api)} — ${esc(c.method)} ${esc(c.endpoint.slice(0, 110))} · ${c.status} · ${c.durationMs} ms</li>`).join("")}</ol>
     ${r.limitations.length ? `<h2>Limitations</h2><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
     <p class="pr-foot">Powered by Geoapify · © OpenMapTiles © OpenStreetMap contributors · ${esc(REPO)}</p>`;
@@ -947,7 +1028,7 @@ async function refreshStatus(): Promise<void> {
 /* ================================ boot ================================ */
 window.addEventListener("resize", () => map.invalidateSize());
 const hp = new URLSearchParams(location.hash.slice(1));
-const hTab = (["ranking", "compare", "evidence"] as Tab[]).find((t) => t === hp.get("tab"));
+const hTab = (["ranking", "compare", "evidence", "dashboard"] as Tab[]).find((t) => t === hp.get("tab"));
 renderAll();
 if (hp.get("r")) void loadShared(hp.get("r")!, hp.get("sel") ?? undefined, hTab);
 else {
