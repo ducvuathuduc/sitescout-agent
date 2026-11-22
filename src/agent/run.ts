@@ -52,6 +52,7 @@ import {
   MeetupVenueEvidence,
   ScoredCandidate,
   ScoredVenue,
+  VN_HCMC_PROFILE,
   WEIGHTS_VERSION,
   rankCandidates,
   rankVenues,
@@ -594,8 +595,12 @@ export async function runSiteSelection(
   }
 
   // Phase 3 — score, rank, render.
+  // The MCP path is HCMC-only (all geocoding is country_codes ["vn"],
+  // Vietnam; SiteSelectionQuestion carries no market field), so the
+  // vn-hcmc market profile is passed explicitly. Scores are identical to
+  // the default profile: VN_HCMC_PROFILE reproduces it exactly.
   const scored = rankCandidates(
-    rankable.map((c) => scoreCandidate(c.evidence, undefined, c.refs)),
+    rankable.map((c) => scoreCandidate(c.evidence, VN_HCMC_PROFILE, c.refs)),
   );
 
   // Phase 3b — route from the first demand origin to the #1 candidate

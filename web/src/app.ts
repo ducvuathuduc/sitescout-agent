@@ -13,7 +13,8 @@ import "leaflet/dist/leaflet.css";
 import "./style.css";
 import { GeoapifyApi, type CallRecord } from "../../src/engine/geoapify.js";
 import { heuristicPlan, parseLlmPlan, PLANNER_SYSTEM_PROMPT, type PlanOutcome } from "../../src/engine/plan.js";
-import { runScout, WEIGHTS, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
+import { runScout, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
+import { DEFAULT_WEIGHTS } from "../../src/scoring/model.js";
 
 /* ============================== constants ============================== */
 const REPO = "https://github.com/ducvuathuduc/sitescout-agent";
@@ -29,12 +30,16 @@ const MODES: Array<{ id: Mode; label: string }> = [
   { id: "motorcycle", label: "Motorbike" },
 ];
 const BAND_MIN = [5, 10, 15];
+/** Unified five-factor sub-scores (src/scoring/model.ts, 2.0.0-unified). */
 const METRICS = [
-  { k: "demand", label: "Demand", hint: "complementary places in the walk zone" },
   { k: "competition", label: "Competition", hint: "fewer direct competitors scores higher" },
-  { k: "access", label: "Access", hint: "drive time from the city origins" },
-  { k: "reach", label: "Reach", hint: "area covered by the walk zone" },
+  { k: "complementarity", label: "Complementarity", hint: "complementary places in the walk zone" },
+  { k: "catchment", label: "Catchment", hint: "places per km² inside the walk zone" },
+  { k: "accessibility", label: "Accessibility", hint: "drive time from the city origins" },
+  { k: "cost", label: "Cost", hint: "relative operating cost at this site" },
 ] as const;
+/** The cost row renders only when its weight is non-zero (0 in both v2 market profiles). */
+const VISIBLE_METRICS = METRICS.filter((m) => DEFAULT_WEIGHTS[m.k] > 0);
 type MetricKey = (typeof METRICS)[number]["k"];
 /** Sequential score ramp (low → high); text colour chosen for ≥4.5:1 contrast. */
 const RAMP = [
@@ -419,15 +424,15 @@ function explain(r: ScoutResult, c: CandidateResult): Array<{ k: MetricKey; text
   const topDem = Object.entries(c.demand).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} ${catName(k)}`).join(", ") || "none found";
   const drive = r.origins.map((o, i) => (o.lat !== undefined ? `${o.query.split(",")[0]} ${c.driveMinByOrigin[i] !== null && c.driveMinByOrigin[i] !== undefined ? Math.round(c.driveMinByOrigin[i] as number) + "′" : "n/a"}` : "")).filter(Boolean).join(", ");
   return [
-    { k: "demand", text: `${c.demandTotal} demand places inside the ${r.plan.walkMinutes}-min walk zone (${topDem}) — #${rankOf(r, c, "demand")} of ${n}.`, refs: refsOf(c, "places") },
     { k: "competition", text: `${c.competitors} direct competitor${c.competitors === 1 ? "" : "s"} (${catName(r.plan.competitorCategory)}) in the same zone — #${rankOf(r, c, "competition")} of ${n} for low competition.`, refs: refsOf(c, "places") },
-    { k: "access", text: c.meanDriveMin !== null ? `${Math.round(c.meanDriveMin)} min average drive (${drive}) — #${rankOf(r, c, "access")} of ${n}.` : "Drive times unavailable; scored neutral.", refs: [matrixRef(r)].filter((x): x is number => x !== undefined) },
-    { k: "reach", text: `The walk zone covers ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² — #${rankOf(r, c, "reach")} of ${n}.`, refs: refsOf(c, "isoline") },
+    { k: "complementarity", text: `${c.demandTotal} demand places inside the ${r.plan.walkMinutes}-min walk zone (${topDem}) — #${rankOf(r, c, "complementarity")} of ${n}.`, refs: refsOf(c, "places") },
+    { k: "catchment", text: `The walk zone covers ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² with ${c.demandTotal + c.competitors} places (${((c.demandTotal + c.competitors) / Math.max(c.isolineAreaM2 / 1e6, 0.01)).toFixed(0)} per km²) — #${rankOf(r, c, "catchment")} of ${n}.`, refs: refsOf(c, "isoline") },
+    { k: "accessibility", text: c.meanDriveMin !== null ? `${Math.round(c.meanDriveMin)} min average drive (${drive}) — #${rankOf(r, c, "accessibility")} of ${n}.` : "Drive times unavailable; scored neutral.", refs: [matrixRef(r)].filter((x): x is number => x !== undefined) },
   ];
 }
 
 function bars(c: CandidateResult): string {
-  return `<div class="bd">${METRICS.map((m) => `<div class="bd-row" title="${esc(m.hint)}"><span class="bd-k">${m.label}<em>${Math.round(WEIGHTS[m.k] * 100)}%</em></span><span class="bd-track"><i class="bd-${m.k}" style="width:${pct(c.scores[m.k])}%"></i></span><span class="bd-v">${c.scores[m.k].toFixed(2)}</span></div>`).join("")}</div>`;
+  return `<div class="bd">${VISIBLE_METRICS.map((m) => `<div class="bd-row" title="${esc(m.hint)}"><span class="bd-k">${m.label}<em>${Math.round(DEFAULT_WEIGHTS[m.k] * 100)}%</em></span><span class="bd-track"><i class="bd-${m.k}" style="width:${pct(c.scores[m.k])}%"></i></span><span class="bd-v">${c.scores[m.k].toFixed(2)}</span></div>`).join("")}</div>`;
 }
 
 function renderResult(): void {
@@ -521,7 +526,7 @@ function compareHtml(r: ScoutResult): string {
     return `<tr><th scope="row">${label}</th>${vals.map((v) => `<td class="${v === best ? "win" : ""}"><span class="cv">${fmt(v)}</span><span class="cbar"><i style="width:${pct(v / mx)}%"></i></span></td>`).join("")}</tr>`;
   };
   const [a, b] = cs;
-  const deltas = a && b ? METRICS.map((m) => ({ m, d: (a.scores[m.k] - b.scores[m.k]) * WEIGHTS[m.k] })).sort((x, y) => y.d - x.d) : [];
+  const deltas = a && b ? VISIBLE_METRICS.map((m) => ({ m, d: (a.scores[m.k] - b.scores[m.k]) * DEFAULT_WEIGHTS[m.k] })).sort((x, y) => y.d - x.d) : [];
   const lead = deltas.filter((x) => x.d > 0.005).slice(0, 2).map((x) => x.m.label.toLowerCase());
   const lag = deltas.filter((x) => x.d < -0.005).map((x) => x.m.label.toLowerCase());
   return `<p class="muted xs pane-hint">${S.compare.length >= 2 ? "Your selection." : "Top 3 by default — tick sites in Ranking to change."} Best value per row is highlighted.</p>
@@ -529,7 +534,7 @@ function compareHtml(r: ScoutResult): string {
     <thead><tr><th></th>${cs.map((c) => { const col = RAMP[rampIdx(c, r)]; return `<th scope="col"><button class="th-btn" data-select="${c.id}" data-row="${c.id}"><span class="badge" style="background:${col.bg};color:${col.fg}">${c.rank}</span><span class="th-label">${esc(c.label)}</span></button></th>`; }).join("")}</tr></thead>
     <tbody>
       ${row("Total score", cs.map((c) => c.total), (v) => v.toFixed(2), true, 1)}
-      ${METRICS.map((m) => row(`${m.label} <em>${Math.round(WEIGHTS[m.k] * 100)}%</em>`, cs.map((c) => c.scores[m.k]), (v) => v.toFixed(2), true, 1)).join("")}
+      ${VISIBLE_METRICS.map((m) => row(`${m.label} <em>${Math.round(DEFAULT_WEIGHTS[m.k] * 100)}%</em>`, cs.map((c) => c.scores[m.k]), (v) => v.toFixed(2), true, 1)).join("")}
       ${row("Demand places", cs.map((c) => c.demandTotal), (v) => String(v))}
       ${row("Competitors", cs.map((c) => c.competitors), (v) => String(v), false)}
       ${row("Avg drive (min)", cs.map((c) => c.meanDriveMin ?? 0), (v) => (v ? String(Math.round(v)) : "n/a"), false)}
@@ -711,8 +716,8 @@ function exportPdf(): void {
   $("#print").innerHTML = `<header class="pr-head"><div>${I.pin("#1570EF", "#fff")} <b>SiteScout</b> · site-selection report</div><div>${esc(new Date().toISOString().slice(0, 10))} · ${esc(location.host)}</div></header>
     <h1>${esc(r.question)}</h1>
     <p>${esc(cap(r.plan.business))} · ${esc(r.area.ward?.name ?? r.plan.area)} · planner ${r.planner === "llm" ? "AI" : "rules"} · competitors <code>${esc(r.plan.competitorCategory)}</code> · demand ${r.plan.demandCategories.map((d) => `<code>${esc(d)}</code>`).join(" ")} · ${r.plan.walkMinutes}-min walk zones</p>
-    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th>${METRICS.map((m) => `<th>${m.label}</th>`).join("")}<th>Demand</th><th>Comp.</th><th>Drive</th></tr></thead><tbody>
-    ${best.map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td>${METRICS.map((m) => `<td>${c.scores[m.k].toFixed(2)}</td>`).join("")}<td>${c.demandTotal}</td><td>${c.competitors}</td><td>${c.meanDriveMin !== null ? Math.round(c.meanDriveMin) + "′" : "n/a"}</td></tr>`).join("")}
+    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th>${VISIBLE_METRICS.map((m) => `<th>${m.label}</th>`).join("")}<th>Demand</th><th>Comp.</th><th>Drive</th></tr></thead><tbody>
+    ${best.map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td>${VISIBLE_METRICS.map((m) => `<td>${c.scores[m.k].toFixed(2)}</td>`).join("")}<td>${c.demandTotal}</td><td>${c.competitors}</td><td>${c.meanDriveMin !== null ? Math.round(c.meanDriveMin) + "′" : "n/a"}</td></tr>`).join("")}
     </tbody></table>
     ${best.slice(0, 3).map((c) => `<h2>#${c.rank} ${esc(c.label)}</h2><ul>${explain(r, c).map((e) => `<li>${esc(e.text)} ${e.refs.map((s) => `[T${s}]`).join(" ")}</li>`).join("")}</ul>`).join("")}
     <h2>Evidence (${S.calls.length} Geoapify calls)</h2><ol class="pr-calls">${S.calls.map((c) => `<li value="${c.seq}">T${c.seq} ${esc(c.api)} — ${esc(c.method)} ${esc(c.endpoint.slice(0, 110))} · ${c.status} · ${c.durationMs} ms</li>`).join("")}</ol>

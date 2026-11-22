@@ -13,7 +13,7 @@
  *   9. Route Matrix         origins × candidates, drive, traffic≈     [route-matrix]
  *  10. Routing              best origin → #1 (polyline)               [routing]
  *  11. Place Details        5-min DRIVE isochrone around #1           [place-details, drive_5]
- *  12. Scoring              min-max normalised across candidates (local)
+ *  12. Scoring              single unified model (src/scoring/model.ts)
  *
  * Runtime-agnostic: used by the CLI (Node) and the Cloudflare Worker demo.
  * Every number in the result carries `refs` = trace seqs of the calls that
@@ -24,12 +24,18 @@
 import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type PlaceProps } from "./geoapify.js";
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
 import { VN_HCMC_PROFILE, type CountryProfile } from "./profile.js";
+import {
+  scoreCandidate,
+  TH_BANGKOK_PROFILE as TH_BANGKOK_MARKET_PROFILE,
+  VN_HCMC_PROFILE as VN_HCMC_MARKET_PROFILE,
+  WEIGHTS_VERSION as UNIFIED_WEIGHTS_VERSION,
+  type EvidenceBundle,
+  type SubScores,
+} from "../scoring/model.js";
 import { geometryAreaM2, haversineM, hexGrid, pointInGeometry, round6, type LatLon } from "../geo/grid.js";
 import { foldKey } from "../geo/text.js";
 
 export const ENGINE_VERSION = "1.0.0";
-export const WEIGHTS = { demand: 0.35, competition: 0.25, access: 0.25, reach: 0.15 } as const;
-export const WEIGHTS_VERSION = "1.0.0-isoline";
 
 export type Geometry = { type: string; coordinates: unknown };
 
@@ -49,7 +55,8 @@ export interface CandidateResult {
   /** Mean drive time from demand origins, minutes. */
   meanDriveMin: number | null;
   driveMinByOrigin: Array<number | null>;
-  scores: { demand: number; competition: number; access: number; reach: number };
+  /** Unified five-factor sub-scores (see src/scoring/model.ts). */
+  scores: SubScores;
   total: number;
   why: string;
   refs: number[];
@@ -102,12 +109,6 @@ export interface ScoutOptions {
   studyRadiusM?: number;
   /** Market profile: geocoder bias, boundary check, stopwords. Default VN_HCMC_PROFILE. */
   profile?: CountryProfile;
-}
-
-function minMax(xs: number[]): (x: number) => number {
-  const lo = Math.min(...xs);
-  const hi = Math.max(...xs);
-  return (x) => (hi - lo < 1e-9 ? 0.5 : (x - lo) / (hi - lo));
 }
 
 function pickAnchor(results: GeocodeResult[], profile: CountryProfile = VN_HCMC_PROFILE): GeocodeResult | undefined {
@@ -367,33 +368,36 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     }
   }
 
-  // 12 — scoring (min-max across the candidate set)
-  const density = cands.map((c) => c.demandTotal / Math.max(0.05, c.isolineAreaM2 / 1e6));
+  // 12 — scoring via the single unified model (src/scoring/model.ts).
+  // The REST `reach` factor is dropped as a weight and folded into
+  // `catchment` (POIs per km² already divides by isoline area).
   const meanDrive = cands.map((_, ti) => {
     const col = times.map((row) => row[ti]).filter((x) => Number.isFinite(x));
     return col.length ? col.reduce((a, b) => a + b, 0) / col.length / 60 : null;
   });
-  const nDemand = minMax(density);
-  const nComp = minMax(cands.map((c) => c.competitors));
-  const nReach = minMax(cands.map((c) => c.isolineAreaM2));
-  const drives = meanDrive.filter((x): x is number => x !== null);
-  const nDrive = drives.length ? minMax(drives) : () => 0.5;
+  // Market profile for scoring: the run's geocoder profile selects it
+  // ("th-bangkok" → TH_BANGKOK_PROFILE, anything else → VN_HCMC_PROFILE).
+  const marketProfile = profile.id === "th-bangkok" ? TH_BANGKOK_MARKET_PROFILE : VN_HCMC_MARKET_PROFILE;
   const scored: CandidateResult[] = cands.map((c, i) => {
-    const scores = {
-      demand: nDemand(density[i]),
-      competition: 1 - nComp(c.competitors),
-      access: meanDrive[i] === null ? 0.5 : 1 - nDrive(meanDrive[i] as number),
-      reach: nReach(c.isolineAreaM2),
+    const evidence: EvidenceBundle = {
+      candidateId: c.id,
+      candidateLabel: c.label,
+      competitorCount: c.competitors,
+      complementaryPoiCount: c.demandTotal,
+      // [ASSUMPTION] walk speed 80 m/min: catchment radius = walk minutes × 80.
+      catchmentRadiusM: plan.walkMinutes * 80,
+      catchmentAreaM2: c.isolineAreaM2,
+      ...(meanDrive[i] === null ? {} : { meanAccessDurationS: meanDrive[i] * 60 }),
     };
-    const total = WEIGHTS.demand * scores.demand + WEIGHTS.competition * scores.competition + WEIGHTS.access * scores.access + WEIGHTS.reach * scores.reach;
     const refs = [...c.refs, ...(matrixRef !== undefined ? [matrixRef] : [])];
+    const scoredCandidate = scoreCandidate(evidence, marketProfile, refs);
     const topDemand = Object.entries(c.demand).sort((a, b) => b[1] - a[1]).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(", ") || "no demand POIs";
     const why = `${plan.walkMinutes}-min walk reaches ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² with ${topDemand} and ${c.competitors} competing ${plan.competitorCategory}` + (meanDrive[i] !== null ? `; ${Math.round(meanDrive[i] as number)} min average drive from ${okOrigins.length} origin(s).` : ".");
     return {
       ...c,
       rank: 0,
-      scores,
-      total: Math.round(total * 1000) / 1000,
+      scores: scoredCandidate.scores,
+      total: Math.round(scoredCandidate.total * 1000) / 1000,
       why,
       refs,
       meanDriveMin: meanDrive[i] === null ? null : Math.round((meanDrive[i] as number) * 10) / 10,
@@ -430,13 +434,13 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   limitations.push(
     "POI counts come from Geoapify Places (OpenStreetMap-based); coverage of small shops is incomplete, so counts are relative signals, not market sizes.",
     "Drive times use Geoapify's approximated traffic at query time, not a specific hour.",
-    `Weights (${WEIGHTS_VERSION}) are heuristic and not calibrated against real store outcomes.`,
+    `Weights (${UNIFIED_WEIGHTS_VERSION}) are heuristic and not calibrated against real store outcomes.`,
     "Decision support only — visit the site before signing a lease.",
   );
 
   const result: ScoutResult = {
     engine: `sitescout-engine@${ENGINE_VERSION}`,
-    weightsVersion: WEIGHTS_VERSION,
+    weightsVersion: UNIFIED_WEIGHTS_VERSION,
     question,
     plan,
     planner: planned.planner,

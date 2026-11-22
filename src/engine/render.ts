@@ -3,6 +3,7 @@
  * trace, and a Geoapify Static Maps request body. Pure functions — no I/O.
  */
 import type { ScoutResult } from "./scout.js";
+import { DEFAULT_WEIGHTS } from "../scoring/model.js";
 
 const cite = (seqs: number[]): string => [...new Set(seqs)].sort((a, b) => a - b).map((s) => `[T${s}]`).join(" ");
 const f2 = (x: number): string => x.toFixed(2);
@@ -35,7 +36,7 @@ export function renderMarkdown(r: ScoutResult): string {
     L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${c.demandTotal} | ${c.competitors} | ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² | ${c.meanDriveMin ?? "n/a"} min | ${cite(c.refs)} |`);
   }
   L.push("");
-  L.push(`Score = ${"0.35·demand density + 0.25·(1 − competition) + 0.25·access + 0.15·walk reach"}, each min-max normalised across these ${r.candidates.length} candidates.`);
+  L.push(`Score = ${DEFAULT_WEIGHTS.competition.toFixed(2)}·competition + ${DEFAULT_WEIGHTS.complementarity.toFixed(2)}·complementarity + ${DEFAULT_WEIGHTS.catchment.toFixed(2)}·catchment + ${DEFAULT_WEIGHTS.accessibility.toFixed(2)}·accessibility + ${DEFAULT_WEIGHTS.cost.toFixed(2)}·cost, each sub-score normalised to [0, 1] (unified model, weights \`${r.weightsVersion}\`).`);
   L.push("");
   L.push("## Why each site ranks where it does");
   L.push("");
@@ -44,7 +45,7 @@ export function renderMarkdown(r: ScoutResult): string {
     L.push("");
     L.push(`${c.why} ${cite(c.refs)}`);
     L.push("");
-    L.push(`- Sub-scores: demand ${f2(c.scores.demand)} · competition ${f2(c.scores.competition)} · access ${f2(c.scores.access)} · reach ${f2(c.scores.reach)}`);
+    L.push(`- Sub-scores: competition ${f2(c.scores.competition)} · complementarity ${f2(c.scores.complementarity)} · catchment ${f2(c.scores.catchment)} · accessibility ${f2(c.scores.accessibility)} · cost ${f2(c.scores.cost)}`);
     L.push(`- Demand mix: ${Object.entries(c.demand).map(([k, n]) => `${k} ${n}`).join(", ")}`);
     L.push(`- Drive time by origin: ${r.origins.filter((o) => o.lat !== undefined).map((o, i) => `${o.query.split(",")[0]} ${c.driveMinByOrigin[i] ?? "n/a"} min`).join(" · ")}`);
     L.push(`- Coordinates: ${c.lat}, ${c.lon}`);

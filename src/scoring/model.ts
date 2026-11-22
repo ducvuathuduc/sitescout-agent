@@ -70,8 +70,12 @@ export interface ScoredCandidate {
 /**
  * Weight-vector version. Bumped on every calibration change — never silently.
  * Format: "<major>.<minor>.<patch>-<basis>".
+ * Interim value "2.0.0-unified": one model for both engines, weights still
+ * heuristic. Bumped to "2.0.0-calibrated" only on the first bench-driven
+ * weight change (spec §2.1); the word "calibrated" must not appear in any
+ * memo, pitch, or user-facing output before then.
  */
-export const WEIGHTS_VERSION = "0.2.0-market-aware";
+export const WEIGHTS_VERSION = "2.0.0-unified";
 
 /** v0 weights — heuristic, pending calibration against smoke-test evidence. */
 export const DEFAULT_WEIGHTS: Record<keyof SubScores, number> = {
@@ -100,6 +104,13 @@ export interface MarketProfile {
     /** Mean access duration (s) that yields accessibility 0.5. */
     accessHalfS: number;
   };
+  /**
+   * Traffic scale for projecting a foot-traffic band from a score.
+   * `null` (default) means no calibration data yet: `trafficBandFor()` then
+   * returns null and the memo renders "traffic projection unavailable" —
+   * never an invented band. Set only from bench evidence (spec §1/H1.2).
+   */
+  trafficScale?: { customersPerDayAtScore1: number; bandHalfWidth: number } | null;
 }
 
 /** Reproduces the 0.1.0 model exactly (cost weight 0). */
@@ -112,7 +123,46 @@ export const DEFAULT_MARKET_PROFILE: MarketProfile = {
     catchmentDensityK: 60,
     accessHalfS: 900,
   },
+  trafficScale: null,
 };
+
+/**
+ * Per-market profiles for the unified model. Initial weights and scales
+ * reproduce the default profile exactly (no silent behaviour change);
+ * calibration moves them only with a RESULTS.md entry and a version bump.
+ */
+export const VN_HCMC_PROFILE: MarketProfile = {
+  id: "vn-hcmc",
+  weights: { ...DEFAULT_WEIGHTS },
+  scales: { ...DEFAULT_MARKET_PROFILE.scales },
+  trafficScale: null,
+};
+
+export const TH_BANGKOK_PROFILE: MarketProfile = {
+  id: "th-bangkok",
+  weights: { ...DEFAULT_WEIGHTS },
+  scales: { ...DEFAULT_MARKET_PROFILE.scales },
+  trafficScale: null,
+};
+
+/**
+ * Projected daily-customer band for a score, or null while the profile has
+ * no trafficScale (no calibration data — never invent a band).
+ * Band: [total × customersPerDayAtScore1 × (1 − bandHalfWidth),
+ *        total × customersPerDayAtScore1 × (1 + bandHalfWidth)].
+ */
+export function trafficBandFor(
+  total: number,
+  profile: MarketProfile,
+): { low: number; high: number } | null {
+  const scale = profile.trafficScale;
+  if (!scale) return null;
+  const centre = total * scale.customersPerDayAtScore1;
+  return {
+    low: centre * (1 - scale.bandHalfWidth),
+    high: centre * (1 + scale.bandHalfWidth),
+  };
+}
 
 /**
  * Data-density floor: a candidate whose catchment yields

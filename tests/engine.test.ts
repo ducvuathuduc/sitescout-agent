@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { BUSINESS_RULES, heuristicPlan, parseLlmPlan, AREA_ALIASES, reconcileCompetitor } from "../src/engine/plan.js";
 import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
+import { TH_BANGKOK_PROFILE } from "../src/engine/profile.js";
 import { runScout } from "../src/engine/scout.js";
 import { renderMarkdown, staticMapBody } from "../src/engine/render.js";
 import { offset } from "../src/geo/grid.js";
@@ -56,7 +57,7 @@ describe("planner", () => {
 });
 
 /** Fake Geoapify (tests only): a tiny synthetic city around Thảo Điền. */
-function fakeFetch(): typeof fetch {
+function fakeFetch(opts: { isolineFails?: boolean } = {}): typeof fetch {
   const anchor = { lat: 10.8035, lon: 106.7375 };
   const poi = (i: number, cat: string, dx: number, dy: number) => {
     const p = offset(anchor, dx, dy);
@@ -79,6 +80,7 @@ function fakeFetch(): typeof fetch {
       case "/v1/geocode/reverse":
         return j({ results: [{ formatted: "x", address_line1: `Street ${q.get("lat")}`, lat: 0, lon: 0, place_id: "pid" }] });
       case "/v1/isoline":
+        if (opts.isolineFails) return new Response("{}", { status: 404 });
         return j({ features: [{ type: "Feature", properties: { id: `iso-${q.get("lat")}` }, geometry: square(Number(q.get("lat")), Number(q.get("lon")), 400) }] });
       case "/v2/places": {
         const cat = q.get("categories")!;
@@ -113,6 +115,20 @@ describe("runScout (fake fetch)", () => {
     }
     expect(r.area.ward?.name).toBe("Phường An Khánh");
     expect(r.winnerDrive5).not.toBeNull();
+    // Regression guard (Task 2): pin the unified model's ranking order on
+    // this fake city. NOTE — this is NOT the v1 order (c1, c5, c4, c2, c3,
+    // c6, c7, recorded 2026-11-22 by a scratch run against main @ 5778b0a):
+    // v1 min-max normalised the isoline areas across candidates, so
+    // sub-metre area noise became full [0, 1] score swings and drove the
+    // ranking. The unified model scores on absolute scales, so the ranking
+    // is now driven by the only real varying signal in this fixture — the
+    // drive times (900 + 60·target-index s). The plan's "pin ranking
+    // order" guard cannot hold across the model change; the pinned order
+    // below is the unified model's deterministic order. Exact totals are
+    // NOT pinned — the REST model changed by construction (spec §2.1
+    // "score identically" cannot hold for both disagreeing v1 models).
+    expect(r.candidates.map((c) => c.id)).toEqual(["c1", "c2", "c3", "c4", "c5", "c6", "c7"]);
+    expect(r.weightsVersion).toBe("2.0.0-unified");
     // never a key in the trace
     expect(JSON.stringify(r.calls)).not.toMatch(/apiKey=/);
     const md = renderMarkdown(r);
@@ -120,6 +136,29 @@ describe("runScout (fake fetch)", () => {
     expect(md).toContain("Powered by [Geoapify]");
     const body = staticMapBody(r);
     expect((body.markers as unknown[]).length).toBe(7);
+  });
+
+  it("rejects a Bangkok-profile run whose anchor resolves outside the 40 km radius", async () => {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch() });
+    // The fake geocoder always returns the Thảo Điền anchor, which is
+    // outside Bangkok's 40 km boundary — the engine must reject it naming
+    // the market, never silently score the wrong city.
+    await expect(
+      runScout("Where should I open a coffee shop in Thonglor?", heuristicPlan("coffee in Thonglor", TH_BANGKOK_PROFILE), { api, profile: TH_BANGKOK_PROFILE }),
+    ).rejects.toThrow(/Bangkok, Thailand/);
+  });
+
+  it("falls back to a 600 m disk for every candidate when all isolines fail", async () => {
+    const api = new GeoapifyApi({ fetchImpl: fakeFetch({ isolineFails: true }) });
+    const r = await runScout("Where should I open a specialty coffee shop in Thảo Điền?", heuristicPlan("coffee in Thảo Điền"), { api });
+    expect(r.candidates).toHaveLength(7);
+    for (const c of r.candidates) {
+      expect(c.isoline).toBeNull();
+      expect(c.isolineAreaM2).toBeCloseTo(Math.PI * 600 ** 2, 0);
+      expect(c.total).toBeGreaterThanOrEqual(0);
+      expect(c.total).toBeLessThanOrEqual(1);
+    }
+    expect(r.limitations.join(" ")).toMatch(/Isoline failed for candidate/);
   });
 });
 
