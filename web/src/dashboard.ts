@@ -38,6 +38,10 @@ export interface MemoIndexCalibration {
   market: string;
   version: string;
   runDate: string | null;
+  /** Bench dataset size (entries / closed) and whether the Phase 1 gate is still open (< 30 entries or < 10 closed). */
+  entries?: number;
+  closedEntries?: number;
+  gateOpen?: boolean;
 }
 
 export interface MemoIndex {
@@ -95,7 +99,7 @@ export function renderDashboard(index: MemoIndex): string {
             (c) =>
               `<li><b>${esc(c.market)}</b> — weights ${esc(c.version)} · ${
                 c.runDate !== null ? `bench run ${esc(c.runDate)}` : "no bench run yet"
-              }</li>`,
+              }${c.gateOpen === true ? " · gate open — example data only" : ""}</li>`,
           )
           .join("")}</ul></div>`
       : "";

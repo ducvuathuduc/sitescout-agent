@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMemoIndex } from "../scripts/build-memo-index.mjs";
+import { buildMemoIndex, loadCalibration } from "../scripts/build-memo-index.mjs";
 import { renderDashboard, type MemoIndex } from "../web/src/dashboard.js";
 
 function memoFixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -94,5 +94,25 @@ describe("renderDashboard", () => {
   it("renders an outcome whose memo is missing from the index as an unknown-memo row", () => {
     const html = renderDashboard(indexWithOrphanOutcome());
     expect(html).toContain("unknown memo");
+  });
+  it("surfaces the gate-open state when the bench dataset is below the 30/10 minimum", () => {
+    const base: MemoIndex = {
+      generatedAt: "",
+      memos: [{ memoId: "thaodien-coffee", market: "vn-hcmc", business: "coffee shop", status: "delivered", topCandidate: "159, Võ Nguyên Giáp", band: null }],
+      metering: { memosGenerated: 1, marketsUsed: ["vn-hcmc"], outcomesRecorded: 0 },
+      calibration: [{ market: "th-bangkok", version: "2.0.0-unified", runDate: "2026-11-22", entries: 5, closedEntries: 2, gateOpen: true }],
+      accountId: null,
+    };
+    expect(renderDashboard(base)).toContain("gate open — example data only");
+    const closed: MemoIndex = { ...base, calibration: [{ market: "th-bangkok", version: "2.0.0-calibrated", runDate: "2026-11-22", entries: 30, closedEntries: 10, gateOpen: false }] };
+    expect(renderDashboard(closed)).not.toContain("gate open");
+  });
+  it("loadCalibration flags the Bangkok bench gate open on its 5 EXAMPLE entries", () => {
+    const cal = loadCalibration(".");
+    const bangkok = cal.find((c: { market: string }) => c.market === "th-bangkok")!;
+    expect(bangkok.entries).toBe(5);
+    expect(bangkok.closedEntries).toBe(2);
+    expect(bangkok.gateOpen).toBe(true);
+    expect(cal.find((c: { market: string }) => c.market === "vn-hcmc")!.gateOpen).toBe(false);
   });
 });

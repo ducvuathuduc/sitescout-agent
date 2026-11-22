@@ -15,7 +15,7 @@ If the question is outside Ho Chi Minh City, still answer with the closest HCMC 
         <td>${s.topCandidate!==null?Fe(s.topCandidate):"\u2014"}</td>
         <td>${s.band!==null?`${s.band.low}\u2013${s.band.high}`:"\u2014"}</td>
         <td>${Qc(s)}</td>
-      </tr>`).join(""),r=a.calibration!==void 0&&a.calibration.length>0?`<div class="block"><p class="h3">Calibration status</p><ul>${a.calibration.map(s=>`<li><b>${Fe(s.market)}</b> \u2014 weights ${Fe(s.version)} \xB7 ${s.runDate!==null?`bench run ${Fe(s.runDate)}`:"no bench run yet"}</li>`).join("")}</ul></div>`:"";return`<div class="block">
+      </tr>`).join(""),r=a.calibration!==void 0&&a.calibration.length>0?`<div class="block"><p class="h3">Calibration status</p><ul>${a.calibration.map(s=>`<li><b>${Fe(s.market)}</b> \u2014 weights ${Fe(s.version)} \xB7 ${s.runDate!==null?`bench run ${Fe(s.runDate)}`:"no bench run yet"}${s.gateOpen===!0?" \xB7 gate open \u2014 example data only":""}</li>`).join("")}</ul></div>`:"";return`<div class="block">
     <p class="h3">SiteScout \u2014 Placer.ai for Southeast Asia</p>
     <p class="muted xs">Pipeline \xB7 generated ${Fe(a.generatedAt)} \xB7 read-only \u2014 memos are generated and recorded from the CLI; nothing here edits them.</p>
     <div class="kpis">

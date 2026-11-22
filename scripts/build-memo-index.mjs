@@ -165,9 +165,22 @@ export function loadCalibration(root) {
   } catch {
     // keep null
   }
+  // Phase 1 gate: the bench dataset needs >= 30 entries with >= 10 closed.
+  // Below that the bench ran on example data and the gate stays open.
+  let bangkokEntries;
+  let bangkokClosed;
+  let bangkokGateOpen = false;
+  try {
+    const entries = JSON.parse(readFileSync(join(root, "bench/bangkok-coffee/dataset.json"), "utf8")).entries ?? [];
+    bangkokEntries = entries.length;
+    bangkokClosed = entries.filter((e) => e.status === "closed").length;
+    bangkokGateOpen = bangkokEntries < 30 || bangkokClosed < 10;
+  } catch {
+    // keep undefined/false — no dataset, no gate claim
+  }
   return [
-    { market: "vn-hcmc", version, runDate: null },
-    { market: "th-bangkok", version, runDate: bangkokRunDate },
+    { market: "vn-hcmc", version, runDate: null, gateOpen: false },
+    { market: "th-bangkok", version, runDate: bangkokRunDate, entries: bangkokEntries, closedEntries: bangkokClosed, gateOpen: bangkokGateOpen },
   ];
 }
 
