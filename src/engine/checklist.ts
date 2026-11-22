@@ -13,7 +13,6 @@
  * - `alleyLighting` may be "N/A" (non-soi candidates); the other five
  *   factors never take "N/A".
  */
-import { readFileSync } from "node:fs";
 import { z } from "zod";
 
 export const MICRO_FACTORS = [
@@ -109,31 +108,6 @@ export function emptyChecklist(): MicroChecklist {
 export function verdictFor(checklist: MicroChecklist, rank: number): Verdict {
   const unverified = Object.values(checklist).filter((f) => f.status === "UNVERIFIED").length;
   return rank >= 1 && rank <= 3 && unverified >= 2 ? "verify on foot before deciding" : "recommend";
-}
-
-/**
- * Read + validate a checklist file. Throws an Error naming the file and the
- * first problem — never returns a partial checklist.
- */
-export function parseChecklistFile(path: string): ChecklistFile {
-  let raw: string;
-  try {
-    raw = readFileSync(path, "utf8");
-  } catch (e) {
-    throw new Error(`checklist file ${path}: cannot read (${(e as Error).message})`);
-  }
-  let data: unknown;
-  try {
-    data = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`checklist file ${path}: invalid JSON (${(e as Error).message})`);
-  }
-  const parsed = ChecklistFileSchema.safeParse(data);
-  if (!parsed.success) {
-    const first = parsed.error.issues[0];
-    throw new Error(`checklist file ${path}: ${first.path.join(".")}: ${first.message}`);
-  }
-  return parsed.data;
 }
 
 /**

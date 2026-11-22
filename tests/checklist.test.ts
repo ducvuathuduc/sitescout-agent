@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   applyChecklists,
   emptyChecklist,
-  parseChecklistFile,
   verdictFor,
   type MicroChecklist,
   type Verdict,
 } from "../src/engine/checklist.js";
+import { parseChecklistFile } from "../src/engine/checklist-file.js";
 
 const allVerified = (): MicroChecklist => ({
   walkability: { status: "VERIFIED", source: "site visit", observedAt: "2026-11-20" },

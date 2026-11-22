@@ -21,7 +21,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { GeoapifyApi } from "./engine/geoapify.js";
-import { parseChecklistFile, type MicroChecklist } from "./engine/checklist.js";
+import { parseChecklistFile } from "./engine/checklist-file.js";
+import { type MicroChecklist } from "./engine/checklist.js";
 import { heuristicPlan, llmPlan } from "./engine/plan.js";
 import { runScout } from "./engine/scout.js";
 import { renderHtml, renderMarkdown, staticMapBody, traceJsonl } from "./engine/render.js";

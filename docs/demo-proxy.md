@@ -68,8 +68,8 @@ putting any key in the page.
 
 | Limit | Value | Where |
 |---|---|---|
-| Daily budget, live API calls **and** map tiles together | **2,400 credits** (`DAILY_CREDIT_CAP`) | `checkCaps()` in `budget.ts` |
-| Map tiles inside that budget | 2,500 tiles a day (`TILE_CAP`) = 625 credits | `proxyTile()` |
+| Daily budget, live API calls **and** map tiles together, per market | **1,200 credits HCMC + 1,200 Bangkok** = 2,400 (`DAILY_CREDIT_CAP_HCMC` / `DAILY_CREDIT_CAP_BANGKOK`) | `checkCaps()` in `budget.ts` |
+| Map tiles inside that budget | 2,500 tiles a day per market (`TILE_CAP`) = 625 credits | `proxyTile()` |
 | Live calls per visitor | 180 a day (`PER_IP_CALL_CAP`); cache hits do not count | `checkCaps()` |
 | AI planner | 300 plans a day for the whole demo | `plan()` |
 | Share links | 20 per visitor a day; run text limited to 1,500,000 JavaScript string code units | `share()` |
@@ -79,6 +79,14 @@ putting any key in the page.
 The plan belongs to the account, so other work on the same account (for us: the CLI and the address benchmark)
 uses the same credits. 2,400 is 80 %. The other 600 credits are headroom for that work and for the few calls that
 can pass the cap check at the same moment (see §8).
+
+Since the Bangkok scope (2026-11-22) the 2,400 splits **1,200 / 1,200 per market**: a Bangkok run cannot eat the
+HCMC budget and vice versa. Which market a request draws from is decided by its coordinates (`marketOf()` in
+[`web/worker/budget.ts`](../web/worker/budget.ts), mirroring the engine profiles: within 40 km of the HCMC bias
+point, or inside the Thailand bbox and within 40 km of the Bangkok bias point). Requests that carry no coordinates
+(geocoding by text, `geometry:` isoline filters) default to HCMC. Each market's spend is its own row in `totals`
+(`market` = `hcmc` or `bangkok`); `/api/status` reports both under `markets`, with the top-level `spent` /
+`creditCap` as the totals across markets.
 
 **Why tiles are in the same budget.** Geoapify counts a map tile request as 0.25 credit (4 tiles = 1 credit,
 [pricing details](https://www.geoapify.com/pricing-details/), checked 2026-11-04). Until 2026-11-04 production had a 1,500-credit API
@@ -112,17 +120,23 @@ key really spent.
 [`web/worker/schema.sql`](../web/worker/schema.sql):
 
 ```sql
-CREATE TABLE IF NOT EXISTS totals (day TEXT PRIMARY KEY, credits INTEGER NOT NULL DEFAULT 0, tiles INTEGER NOT NULL DEFAULT 0, plans INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS totals (day TEXT NOT NULL, market TEXT NOT NULL DEFAULT 'hcmc', credits INTEGER NOT NULL DEFAULT 0, tiles INTEGER NOT NULL DEFAULT 0, plans INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, market));
 CREATE TABLE IF NOT EXISTS ip_usage (day TEXT NOT NULL, ip TEXT NOT NULL, calls INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, ip));
 CREATE TABLE IF NOT EXISTS cache_stats (day TEXT PRIMARY KEY, hits INTEGER NOT NULL DEFAULT 0, tile_hits INTEGER NOT NULL DEFAULT 0, saved REAL NOT NULL DEFAULT 0);
 ```
 
-- **One row per day.** `day` is the UTC date (`new Date().toISOString().slice(0, 10)`), so the limits reset at
-  00:00 UTC, which is 07:00 in Vietnam.
+- **One row per day and market.** `day` is the UTC date (`new Date().toISOString().slice(0, 10)`), so the limits reset at
+  00:00 UTC, which is 07:00 in Vietnam. Existing databases need the one-off migration
+  [`web/worker/migrations/001-market-budgets.sql`](../web/worker/migrations/001-market-budgets.sql)
+  (`npm run demo:migrate:markets`, run once before deploying the worker that reads the `market` column) — the
+  `totals` primary key was `(day)` and SQLite cannot ALTER a primary key, so the migration rebuilds the table with
+  `PRIMARY KEY (day, market)` and preserves existing rows as `market = 'hcmc'`.
 - **No raw IP is stored.** `visitor()` stores `sha256(ip | day | "sitescout")`, cut to 24 hex characters. The salt
   includes the day, so the same visitor gets a new id every day and ids cannot be linked across days.
-- **Per call:** a cache miss reads both counters (`usage()`), compares them with the caps (`checkCaps()`), forwards
-  the call, then adds the call and its credits in one D1 batch after the response is sent (`ctx.waitUntil(bump(…))`).
+- **Per call:** a cache miss reads both counters for the request's market (`usage()`), compares them with that
+  market's caps (`checkCaps()`), forwards the call, then adds the call and its credits in one D1 batch after the
+  response is sent (`ctx.waitUntil(bump(…))`). The per-visitor cap (180) is shared across markets — it counts in
+  `ip_usage`, which has no market column.
   A cache hit touches neither counter. It only adds to `cache_stats`, which lives in its own table so that a
   statistics problem can never break the caps.
 
@@ -135,10 +149,10 @@ HTTP/1.1 429 Too Many Requests
 content-type: application/json
 x-sitescout-fallback: quota
 
-{"error":"daily live quota reached","fallback":true,"used":2400,"cap":2400}
+{"error":"daily live quota reached","fallback":true,"used":1200,"cap":1200,"market":"hcmc"}
 ```
 
-The per-visitor limit gives `"error":"per-visitor daily limit reached"` with `used`/`cap` of 180. The engine does
+The body names the market whose budget was hit (`market`: `hcmc` or `bangkok`). The per-visitor limit gives `"error":"per-visitor daily limit reached"` with `used`/`cap` of 180. The engine does
 not retry a 429 that carries `x-sitescout-fallback` (ordinary Geoapify 429s get up to 2 retries, 3 attempts total).
 
 In the app ([`web/src/app.ts`](../web/src/app.ts)):
@@ -302,10 +316,11 @@ Cache first, then caps, then Geoapify (`proxyGeo()`, shortened):
   }
 
   const ip = await visitor(req);
-  const u = await usage(env, ip);
+  const market = requestMarket(path, url.searchParams, body) ?? "hcmc";
+  const u = await usage(env, ip, market);
   const c0 = caps(env);
-  const gate = checkCaps(u, c0);
-  if (!gate.ok) return capped(gate.reason === "daily" ? "daily live quota reached" : "per-visitor daily limit reached", gate.used, gate.cap);
+  const gate = checkCaps(u, { daily: c0[market], perIp: c0.perIp });
+  if (!gate.ok) return capped(gate.reason === "daily" ? "daily live quota reached" : "per-visitor daily limit reached", gate.used, gate.cap, market);
 
   const res = await fetch(upstream, {
     method,
@@ -321,7 +336,8 @@ Cache first, then caps, then Geoapify (`proxyGeo()`, shortened):
 Map tiles (`proxyTile()`, shortened):
 
 ```ts
-  if (!tileInHcmc(z, x, y)) return new Response(null, { status: 204 });
+  const market = tileMarket(z, x, y);
+  if (!market) return new Response(null, { status: 204 });
   const upstream = `${UPSTREAM}/v1/tile/positron/${z}/${x}/${y}${m[4] ?? ""}.png`;
   const cache = caches.default;
   const key = new Request(upstream);
@@ -332,14 +348,15 @@ Map tiles (`proxyTile()`, shortened):
   }
   // Tiles draw from the same daily credit budget as API calls (0.25 credit each),
   // plus their own ceiling so a map-browsing spike cannot starve live analyses.
-  const u = await usage(env, "tiles");
+  // The ceiling applies per market, like the credit budget.
+  const u = await usage(env, "tiles", market);
   const c0 = caps(env);
-  if (!checkCaps({ ...u, ipCalls: 0 }, c0).ok || u.tiles >= c0.tiles) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
+  if (!checkCaps({ ...u, ipCalls: 0 }, { daily: c0[market], perIp: c0.perIp }).ok || u.tiles >= c0.tiles) return new Response(null, { status: 429, headers: { "x-sitescout-fallback": "tiles" } });
   const res = await fetch(upstream, { headers: { "x-api-key": env.GEOAPIFY_KEY } });
   if (!res.ok) return new Response(null, { status: res.status });
   const out = new Response(res.body, { headers: { "content-type": "image/png", "cache-control": "public, max-age=2592000" } });
   ctx.waitUntil(cache.put(key, out.clone()));
-  ctx.waitUntil(bump(env, "tiles", { tiles: 1 }));
+  ctx.waitUntil(bump(env, "tiles", { tiles: 1 }, market));
   return out;
 ```
 
@@ -359,20 +376,25 @@ npx wrangler login
 npx wrangler d1 create sitescout-demo        # put the returned database_id in web/wrangler.toml
 npx wrangler secret put GEOAPIFY_KEY -c web/wrangler.toml
 npm run demo:migrate                        # creates tables in your own remote database
+npm run demo:migrate:markets                # one-off, only for databases created before 2026-11-22: adds the per-market totals rows (safe to skip on a fresh database)
 npm run demo:dry-run                        # builds and checks the bundle without uploading
 npm run demo:deploy                         # builds and publishes your own Worker
-npm run demo:totals                         # reads daily aggregates; update the date range as needed
+npm run demo:totals                         # reads daily aggregates per market; update the date range as needed
 ```
 
 Before the secret, migration, or deploy steps, edit [`web/wrangler.toml`](../web/wrangler.toml) to make it yours:
 
 - `name`: the Worker name, which is part of the URL.
 - `database_id`: the id from `d1 create`.
-- `[vars]`: `DAILY_CREDIT_CAP`, `PER_IP_CALL_CAP`, `TILE_CAP`. Keep `DAILY_CREDIT_CAP` below your Geoapify plan's
-  daily credits, minus what you use yourself with the same account.
+- `[vars]`: `DAILY_CREDIT_CAP_HCMC`, `DAILY_CREDIT_CAP_BANGKOK`, `PER_IP_CALL_CAP`, `TILE_CAP`. Keep
+  `DAILY_CREDIT_CAP_HCMC + DAILY_CREDIT_CAP_BANGKOK` below your Geoapify plan's daily credits, minus what you
+  use yourself with the same account. (The old single `DAILY_CREDIT_CAP` var is retired — the Worker no longer
+  reads it; a value left in the Cloudflare dashboard is ignored.)
 - Remove the `[ai]` block if you do not want the LLM planner; the app then uses the rule-based planner.
 
-To serve another city, change `BBOX` in `web/worker/index.ts` (and the map's start view in `web/src/app.ts`).
+Bangkok is already built in: the demo scope is HCMC + Bangkok (`marketOf()` in `web/worker/budget.ts`, mirroring
+the engine's market profiles). To serve another city, add its market there and in the engine profile, a per-market
+cap, and a row in the per-market caps.
 To allow another Geoapify API, add its path to `ALLOW` and a rule to `scopeError()`.
 
 `npm run demo:dry-run`, `demo:migrate` and `demo:deploy` ran with Wrangler 4.157.0 on 2026-11-04. No lifecycle hook calls these demo scripts.
@@ -387,7 +409,7 @@ API without wrangler (for CI); it keeps the `GEOAPIFY_KEY` secret from the previ
 | Worker requests | 100,000 a day | 1 per API call, tile, static file |
 | D1 rows written | 100,000 a day | 2 logical counter upserts per forwarded call (`totals` + `ip_usage`), 1 statistics upsert per cache hit; billed rows can include index work |
 | D1 rows read | 5 million a day | 2 counter SELECTs per cache miss; not a measured billed-row count |
-| Geoapify (free) | 3,000 credits a day, 5 requests a second | shared 2,400-credit budget (80 %) |
+| Geoapify (free) | 3,000 credits a day, 5 requests a second | 1,200 + 1,200 per-market budgets (80 % of 3,000 combined) |
 
 ## 8. Known limits
 
@@ -399,4 +421,4 @@ API without wrangler (for CI); it keeps the `GEOAPIFY_KEY` secret from the previ
   (`runScout()` in `src/engine/scout.ts` awaits each call), but several visitors at once could go over. Geoapify's
   limits are soft ([pricing FAQ](https://www.geoapify.com/pricing/)), and the engine retries a Geoapify 429 with
   backoff.
-- **Tiles outside the HCMC box return 204** (empty), so the map is blank outside the demo area.
+- **Tiles outside the HCMC and Bangkok boxes return 204** (empty), so the map is blank outside the demo area.

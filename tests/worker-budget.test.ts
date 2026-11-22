@@ -3,7 +3,7 @@
  * daily credit budget. Rules: https://www.geoapify.com/pricing-details/ (2026-10-31).
  */
 import { describe, expect, it } from "vitest";
-import { checkCaps, credits, isolineCredits, spent, DEFAULT_DAILY_CAP, TILE_CREDITS } from "../web/worker/budget.js";
+import { checkCaps, credits, isolineCredits, marketOf, spent, DEFAULT_DAILY_CAP, TILE_CREDITS } from "../web/worker/budget.js";
 import { estimateCredits } from "../src/engine/geoapify.js";
 
 const q = (s: string): URLSearchParams => new URLSearchParams(s);
@@ -71,5 +71,21 @@ describe("one daily budget for API calls and tiles", () => {
   });
   it("allows a call under both caps", () => {
     expect(checkCaps({ credits: 2399, tiles: 3, ipCalls: 179 }, { daily: 2400, perIp: 180 })).toEqual({ ok: true });
+  });
+});
+
+describe("per-market budgets (Bangkok + HCMC)", () => {
+  it("classifies Bangkok and HCMC points into their markets, and neither into the other", () => {
+    expect(marketOf(13.7563, 100.5018)).toBe("bangkok");
+    expect(marketOf(10.7769, 106.7009)).toBe("hcmc");
+    expect(marketOf(1.3521, 103.8198)).toBeNull(); // Singapore: out of scope
+  });
+  it("a Bangkok run cannot spend the HCMC budget", () => {
+    const u = { credits: 1200, tiles: 0, ipCalls: 0 };
+    expect(checkCaps(u, { daily: 1200, perIp: 180 }).ok).toBe(false);
+    expect(checkCaps({ credits: 0, tiles: 0, ipCalls: 0 }, { daily: 1200, perIp: 180 }).ok).toBe(true);
+  });
+  it("a point inside Thailand but far from Bangkok is out of scope", () => {
+    expect(marketOf(18.7883, 98.9853)).toBeNull(); // Chiang Mai: in TH_BBOX, >40 km from the bias point
   });
 });
