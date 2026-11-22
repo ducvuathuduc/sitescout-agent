@@ -14,7 +14,9 @@ import "./style.css";
 import { GeoapifyApi, type CallRecord } from "../../src/engine/geoapify.js";
 import { heuristicPlan, parseLlmPlan, PLANNER_SYSTEM_PROMPT, type PlanOutcome } from "../../src/engine/plan.js";
 import { runScout, type ScoutResult, type CandidateResult, type Geometry } from "../../src/engine/scout.js";
-import { DEFAULT_WEIGHTS } from "../../src/scoring/model.js";
+import { DEFAULT_WEIGHTS, formatTrafficBand } from "../../src/scoring/model.js";
+import { MICRO_FACTORS, MICRO_FACTOR_DESCRIPTIONS, MICRO_FACTOR_LABELS, checklistEntryText, emptyChecklist, verdictFor, type MicroChecklist } from "../../src/engine/checklist.js";
+import { expiryFor, isExpired, isStale } from "../../src/engine/freshness.js";
 
 /* ============================== constants ============================== */
 const REPO = "https://github.com/ducvuathuduc/sitescout-agent";
@@ -713,13 +715,35 @@ function exportPdf(): void {
   const r = S.result;
   if (!r) return;
   const best = [...r.candidates].sort((a, b) => a.rank - b.rank);
+  // Defensive reads: memos recorded before v2 lack these fields.
+  const asOf = r.dataAsOf ?? r.generatedAt.slice(0, 10);
+  const exp = r.expiresAt ?? expiryFor(asOf);
+  const checklistOf = (c: CandidateResult): MicroChecklist => c.checklist ?? emptyChecklist();
+  const verdictOf = (c: CandidateResult): string => c.verdict ?? verdictFor(checklistOf(c), c.rank);
   $("#print").innerHTML = `<header class="pr-head"><div>${I.pin("#1570EF", "#fff")} <b>SiteScout</b> · site-selection report</div><div>${esc(new Date().toISOString().slice(0, 10))} · ${esc(location.host)}</div></header>
     <h1>${esc(r.question)}</h1>
     <p>${esc(cap(r.plan.business))} · ${esc(r.area.ward?.name ?? r.plan.area)} · planner ${r.planner === "llm" ? "AI" : "rules"} · competitors <code>${esc(r.plan.competitorCategory)}</code> · demand ${r.plan.demandCategories.map((d) => `<code>${esc(d)}</code>`).join(" ")} · ${r.plan.walkMinutes}-min walk zones</p>
+    <p>Data as of ${esc(asOf)} · valid until ${esc(exp)} (30 days).${isExpired(exp) ? " <b>This memo has expired — re-run before deciding.</b>" : ""}${isStale(asOf) ? " <b>Stale data:</b> this memo's data is older than 90 days — re-run before deciding." : ""}</p>
+    <h2>Executive summary</h2>
+    <p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p>
+    <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>
+    ${best.slice(0, 3).map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td><td>${esc(formatTrafficBand(c.trafficBand ?? null))}</td><td>${esc(verdictOf(c))}</td></tr>`).join("")}
+    </tbody></table>
+    <p><b>Visit the site before signing a lease.</b></p>
     <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th>${VISIBLE_METRICS.map((m) => `<th>${m.label}</th>`).join("")}<th>Demand</th><th>Comp.</th><th>Drive</th></tr></thead><tbody>
     ${best.map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td>${VISIBLE_METRICS.map((m) => `<td>${c.scores[m.k].toFixed(2)}</td>`).join("")}<td>${c.demandTotal}</td><td>${c.competitors}</td><td>${c.meanDriveMin !== null ? Math.round(c.meanDriveMin) + "′" : "n/a"}</td></tr>`).join("")}
     </tbody></table>
     ${best.slice(0, 3).map((c) => `<h2>#${c.rank} ${esc(c.label)}</h2><ul>${explain(r, c).map((e) => `<li>${esc(e.text)} ${e.refs.map((s) => `[T${s}]`).join(" ")}</li>`).join("")}</ul>`).join("")}
+    <h2>Micro-feature checklist</h2>
+    <p>Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.</p>
+    <table class="pr-table"><thead><tr><th>Site</th>${MICRO_FACTORS.map((f) => `<th>${MICRO_FACTOR_LABELS[f]}</th>`).join("")}</tr></thead><tbody>
+    ${best.map((c) => `<tr><td>${c.rank}. ${esc(c.label)}</td>${MICRO_FACTORS.map((f) => `<td>${esc(checklistEntryText(checklistOf(c)[f]))}</td>`).join("")}</tr>`).join("")}
+    </tbody></table>
+    <h2>What this model cannot see</h2>
+    <p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p>
+    <ul>${MICRO_FACTORS.map((f) => `<li><b>${esc(MICRO_FACTOR_DESCRIPTIONS[f])}:</b> ${best.map((c) => `#${c.rank} ${esc(checklistOf(c)[f].status)}`).join(" · ")}</li>`).join("")}</ul>
+    ${(r.excluded ?? []).length ? `<h2>Excluded — insufficient data</h2><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)}</li>`).join("")}</ul>` : ""}
+    ${(r.unconfirmed ?? []).length ? `<h2>Unconfirmed competitors — verify on foot</h2><p>These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are <b>not counted</b> in any competitor total or score — verify on foot before treating the area as empty.</p><ul>${(r.unconfirmed ?? []).map((u) => `<li><b>${esc(u.name)}</b> — ${esc(u.category)} · ${u.lat}, ${u.lon} — ${esc(u.reason)}</li>`).join("")}</ul>` : ""}
     <h2>Evidence (${S.calls.length} Geoapify calls)</h2><ol class="pr-calls">${S.calls.map((c) => `<li value="${c.seq}">T${c.seq} ${esc(c.api)} — ${esc(c.method)} ${esc(c.endpoint.slice(0, 110))} · ${c.status} · ${c.durationMs} ms</li>`).join("")}</ol>
     ${r.limitations.length ? `<h2>Limitations</h2><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
     <p class="pr-foot">Powered by Geoapify · © OpenMapTiles © OpenStreetMap contributors · ${esc(REPO)}</p>`;
