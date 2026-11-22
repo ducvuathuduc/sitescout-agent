@@ -1,0 +1,70 @@
+{
+  "_note": "EXAMPLE — not ground truth",
+  "entries": [
+    {
+      "area": "Thonglor",
+      "closed_approx": null,
+      "id": "bk-ex-001",
+      "label": "Example Coffee A, Thonglor Soi 10",
+      "lat": 13.7312,
+      "lon": 100.5811,
+      "observed_at": "2026-11-01",
+      "opened_approx": "2022-03",
+      "status": "open",
+      "tier_source": "example — operator-reported (illustrative)",
+      "traffic_tier": "high"
+    },
+    {
+      "area": "Thonglor",
+      "closed_approx": null,
+      "id": "bk-ex-002",
+      "label": "Example Coffee B, Thonglor Soi 8",
+      "lat": 13.7288,
+      "lon": 100.5789,
+      "observed_at": "2026-11-01",
+      "opened_approx": "2021-11",
+      "status": "open",
+      "tier_source": "example — operator-reported (illustrative)",
+      "traffic_tier": "medium"
+    },
+    {
+      "area": "Thonglor",
+      "closed_approx": "2024-02",
+      "id": "bk-ex-003",
+      "label": "Example Coffee C, Sukhumvit 55",
+      "lat": 13.7282,
+      "lon": 100.5831,
+      "observed_at": "2026-11-01",
+      "opened_approx": "2020-06",
+      "status": "closed",
+      "tier_source": "example — public listing (illustrative)",
+      "traffic_tier": "low"
+    },
+    {
+      "area": "Thonglor",
+      "closed_approx": null,
+      "id": "bk-ex-004",
+      "label": "Example Coffee D, Thonglor Soi 13",
+      "lat": 13.7321,
+      "lon": 100.5822,
+      "observed_at": "2026-11-01",
+      "opened_approx": "2023-01",
+      "status": "open",
+      "tier_source": "example — on-foot observation (illustrative)",
+      "traffic_tier": "unknown"
+    },
+    {
+      "area": "Thonglor",
+      "closed_approx": "2023-08",
+      "id": "bk-ex-005",
+      "label": "Example Coffee E, Thonglor Soi 17",
+      "lat": 13.7331,
+      "lon": 100.5782,
+      "observed_at": "2026-11-01",
+      "opened_approx": "2019-09",
+      "status": "closed",
+      "tier_source": "example — public listing (illustrative)",
+      "traffic_tier": "low"
+    }
+  ]
+}
