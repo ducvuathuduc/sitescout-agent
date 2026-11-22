@@ -100,6 +100,7 @@ export function renderDashboard(index: MemoIndex): string {
           .join("")}</ul></div>`
       : "";
   return `<div class="block">
+    <p class="h3">SiteScout — Placer.ai for Southeast Asia</p>
     <p class="muted xs">Pipeline · generated ${esc(index.generatedAt)} · read-only — memos are generated and recorded from the CLI; nothing here edits them.</p>
     <div class="kpis">
       <div class="kpi"><b>${index.metering.memosGenerated}</b><span>memos generated</span></div>

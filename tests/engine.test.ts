@@ -15,6 +15,7 @@ import { runScout, type ScoutResult } from "../src/engine/scout.js";
 import { isStale } from "../src/engine/freshness.js";
 import { parseSignalsFile } from "../src/engine/signals-file.js";
 import { type LocalSignal } from "../src/engine/signals.js";
+import { renderDashboard, type MemoIndex } from "../web/src/dashboard.js";
 import { offset } from "../src/geo/grid.js";
 
 describe("planner", () => {
@@ -287,6 +288,25 @@ describe("GeoapifyApi against the demo proxy", () => {
 });
 
 describe("memo v2 rendering", () => {
+  /** Minimal committed-index fixture for the chain-facing copy test. */
+  function sampleIndex(): MemoIndex {
+    return {
+      generatedAt: "2026-11-22T00:00:00.000Z",
+      memos: [
+        {
+          memoId: "thaodien-coffee",
+          market: "vn-hcmc",
+          business: "coffee shop",
+          status: "delivered",
+          topCandidate: "159, Võ Nguyên Giáp",
+          band: null,
+        },
+      ],
+      metering: { memosGenerated: 1, marketsUsed: ["vn-hcmc"], outcomesRecorded: 0 },
+      accountId: null,
+    };
+  }
+
   /**
    * Fake-fetch run + a 2-UNVERIFIED checklist on #1 + a 120–180 band on #1.
    * Async because the fixture is built from runScout (the plan's snippet
@@ -324,6 +344,12 @@ describe("memo v2 rendering", () => {
       expect(md).toContain(c.total.toFixed(2));
       expect(html).toContain(c.total.toFixed(2));
     }
+  });
+  it("chain-facing copy never claims parity with Placer.ai or Buxton", async () => {
+    // Async because memoV2Result is built from runScout (see above).
+    const copy = [renderDashboard(sampleIndex()), renderMarkdown(await memoV2Result())].join("\n");
+    expect(copy).not.toMatch(/as accurate as|same (data|features) as|parity with/i);
+    expect(copy).toMatch(/Placer\.ai for Southeast Asia/);
   });
 });
 

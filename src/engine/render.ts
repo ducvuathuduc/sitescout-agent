@@ -44,6 +44,8 @@ export function renderMarkdown(r: ScoutResult): string {
   L.push("");
   L.push("The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.");
   L.push("");
+  L.push("SiteScout — Placer.ai for Southeast Asia.");
+  L.push("");
   L.push(`| # | Candidate | Score | Projected traffic | Verdict |`);
   L.push(`|---|---|---|---|---|`);
   for (const c of [...r.candidates].sort((a, b) => a.rank - b.rank).slice(0, 3)) {
@@ -255,7 +257,7 @@ ${isStale(asOf(r)) ? `<p><b>Stale data:</b> this memo's data is older than 90 da
 <h1>${esc(r.plan.business)} in ${esc(r.area.ward?.name ?? r.plan.area)}</h1>
 <p>${esc(r.question)}</p>
 <div class="card"><img src="${mapFile}" alt="Shortlist map with ${r.plan.walkMinutes}-minute walking isochrones"></div>
-<div class="card"><h3>Executive summary</h3><p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>${summaryRows}</tbody></table><p><b>Visit the site before signing a lease.</b></p></div>
+<div class="card"><h3>Executive summary</h3><p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p><p>SiteScout — Placer.ai for Southeast Asia.</p><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>${summaryRows}</tbody></table><p><b>Visit the site before signing a lease.</b></p></div>
 <div class="card"><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th class="n">Coverage</th><th class="n">Demand</th><th class="n">Competitors</th><th class="n">Drive (min)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
 <div class="card"><h3>Micro-feature checklist</h3><p>Hand-verified street facts (VERIFIED only by a named source — a dated site visit, a dated Street View / map imagery check, or operator confirmation; never inferred from POI density). UNVERIFIED is valid and publishable.</p><table><thead><tr><th>Candidate</th>${MICRO_FACTORS.map((f) => `<th>${esc(MICRO_FACTOR_LABELS[f])}</th>`).join("")}</tr></thead><tbody>${checklistRows}</tbody></table></div>
 <div class="card"><h3>What this model cannot see</h3><p>The model sees POI density, walk-zone area, and drive times. It cannot see street-level factors — each row shows every candidate's verification status for that factor. Anything UNVERIFIED needs a foot check before deciding.</p><ul>${blindspot}</ul></div>

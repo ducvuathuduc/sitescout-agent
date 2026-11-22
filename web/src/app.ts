@@ -17,6 +17,7 @@ import { runScout, type ScoutResult, type CandidateResult, type Geometry } from 
 import { DEFAULT_WEIGHTS, formatTrafficBand } from "../../src/scoring/model.js";
 import { MICRO_FACTORS, MICRO_FACTOR_DESCRIPTIONS, MICRO_FACTOR_LABELS, checklistEntryText, emptyChecklist, verdictFor, type MicroChecklist } from "../../src/engine/checklist.js";
 import { expiryFor, isExpired, isStale } from "../../src/engine/freshness.js";
+import { SIGNAL_KIND_LABELS } from "../../src/engine/signals.js";
 import { renderDashboard, type MemoIndex } from "./dashboard.js";
 
 /* ============================== constants ============================== */
@@ -756,6 +757,7 @@ function exportPdf(): void {
     <p>Data as of ${esc(asOf)} · valid until ${esc(exp)} (30 days).${isExpired(exp) ? " <b>This memo has expired — re-run before deciding.</b>" : ""}${isStale(asOf) ? " <b>Stale data:</b> this memo's data is older than 90 days — re-run before deciding." : ""}</p>
     <h2>Executive summary</h2>
     <p>The three spots to filter from, with their projected traffic bands and verdicts — forwardable by a franchise director.</p>
+    <p>SiteScout — Placer.ai for Southeast Asia.</p>
     <table class="pr-table"><thead><tr><th>#</th><th>Site</th><th>Score</th><th>Projected traffic</th><th>Verdict</th></tr></thead><tbody>
     ${best.slice(0, 3).map((c) => `<tr><td>${c.rank}</td><td>${esc(c.label)}</td><td><b>${c.total.toFixed(2)}</b></td><td>${esc(formatTrafficBand(c.trafficBand ?? null))}</td><td>${esc(verdictOf(c))}</td></tr>`).join("")}
     </tbody></table>
@@ -774,6 +776,7 @@ function exportPdf(): void {
     <ul>${MICRO_FACTORS.map((f) => `<li><b>${esc(MICRO_FACTOR_DESCRIPTIONS[f])}:</b> ${best.map((c) => `#${c.rank} ${esc(checklistOf(c)[f].status)}`).join(" · ")}</li>`).join("")}</ul>
     ${(r.excluded ?? []).length ? `<h2>Excluded — insufficient data</h2><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)}</li>`).join("")}</ul>` : ""}
     ${(r.unconfirmed ?? []).length ? `<h2>Unconfirmed competitors — verify on foot</h2><p>These competitors were listed by Places but Place Details could not confirm them (closed, delisted, or absent from the index). They are <b>not counted</b> in any competitor total or score — verify on foot before treating the area as empty.</p><ul>${(r.unconfirmed ?? []).map((u) => `<li><b>${esc(u.name)}</b> — ${esc(u.category)} · ${u.lat}, ${u.lon} — ${esc(u.reason)}</li>`).join("")}</ul>` : ""}
+    ${(r.signals ?? []).length ? `<h2>Local signals (operator-reported)</h2><p>Human-observed or operator-reported facts the model cannot fetch. They are displayed evidence only — they never alter a score.</p><ul>${(r.signals ?? []).map((s) => `<li><b>${esc(SIGNAL_KIND_LABELS[s.kind])}</b> — ${esc(s.street)} — observed by ${esc(s.observedBy)} on ${esc(s.observedAt)}${s.note ? ` — ${esc(s.note)}` : ""}</li>`).join("")}</ul>` : ""}
     <h2>Evidence (${S.calls.length} Geoapify calls)</h2><ol class="pr-calls">${S.calls.map((c) => `<li value="${c.seq}">T${c.seq} ${esc(c.api)} — ${esc(c.method)} ${esc(c.endpoint.slice(0, 110))} · ${c.status} · ${c.durationMs} ms</li>`).join("")}</ol>
     ${r.limitations.length ? `<h2>Limitations</h2><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
     <p class="pr-foot">Powered by Geoapify · © OpenMapTiles © OpenStreetMap contributors · ${esc(REPO)}</p>`;
