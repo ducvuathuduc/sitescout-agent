@@ -28,6 +28,16 @@
  *       Score bench/vngeobench/questions.json against logs/*.jsonl traces,
  *       or run the Bangkok coffee calibration bench (bench/bangkok-coffee/).
  *
+ *   sitescout outcome record --memo <id> --candidate <id>
+ *       --decision <signed|opened|passed> --method <customer-counts|pos-transactions>
+ *       [--band-low <n> --band-high <n>] [--actual-mean <n>] [--tier <high|medium|low>]
+ *       Append one ground-truth outcome to bench/outcomes/outcomes.jsonl.
+ *       Refuses orphans: without a usable band and without a matching
+ *       examples/<id>/result.json, nothing is recorded.
+ *
+ *   sitescout outcome report [--out bench/outcomes/CALIBRATION-REPORT.md]
+ *       Publish the ±20% calibration report from the outcomes file.
+ *
  *   sitescout static <report.html> <out.png>
  *       Static PNG export (playwright if installed; honest manual
  *       procedure otherwise — never a fake image).
@@ -57,6 +67,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { cmdScout } from "./scout-cli.js";
+import { cmdOutcome } from "./outcome-cli.js";
 
 loadDotenv({ path: ".env.local" });
 
@@ -85,6 +96,10 @@ export function help(): string {
     "  sitescout trace validate <file>",
     "  sitescout report <question-id> [--format md|html]",
     "  sitescout bench run [--suite vngeobench|bangkok-coffee]",
+    "  sitescout outcome record --memo <id> --candidate <id>",
+    "      --decision <signed|opened|passed> --method <customer-counts|pos-transactions>",
+    "      [--band-low <n> --band-high <n>] [--actual-mean <n>] [--tier <high|medium|low>]",
+    "  sitescout outcome report [--out bench/outcomes/CALIBRATION-REPORT.md]",
     "  sitescout static <report.html> <out.png>",
     "  sitescout --help",
     "",
@@ -276,6 +291,7 @@ async function main(): Promise<void> {
   if (cmd === "smoke") return cmdSmoke(rest);
   if (cmd === "report") return cmdReport(rest);
   if (cmd === "bench") return cmdBench(rest);
+  if (cmd === "outcome") return cmdOutcome(rest);
   if (cmd === "static") {
     const r = spawnSync(process.execPath, [join("dist", "report", "static.js"), ...rest], {
       stdio: "inherit",

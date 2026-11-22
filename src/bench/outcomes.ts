@@ -66,3 +66,70 @@ export function parseOutcomeLine(line: string): Outcome {
   }
   return parsed.data;
 }
+
+/**
+ * Match rule (spec §3.2, verbatim): the actual 30-day mean falls within
+ * the memo's projected band widened by ±20% — within
+ * `[low × 0.8, high × 1.2]`. The band widens; the actual does not.
+ */
+export function matchTrafficBand(low: number, high: number, actualMean: number): boolean {
+  return actualMean >= low * 0.8 && actualMean <= high * 1.2;
+}
+
+export interface CalibrationRow {
+  memoId: string;
+  candidateId: string;
+  decision: Outcome["decision"];
+  projectedLow: number;
+  projectedHigh: number;
+  actualDailyCustomersMean: number | null;
+  measurementMethod: Outcome["measurementMethod"];
+  /** true/false for traffic-match points; null for signed-only rows (no traffic yet). */
+  match: boolean | null;
+  isExample: boolean;
+}
+
+export interface CalibrationReport {
+  rows: CalibrationRow[];
+  nOutcomes: number;
+  /** Real (non-example) outcomes with an actual mean — the traffic-match proof points. */
+  nMatchable: number;
+  nMatched: number;
+  /** Share of matchable real outcomes within ±20%; null when there are none. */
+  matchShare: number | null;
+  /** Real signed-lease outcomes with no traffic yet (proof elements, not match points). */
+  nSignedOnly: number;
+}
+
+/**
+ * Pure report computation: per-outcome rows + aggregate. Example lines
+ * are judged like any other row but EXCLUDED from the aggregate — they
+ * are never presented as evidence.
+ */
+export function computeCalibrationReport(outcomes: Outcome[]): CalibrationReport {
+  const rows: CalibrationRow[] = outcomes.map((o) => ({
+    memoId: o.memoId,
+    candidateId: o.candidateId,
+    decision: o.decision,
+    projectedLow: o.projectedLow,
+    projectedHigh: o.projectedHigh,
+    actualDailyCustomersMean: o.actualDailyCustomersMean,
+    measurementMethod: o.measurementMethod,
+    match:
+      o.actualDailyCustomersMean === null
+        ? null
+        : matchTrafficBand(o.projectedLow, o.projectedHigh, o.actualDailyCustomersMean),
+    isExample: o._example === true,
+  }));
+  const real = rows.filter((r) => !r.isExample);
+  const matchable = real.filter((r) => r.match !== null);
+  const nMatched = matchable.filter((r) => r.match === true).length;
+  return {
+    rows,
+    nOutcomes: rows.length,
+    nMatchable: matchable.length,
+    nMatched,
+    matchShare: matchable.length === 0 ? null : nMatched / matchable.length,
+    nSignedOnly: real.filter((r) => r.decision === "signed" && r.match === null).length,
+  };
+}
