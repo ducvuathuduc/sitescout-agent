@@ -8,6 +8,7 @@ import { BUSINESS_RULES, heuristicPlan, parseLlmPlan, AREA_ALIASES, reconcileCom
 import { CATEGORY_SET } from "../src/engine/categories.js";
 import { GeoapifyApi } from "../src/engine/geoapify.js";
 import { TH_BANGKOK_PROFILE } from "../src/engine/profile.js";
+import { dataCoverageScore, VN_HCMC_PROFILE } from "../src/scoring/model.js";
 import { runScout } from "../src/engine/scout.js";
 import { renderMarkdown, staticMapBody } from "../src/engine/render.js";
 import { offset } from "../src/geo/grid.js";
@@ -57,7 +58,15 @@ describe("planner", () => {
 });
 
 /** Fake Geoapify (tests only): a tiny synthetic city around Thảo Điền. */
-function fakeFetch(opts: { isolineFails?: boolean } = {}): typeof fetch {
+function fakeFetch(opts: { isolineFails?: boolean; thinFirstCandidate?: boolean } = {}): typeof fetch {
+  // With thinFirstCandidate, the first geometry-filtered places query (the
+  // first candidate's isoline) returns 1 café and 0 demand POIs.
+  let thinFilter: string | null = null;
+  const thin = (filter: string): boolean => {
+    if (!opts.thinFirstCandidate || !filter.startsWith("geometry:")) return false;
+    if (thinFilter === null) thinFilter = filter;
+    return filter === thinFilter;
+  };
   const anchor = { lat: 10.8035, lon: 106.7375 };
   const poi = (i: number, cat: string, dx: number, dy: number) => {
     const p = offset(anchor, dx, dy);
@@ -84,6 +93,10 @@ function fakeFetch(opts: { isolineFails?: boolean } = {}): typeof fetch {
         return j({ features: [{ type: "Feature", properties: { id: `iso-${q.get("lat")}` }, geometry: square(Number(q.get("lat")), Number(q.get("lon")), 400) }] });
       case "/v2/places": {
         const cat = q.get("categories")!;
+        if (thin(q.get("filter") ?? "")) {
+          const n = cat === "catering.cafe" ? 1 : 0;
+          return j({ type: "FeatureCollection", features: Array.from({ length: n }, (_, i) => poi(i, cat, (i - 2) * 300 + (cat.length % 7) * 40, (i % 3) * 250 - 250)) });
+        }
         const n = cat === "catering.cafe" ? 6 : 4;
         return j({ type: "FeatureCollection", features: Array.from({ length: n }, (_, i) => poi(i, cat, (i - 2) * 300 + (cat.length % 7) * 40, (i % 3) * 250 - 250)) });
       }
@@ -160,7 +173,25 @@ describe("runScout (fake fetch)", () => {
     }
     expect(r.limitations.join(" ")).toMatch(/Isoline failed for candidate/);
   });
+
+  it("excludes a candidate below the POI floor instead of ranking it", async () => {
+    const api = new GeoapifyApi({ fetchImpl: thinDataApi() });
+    const r = await runScout("coffee in Thảo Điền", heuristicPlan("coffee in Thảo Điền"), { api });
+    expect(r.candidates.every((c) => c.competitors + c.demandTotal >= 5)).toBe(true);
+    expect(r.excluded.length).toBeGreaterThan(0);
+    expect(r.excluded[0].reason).toMatch(/insufficient data/i);
+  });
+
+  it("coverage score is 0 with no POIs and 1 at the profile expectation", () => {
+    expect(dataCoverageScore(0, VN_HCMC_PROFILE)).toBe(0);
+    expect(dataCoverageScore(33, VN_HCMC_PROFILE)).toBe(1); // 8 + 25
+  });
 });
+
+/** Variant of fakeFetch() whose first candidate sees 1 café and 0 demand POIs. */
+function thinDataApi(): typeof fetch {
+  return fakeFetch({ thinFirstCandidate: true });
+}
 
 describe("GeoapifyApi against the demo proxy", () => {
   it("does not retry a 429 the proxy marks as 'daily budget used up'", async () => {

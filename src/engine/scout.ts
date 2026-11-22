@@ -25,6 +25,8 @@ import { GeoapifyApi, type CallRecord, type Feature, type GeocodeResult, type Pl
 import type { PlanOutcome, ScoutPlan } from "./plan.js";
 import { VN_HCMC_PROFILE, type CountryProfile } from "./profile.js";
 import {
+  dataCoverageScore,
+  INSUFFICIENT_DATA_POI_FLOOR,
   scoreCandidate,
   TH_BANGKOK_PROFILE as TH_BANGKOK_MARKET_PROFILE,
   VN_HCMC_PROFILE as VN_HCMC_MARKET_PROFILE,
@@ -57,6 +59,8 @@ export interface CandidateResult {
   driveMinByOrigin: Array<number | null>;
   /** Unified five-factor sub-scores (see src/scoring/model.ts). */
   scores: SubScores;
+  /** Data-coverage score in [0, 1]: POIs found vs. the profile expectation. */
+  coverage: number;
   total: number;
   why: string;
   refs: number[];
@@ -83,6 +87,8 @@ export interface ScoutResult {
   };
   origins: Array<{ query: string; label?: string; lat?: number; lon?: number; ref?: number }>;
   candidates: CandidateResult[];
+  /** Candidates below the POI floor: excluded from ranking, never scored. */
+  excluded: Array<{ id: string; label: string; reason: string; refs: number[] }>;
   winnerRoute: { origin: string; timeS?: number; distanceM?: number; geometry?: Geometry; ref: number } | null;
   winnerDrive5: { geometry: Geometry; ref: number } | null;
   limitations: string[];
@@ -281,7 +287,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   }
 
   // 5–7 — per candidate: label, walk isoline, POIs inside it
-  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin">> = [];
+  const cands: Array<Omit<CandidateResult, "rank" | "scores" | "total" | "why" | "meanDriveMin" | "driveMinByOrigin" | "coverage">> = [];
   for (const [i, p] of chosen.entries()) {
     emit({ type: "stage", stage: "candidate", detail: `${i + 1}/${chosen.length}` });
     const refs: number[] = [];
@@ -378,7 +384,27 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
   // Market profile for scoring: the run's geocoder profile selects it
   // ("th-bangkok" → TH_BANGKOK_PROFILE, anything else → VN_HCMC_PROFILE).
   const marketProfile = profile.id === "th-bangkok" ? TH_BANGKOK_MARKET_PROFILE : VN_HCMC_MARKET_PROFILE;
-  const scored: CandidateResult[] = cands.map((c, i) => {
+  // Insufficient-data floor (spec §1/H1.4): a candidate with fewer than
+  // INSUFFICIENT_DATA_POI_FLOOR POIs across all sweeps is excluded from
+  // ranking — "no data" must never read as "no competition". Excluded
+  // candidates never enter `scored`, never receive a rank, and never
+  // affect the winner route/drive-5 steps (those read scored[0]).
+  const excluded: ScoutResult["excluded"] = [];
+  const rankable: Array<{ cand: (typeof cands)[number]; i: number }> = [];
+  for (const [i, c] of cands.entries()) {
+    const totalPois = c.competitors + c.demandTotal;
+    if (totalPois < INSUFFICIENT_DATA_POI_FLOOR) {
+      excluded.push({
+        id: c.id,
+        label: c.label,
+        reason: `insufficient data: ${totalPois} POIs across all sweeps (floor ${INSUFFICIENT_DATA_POI_FLOOR})`,
+        refs: [...c.refs],
+      });
+    } else {
+      rankable.push({ cand: c, i });
+    }
+  }
+  const scored: CandidateResult[] = rankable.map(({ cand: c, i }) => {
     const evidence: EvidenceBundle = {
       candidateId: c.id,
       candidateLabel: c.label,
@@ -398,6 +424,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
       rank: 0,
       scores: scoredCandidate.scores,
       total: Math.round(scoredCandidate.total * 1000) / 1000,
+      coverage: dataCoverageScore(c.competitors + c.demandTotal, marketProfile),
       why,
       refs,
       meanDriveMin: meanDrive[i] === null ? null : Math.round((meanDrive[i] as number) * 10) / 10,
@@ -450,6 +477,7 @@ export async function runScout(question: string, planned: PlanOutcome, opts: Sco
     area: { query: plan.area, anchor, ward, studyRadiusM: studyR, refs: areaRefs },
     origins,
     candidates: scored,
+    excluded,
     winnerRoute,
     winnerDrive5,
     limitations: [...new Set(limitations)],

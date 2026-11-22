@@ -229,6 +229,16 @@ export function scoreCandidate(
   };
 }
 
+/**
+ * Data-coverage score: POIs found vs. the count implied by the market
+ * profile scales (competitorK + complementaryK) — an expected value from
+ * the profile, not invented per run. 0 with no POIs, 1 at the expectation.
+ */
+export function dataCoverageScore(totalPois: number, profile: MarketProfile): number {
+  const expected = profile.scales.competitorK + profile.scales.complementaryK;
+  return clamp01(totalPois / Math.max(expected, 1));
+}
+
 /** Rank best-first. Ties broken deterministically by candidateId. */
 export function rankCandidates(scored: ScoredCandidate[]): ScoredCandidate[] {
   return [...scored].sort((a, b) => b.total - a.total || a.candidateId.localeCompare(b.candidateId));

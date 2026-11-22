@@ -30,10 +30,10 @@ export function renderMarkdown(r: ScoutResult): string {
   L.push("");
   L.push("## Ranked shortlist");
   L.push("");
-  L.push(`| # | Candidate | Score | Demand POIs (10-min walk) | Competitors | Walk area | Mean drive | Evidence |`);
-  L.push(`|---|---|---|---|---|---|---|---|`);
+  L.push(`| # | Candidate | Score | Coverage | Demand POIs (10-min walk) | Competitors | Walk area | Mean drive | Evidence |`);
+  L.push(`|---|---|---|---|---|---|---|---|---|`);
   for (const c of r.candidates) {
-    L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${c.demandTotal} | ${c.competitors} | ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² | ${c.meanDriveMin ?? "n/a"} min | ${cite(c.refs)} |`);
+    L.push(`| ${c.rank} | ${c.label} | **${f2(c.total)}** | ${typeof c.coverage === "number" ? c.coverage.toFixed(2) : "n/a"} | ${c.demandTotal} | ${c.competitors} | ${(c.isolineAreaM2 / 1e6).toFixed(2)} km² | ${c.meanDriveMin ?? "n/a"} min | ${cite(c.refs)} |`);
   }
   L.push("");
   L.push(`Score = ${DEFAULT_WEIGHTS.competition.toFixed(2)}·competition + ${DEFAULT_WEIGHTS.complementarity.toFixed(2)}·complementarity + ${DEFAULT_WEIGHTS.catchment.toFixed(2)}·catchment + ${DEFAULT_WEIGHTS.accessibility.toFixed(2)}·accessibility + ${DEFAULT_WEIGHTS.cost.toFixed(2)}·cost, each sub-score normalised to [0, 1] (unified model, weights \`${r.weightsVersion}\`).`);
@@ -57,6 +57,16 @@ export function renderMarkdown(r: ScoutResult): string {
   }
   if (r.winnerDrive5) {
     L.push(`**5-minute drive zone around #1** (Place Details \`drive_5\`): ${(geometryKm2(r.winnerDrive5.geometry)).toFixed(2)} km² ${cite([r.winnerDrive5.ref])}.`);
+    L.push("");
+  }
+  if ((r.excluded ?? []).length > 0) {
+    L.push("## Excluded — insufficient data");
+    L.push("");
+    L.push("These candidates were **not scored** — listed here so nothing is silently dropped:");
+    L.push("");
+    for (const x of r.excluded ?? []) {
+      L.push(`- **${x.label}** — ${x.reason} ${cite(x.refs)}`);
+    }
     L.push("");
   }
   L.push("## Limitations");
@@ -155,6 +165,7 @@ code{font-size:11px;word-break:break-all}footer{font-size:12px;color:#636D72}
 <p>${esc(r.question)}</p>
 <div class="card"><img src="${mapFile}" alt="Shortlist map with ${r.plan.walkMinutes}-minute walking isochrones"></div>
 <div class="card"><table><thead><tr><th>#</th><th>Candidate</th><th class="n">Score</th><th class="n">Demand</th><th class="n">Competitors</th><th class="n">Drive (min)</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>
+${(r.excluded ?? []).length > 0 ? `<div class="card"><h3>Excluded — insufficient data</h3><p>These candidates were <b>not scored</b> — listed here so nothing is silently dropped.</p><ul>${(r.excluded ?? []).map((x) => `<li><b>${esc(x.label)}</b> — ${esc(x.reason)} ${[...new Set(x.refs)].map((s) => `<a href="#T${s}">T${s}</a>`).join(" ")}</li>`).join("")}</ul></div>` : ""}
 <div class="card"><h3>Limitations</h3><ul>${r.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>
 <div class="card"><h3>Evidence trace</h3><table><thead><tr><th>T</th><th>API</th><th>Request</th><th>Status</th><th>ms</th><th>Result</th></tr></thead><tbody>${trace}</tbody></table></div>
 <footer>Powered by <a href="https://www.geoapify.com/">Geoapify</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</footer>
